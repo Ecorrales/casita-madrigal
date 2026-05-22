@@ -1,0 +1,2377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#f4e4d4" />
+<title>Casita Madrigal · Planificador familiar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌺%3C/text%3E%3C/svg%3E">
+
+<style>
+:root {
+  /* Paleta diurna — terracota, papel, follaje */
+  --bg: #f6ece0;
+  --bg-soft: #fdf6ec;
+  --paper: #fffaf2;
+  --ink: #2a1f1a;
+  --ink-soft: #5a463c;
+  --muted: #8a7567;
+  --line: #e6d4c0;
+  --line-soft: #f0e2cf;
+
+  --terra: #c4634a;          /* terracota principal */
+  --terra-deep: #9b3f2a;
+  --rose: #e08a8a;            /* rosa polvo */
+  --rose-soft: #f4d4d0;
+  --leaf: #5b7a4e;            /* verde follaje */
+  --leaf-soft: #c8d4ba;
+  --gold: #c89b3c;            /* dorado mostaza */
+  --sky: #7ba0b8;             /* azul polvo */
+
+  /* Colores por persona — cada quien tiene su don */
+  --emm: #c4634a;             /* terracota */
+  --jov: #5b7a4e;             /* verde follaje */
+  --mar: #c89b3c;             /* dorado mostaza */
+  --lup: #7ba0b8;             /* azul polvo */
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 0 rgba(42,31,26,0.04), 0 8px 24px -12px rgba(42,31,26,0.18);
+  --shadow-lift: 0 2px 0 rgba(42,31,26,0.05), 0 18px 40px -16px rgba(42,31,26,0.25);
+}
+
+[data-theme="dark"] {
+  --bg: #1a1411;
+  --bg-soft: #221a16;
+  --paper: #2a201b;
+  --ink: #f6ece0;
+  --ink-soft: #d4c0b0;
+  --muted: #998878;
+  --line: #3d2f26;
+  --line-soft: #322620;
+
+  --terra: #e08363;
+  --terra-deep: #c4634a;
+  --rose: #e8a8a8;
+  --rose-soft: #4a3530;
+  --leaf: #8aa878;
+  --leaf-soft: #3d4a35;
+  --gold: #d4b256;
+  --sky: #9bb8cc;
+
+  --emm: #e08363;
+  --jov: #8aa878;
+  --mar: #d4b256;
+  --lup: #9bb8cc;
+
+  --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.6);
+  --shadow-lift: 0 2px 0 rgba(0,0,0,0.4), 0 18px 40px -16px rgba(0,0,0,0.7);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Textura de papel orgánica */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(196, 99, 74, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(91, 122, 78, 0.04) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.2  0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* === LOGIN / SELECTOR DE PERFIL === */
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+.welcome.hidden { display: none; }
+
+.welcome-mark {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(48px, 12vw, 96px);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: -0.03em;
+  color: var(--terra);
+  line-height: 0.95;
+  margin-bottom: 8px;
+}
+
+.welcome-mark .ampersand {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--leaf);
+}
+
+.welcome-sub {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 56px;
+}
+
+.welcome-question {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-bottom: 32px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 520px;
+  width: 100%;
+}
+
+.profile-btn {
+  appearance: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px 16px;
+  cursor: pointer;
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--ink);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--accent);
+}
+
+.profile-btn:hover, .profile-btn:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+  outline: none;
+}
+
+.profile-btn[data-p="emm"] { --accent: var(--emm); }
+.profile-btn[data-p="jov"] { --accent: var(--jov); }
+.profile-btn[data-p="mar"] { --accent: var(--mar); }
+.profile-btn[data-p="lup"] { --accent: var(--lup); }
+
+.profile-don {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* === APP === */
+.app { position: relative; z-index: 1; }
+
+.app.hidden { display: none; }
+
+/* Header */
+.header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brand-name {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(20px, 4vw, 28px);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  color: var(--terra);
+}
+
+.brand-date {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+.icon-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  transition: all 0.2s;
+}
+
+.icon-btn:hover { background: var(--paper); color: var(--terra); border-color: var(--terra); }
+
+.icon-btn svg { width: 18px; height: 18px; }
+
+.me-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.me-chip-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 71px;
+  z-index: 9;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+}
+
+.tabs::-webkit-scrollbar { display: none; }
+
+.tabs-inner {
+  display: flex;
+  gap: 4px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 14px 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab:hover { color: var(--ink-soft); }
+
+.tab.active {
+  color: var(--terra);
+  border-bottom-color: var(--terra);
+}
+
+.tab-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  font-size: 11px;
+  background: var(--line-soft);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.tab.active .tab-count {
+  background: var(--terra);
+  color: var(--paper);
+}
+
+/* Main */
+.main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 20px 120px;
+}
+
+.panel { display: none; animation: fade 0.4s ease; }
+.panel.active { display: block; }
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.panel-head {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.panel-title {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.panel-title em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terra);
+}
+
+.panel-sub {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* === TAREAS DIARIAS — Lista cálida === */
+.daily-list { display: flex; flex-direction: column; gap: 8px; }
+
+.task-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.task-row:hover {
+  border-color: color-mix(in srgb, var(--terra) 35%, var(--line));
+  transform: translateX(2px);
+}
+
+.task-row.done {
+  background: color-mix(in srgb, var(--leaf-soft) 25%, var(--paper));
+  border-color: color-mix(in srgb, var(--leaf) 25%, var(--line));
+}
+
+.task-row.done .task-name { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* Estado "tomada" — alguien la está haciendo */
+.task-row.taken {
+  background: color-mix(in srgb, var(--gold) 8%, var(--paper));
+  border-color: color-mix(in srgb, var(--gold) 35%, var(--line));
+  border-left: 3px solid var(--gold);
+  padding-left: 14px;
+}
+
+.task-row.taken .task-name { color: var(--ink); }
+
+.task-row.taken .check {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+  color: var(--gold);
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+.task-row.taken .check svg {
+  width: 14px;
+  height: 14px;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.check {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.check:hover { border-color: var(--terra); transform: scale(1.05); }
+
+.task-row.done .check {
+  background: var(--leaf);
+  border-color: var(--leaf);
+  color: var(--paper);
+}
+
+.check svg { width: 16px; height: 16px; }
+
+.task-name {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.task-meta {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.task-meta strong { color: var(--ink-soft); font-weight: 600; }
+
+.task-claim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.who-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.who-badge[data-p="emm"] { background: color-mix(in srgb, var(--emm) 15%, transparent); color: var(--emm); }
+.who-badge[data-p="jov"] { background: color-mix(in srgb, var(--jov) 18%, transparent); color: var(--jov); }
+.who-badge[data-p="mar"] { background: color-mix(in srgb, var(--mar) 18%, transparent); color: var(--mar); }
+.who-badge[data-p="lup"] { background: color-mix(in srgb, var(--lup) 18%, transparent); color: var(--lup); }
+
+.who-avatar-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.who-avatar-dot[data-p="emm"] { background: var(--emm); }
+.who-avatar-dot[data-p="jov"] { background: var(--jov); }
+.who-avatar-dot[data-p="mar"] { background: var(--mar); }
+.who-avatar-dot[data-p="lup"] { background: var(--lup); }
+
+.claim-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.claim-btn:hover { background: var(--terra); color: var(--paper); border-color: var(--terra); }
+
+.claim-btn.primary {
+  background: var(--leaf);
+  color: var(--paper);
+  border-color: var(--leaf);
+  font-weight: 600;
+}
+.claim-btn.primary:hover {
+  background: color-mix(in srgb, var(--leaf) 80%, black);
+  border-color: color-mix(in srgb, var(--leaf) 80%, black);
+}
+
+.claim-btn.ghost {
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 8px;
+}
+.claim-btn.ghost:hover {
+  background: transparent;
+  color: var(--terra);
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.taken-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* === Sección de tareas con encabezado === */
+.section-block { margin-bottom: 36px; }
+
+.section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--terra-deep), transparent);
+  opacity: 0.3;
+}
+
+/* === DETALLES — Lista delicada === */
+.details-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: all 0.25s;
+  cursor: pointer;
+}
+
+.detail-item:hover { border-color: color-mix(in srgb, var(--rose) 50%, var(--line)); }
+
+.detail-item.done { background: color-mix(in srgb, var(--leaf-soft) 18%, var(--paper)); }
+.detail-item.done .detail-title { text-decoration: line-through; color: var(--muted); }
+
+.detail-check {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.2s;
+}
+
+.detail-item.done .detail-check {
+  background: var(--leaf);
+  border-color: var(--leaf);
+  color: var(--paper);
+}
+
+.detail-check svg { width: 14px; height: 14px; }
+
+.detail-text { flex: 1; }
+.detail-title {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rose);
+  display: block;
+  margin-bottom: 2px;
+}
+.detail-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* === FAMILIA — Tarjetas de logros === */
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.family-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.family-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--p-color);
+}
+
+.family-card[data-p="emm"] { --p-color: var(--emm); }
+.family-card[data-p="jov"] { --p-color: var(--jov); }
+.family-card[data-p="mar"] { --p-color: var(--mar); }
+.family-card[data-p="lup"] { --p-color: var(--lup); }
+
+.family-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--p-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  font-family: 'Fraunces', serif;
+  font-size: 26px;
+  font-weight: 500;
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.family-name {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.family-don {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+
+.family-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.family-stat-num {
+  font-family: 'Fraunces', serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--p-color);
+  margin-bottom: 4px;
+}
+
+.family-stat-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.family-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  background: color-mix(in srgb, var(--p-color) 12%, transparent);
+  color: var(--p-color);
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* === HISTORIAL === */
+.history-list { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.history-time {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+  min-width: 90px;
+}
+
+.history-text {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  color: var(--ink);
+  flex: 1;
+}
+
+.history-text strong {
+  font-weight: 600;
+  color: var(--p-color, var(--terra));
+}
+
+/* === LIVE STRIP — Banner de actividad en vivo en Hoy === */
+.live-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--gold) 12%, var(--paper)) 0%,
+    color-mix(in srgb, var(--gold) 4%, var(--paper)) 100%);
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--line));
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.live-strip::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--gold);
+}
+
+.live-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  animation: pulse-dot 1.8s ease-in-out infinite;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 60%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold) 0%, transparent); }
+}
+
+.live-text {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.live-text strong {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.live-go {
+  appearance: none;
+  background: transparent;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+.live-go:hover { text-decoration: underline; }
+
+/* === PANEL AHORA MISMO === */
+.now-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.now-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 18px 16px;
+  position: relative;
+  border-left: 4px solid var(--p-color, var(--gold));
+}
+
+.now-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.now-card-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--p-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 500;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.now-card-avatar::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: var(--gold);
+  border-radius: 50%;
+  border: 2px solid var(--paper);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+.now-card-who {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.now-card-status {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-top: 2px;
+}
+
+.now-card-task {
+  font-family: 'Fraunces', serif;
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.now-card-time {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.now-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.now-empty {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.now-empty-icon {
+  font-family: 'Fraunces', serif;
+  font-size: 56px;
+  font-style: italic;
+  color: var(--leaf);
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.now-empty-text {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.now-empty-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.now-section {
+  margin-bottom: 32px;
+}
+
+/* Empty states */
+.empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--muted);
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 16px;
+}
+
+/* Notification bell */
+.bell-wrap { position: relative; }
+.bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  background: var(--terra);
+  border-radius: 50%;
+  border: 2px solid var(--bg-soft);
+  display: none;
+}
+.bell-wrap.has-pending .bell-dot { display: block; }
+
+/* Notifications panel */
+.notif-panel {
+  position: fixed;
+  top: 70px;
+  right: 16px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 70vh;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lift);
+  z-index: 50;
+  overflow-y: auto;
+  padding: 14px;
+  display: none;
+}
+.notif-panel.open { display: block; }
+
+.notif-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notif-item {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item strong { color: var(--terra); font-weight: 600; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-style: italic;
+  z-index: 200;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+  box-shadow: var(--shadow-lift);
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Footer connection status */
+.conn-status {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  z-index: 30;
+}
+
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+}
+.conn-status.online .conn-dot { background: var(--leaf); animation: pulse 2s ease infinite; }
+.conn-status.offline .conn-dot { background: var(--terra); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Confetti for completing tasks */
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(-80px) rotate(360deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  animation: confetti-fall 0.8s ease-out forwards;
+}
+
+/* Modal — claim selector for tasks */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 31, 26, 0.4);
+  z-index: 90;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lift);
+}
+.modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.modal-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.modal-opt {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.modal-opt:hover { border-color: var(--terra); background: color-mix(in srgb, var(--terra) 6%, transparent); }
+.modal-cancel {
+  appearance: none;
+  background: transparent;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .profile-grid { grid-template-columns: 1fr 1fr; }
+  .task-row { grid-template-columns: 36px 1fr auto; padding: 12px 14px; gap: 10px; }
+  .task-name { font-size: 15px; }
+  .check { width: 26px; height: 26px; }
+  .header { padding: 14px 16px 12px; }
+  .main { padding: 18px 14px 100px; }
+  .panel-title { font-size: 28px; }
+  .details-list { grid-template-columns: 1fr; }
+  .family-grid { grid-template-columns: 1fr; }
+  .tab { padding: 12px 14px; font-size: 12px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- =================================================
+     PANTALLA DE BIENVENIDA / SELECTOR DE PERFIL
+     ================================================= -->
+<div class="welcome" id="welcome">
+  <div class="welcome-mark">
+    Casita <span class="ampersand">&</span> Madrigal
+  </div>
+  <div class="welcome-sub">Planificador familiar</div>
+  <div class="welcome-question">¿Quién está en casa?</div>
+  <div class="profile-grid">
+    <button class="profile-btn" data-p="emm" onclick="selectProfile('emm')">
+      Emmanuel
+      <span class="profile-don">El que organiza</span>
+    </button>
+    <button class="profile-btn" data-p="jov" onclick="selectProfile('jov')">
+      Jovanny
+      <span class="profile-don">El que cocina</span>
+    </button>
+    <button class="profile-btn" data-p="mar" onclick="selectProfile('mar')">
+      Mariel
+      <span class="profile-don">La que cuida</span>
+    </button>
+    <button class="profile-btn" data-p="lup" onclick="selectProfile('lup')">
+      Lupita
+      <span class="profile-don">La que brilla</span>
+    </button>
+  </div>
+</div>
+
+<!-- =================================================
+     APP PRINCIPAL
+     ================================================= -->
+<div class="app hidden" id="app">
+
+  <header class="header">
+    <div class="header-row">
+      <div class="brand">
+        <div class="brand-name">Casita Madrigal</div>
+        <div class="brand-date" id="brand-date"></div>
+      </div>
+      <div class="header-actions">
+        <button class="me-chip" onclick="showProfileSwitcher()" title="Cambiar perfil">
+          <span class="me-chip-avatar" id="me-avatar"></span>
+          <span id="me-name"></span>
+        </button>
+        <button class="icon-btn bell-wrap" id="bell-btn" onclick="toggleNotifs()" title="Notificaciones">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <span class="bell-dot"></span>
+        </button>
+        <button class="icon-btn" onclick="toggleMute()" title="Sonido on/off" id="mute-btn">
+          <svg id="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          <svg id="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
+        <button class="icon-btn" onclick="toggleTheme()" title="Modo oscuro/claro" id="theme-btn">
+          <svg id="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <svg id="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <div class="tabs-inner">
+      <button class="tab active" data-tab="hoy" onclick="switchTab('hoy')">Hoy<span class="tab-count" id="count-hoy">0</span></button>
+      <button class="tab" data-tab="ahora" onclick="switchTab('ahora')">Ahora mismo<span class="tab-count" id="count-ahora" style="display:none">0</span></button>
+      <button class="tab" data-tab="esporadicas" onclick="switchTab('esporadicas')">Esporádicas<span class="tab-count" id="count-esp">0</span></button>
+      <button class="tab" data-tab="detalles" onclick="switchTab('detalles')">Detalles que cuidan</button>
+      <button class="tab" data-tab="familia" onclick="switchTab('familia')">Familia</button>
+      <button class="tab" data-tab="historial" onclick="switchTab('historial')">Historial</button>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- HOY -->
+    <section class="panel active" data-panel="hoy">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Tareas de <em>hoy</em></h1>
+          <p class="panel-sub" id="hoy-sub">Lo que mantiene la casita andando</p>
+        </div>
+      </div>
+      <div id="live-strip"></div>
+      <div class="section-block">
+        <div class="section-label">Mañana</div>
+        <div class="daily-list" id="daily-morning"></div>
+      </div>
+      <div class="section-block">
+        <div class="section-label">Mediodía</div>
+        <div class="daily-list" id="daily-noon"></div>
+      </div>
+      <div class="section-block">
+        <div class="section-label">Tarde y noche</div>
+        <div class="daily-list" id="daily-evening"></div>
+      </div>
+    </section>
+
+    <!-- AHORA MISMO -->
+    <section class="panel" data-panel="ahora">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Ahora <em>mismo</em></h1>
+          <p class="panel-sub">Quién está en qué en este momento</p>
+        </div>
+      </div>
+      <div id="now-content"></div>
+    </section>
+
+    <!-- ESPORÁDICAS -->
+    <section class="panel" data-panel="esporadicas">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Tareas <em>esporádicas</em></h1>
+          <p class="panel-sub">Las que no son diarias, pero importan igual</p>
+        </div>
+      </div>
+      <div class="daily-list" id="esp-list"></div>
+    </section>
+
+    <!-- DETALLES -->
+    <section class="panel" data-panel="detalles">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">Detalles que <em>nos cuidan</em></h1>
+          <p class="panel-sub">Pequeños gestos que hacen la casa hogar</p>
+        </div>
+      </div>
+      <div class="details-list" id="details-list"></div>
+    </section>
+
+    <!-- FAMILIA -->
+    <section class="panel" data-panel="familia">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">La <em>familia</em></h1>
+          <p class="panel-sub">Cada quien con su don, todos juntos</p>
+        </div>
+      </div>
+      <div class="family-grid" id="family-grid"></div>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section class="panel" data-panel="historial">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">El <em>historial</em></h1>
+          <p class="panel-sub">Lo que hicimos, quién lo hizo, cuándo</p>
+        </div>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- =================================================
+     MODAL — Asignar tarea
+     ================================================= -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-title">¿Quién toma esta tarea?</div>
+    <div class="modal-sub" id="modal-task-name"></div>
+    <div class="modal-options" id="modal-opts"></div>
+    <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- =================================================
+     NOTIFICACIONES
+     ================================================= -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-title">Pendientes de hoy</div>
+  <div id="notif-list"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Connection status -->
+<div class="conn-status offline" id="conn-status">
+  <span class="conn-dot"></span>
+  <span id="conn-text">Local</span>
+</div>
+
+<script>
+/* ===================================================================
+   CASITA MADRIGAL — Planificador familiar
+   Funciona sin Firebase (modo local). Si se configura, sincroniza en
+   tiempo real entre todos los dispositivos.
+   =================================================================== */
+
+/* ===== CONFIGURACIÓN FIREBASE (opcional) =====
+   Para activar sincronización en tiempo real entre dispositivos:
+   1. Ve a https://console.firebase.google.com/
+   2. Crea un proyecto gratis
+   3. Activa Realtime Database (modo de prueba)
+   4. Pega tu configuración aquí abajo */
+const FIREBASE_CONFIG = null; // Reemplaza con tu config: { apiKey: '...', databaseURL: '...', etc }
+
+/* ===== DATOS BASE ===== */
+const PEOPLE = {
+  emm: { name: 'Emmanuel',  initial: 'E', color: 'emm' },
+  jov: { name: 'Jovanny',   initial: 'J', color: 'jov' },
+  mar: { name: 'Mariel',    initial: 'M', color: 'mar' },
+  lup: { name: 'Lupita',    initial: 'L', color: 'lup' }
+};
+
+const DAILY_TASKS = [
+  { id: 'd01', name: 'Hacer desayuno', meta: 'Empezar el día bien', section: 'morning' },
+  { id: 'd02', name: 'Lavar losa del desayuno', meta: 'Después del desayuno', section: 'morning' },
+  { id: 'd03', name: 'Limpiar cocina (Mañana)', meta: 'Dejar lista para el día', section: 'morning' },
+  { id: 'd04', name: 'Limpiar la planta baja', meta: 'Barrer y trapear', section: 'morning' },
+  { id: 'd05', name: 'Preparar la comida', meta: 'Comida principal del día', section: 'noon' },
+  { id: 'd06', name: 'Guardar la comida en toppers', meta: 'Para después de comer', section: 'noon' },
+  { id: 'd07', name: 'Lavar losa comida', meta: 'Después de la comida', section: 'noon' },
+  { id: 'd08', name: 'Limpiar cocina (Tarde)', meta: 'Después de la comida', section: 'noon' },
+  { id: 'd09', name: 'Preparar cena', meta: 'Algo ligero para cerrar', section: 'evening' },
+  { id: 'd10', name: 'Lavar losa cena', meta: 'Antes de dormir', section: 'evening' },
+  { id: 'd11', name: 'Limpiar cocina (Noche)', meta: 'Dejarla lista para mañana', section: 'evening' }
+];
+
+const SPORADIC_TASKS = [
+  { id: 's01', name: 'Regar las flores', when: '2× semana' },
+  { id: 's02', name: 'Barrer frente de la casa', when: 'Semanal' },
+  { id: 's03', name: 'Aspirar las escaleras', when: 'Semanal' },
+  { id: 's04', name: 'Ventanas planta baja', when: 'Mensual' },
+  { id: 's05', name: 'Lavamanos y espejo', when: 'Semanal' },
+  { id: 's06', name: 'Limpiar el refrigerador', when: 'Quincenal' },
+  { id: 's07', name: 'Limpiar el baño', when: 'Semanal' },
+  { id: 's08', name: 'Lavar el patio', when: 'Mensual' },
+  { id: 's09', name: 'Baño de Nana', when: 'Quincenal' },
+  { id: 's10', name: 'Bolsas de proteínas', when: 'Quincenal' },
+  { id: 's11', name: 'Alacena y refrigerador', when: 'Mensual' }
+];
+
+const DETAILS = [
+  { id: 'x01', title: 'Agua siempre lista', desc: 'Llenar jarra si garrafón pesa.' },
+  { id: 'x02', title: 'Cierre de cocina', desc: 'Sin bolsas de basura por la noche.' },
+  { id: 'x03', title: 'Control de basura', desc: 'Si se llena en el día, sacarla.' },
+  { id: 'x04', title: 'Papeleras de baño', desc: 'Vaciar cesto y cambiar bolsa.' },
+  { id: 'x05', title: 'Mesa despejada', desc: 'Limpiar después de comer.' },
+  { id: 'x06', title: 'Zona segura (Mati)', desc: 'Guardar productos mal parados.' },
+  { id: 'x07', title: 'Hielo disponible', desc: 'Rellenar el molde si se va a acabar.' },
+  { id: 'x08', title: 'Relevo de papel', desc: 'Cambiar el rollo al terminarse.' },
+  { id: 'x09', title: 'Casa fresca', desc: 'Ventilar áreas comunes para evitar encierro.' },
+  { id: 'x10', title: 'Filtro lavaplatos', desc: 'Limpiarlo si se queda con comida.' },
+  { id: 'x11', title: 'Lavaplatos seco', desc: 'Dejar el área limpia y sin humedad.' }
+];
+
+/* ===== ESTADO ===== */
+let state = {
+  me: null,                      // perfil actual
+  theme: 'light',
+  muted: false,                  // sonidos on/off
+  date: todayKey(),              // YYYY-MM-DD
+  daily: {},                     // { taskId: { done, by, at, takenBy, takenAt } }
+  sporadic: {},                  // { taskId: { ... } }
+  details: {},                   // { detailId: { done, by, at } }
+  history: [],                   // [{ ts, by, taskName, action }]
+  scores: { emm: 0, jov: 0, mar: 0, lup: 0 } // total tareas históricas
+};
+
+let useFirebase = false;
+let db = null;
+
+/* ===== UTILIDADES ===== */
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate() {
+  const d = new Date();
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return `${dias[d.getDay()]} ${d.getDate()} de ${meses[d.getMonth()]}`;
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'ahora';
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h}h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d}d`;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ===== SONIDO — Campanita sintetizada al completar ===== */
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (audioCtx) return audioCtx;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
+    return audioCtx;
+  } catch(e) { return null; }
+}
+
+function playDoneSound() {
+  if (state.muted) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  // iOS necesita "resume" tras gesto del usuario
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // Acorde alegre: do mayor con armónicos suaves (campana orgánica)
+  // Frecuencias: Do5 (523.25), Mi5 (659.25), Sol5 (783.99)
+  const now = ctx.currentTime;
+  const notes = [
+    { freq: 523.25, delay: 0,    dur: 0.8, vol: 0.18 },
+    { freq: 659.25, delay: 0.06, dur: 0.7, vol: 0.14 },
+    { freq: 783.99, delay: 0.12, dur: 0.9, vol: 0.16 },
+    { freq: 1046.5, delay: 0.04, dur: 0.4, vol: 0.06 }  // octava arriba, brillo
+  ];
+
+  notes.forEach(n => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = n.freq;
+
+    // Envelope ADSR — ataque rápido, decay largo (campana)
+    const start = now + n.delay;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(n.vol, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + n.dur);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + n.dur);
+  });
+}
+
+function playClaimSound() {
+  if (state.muted) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // Tono suave ascendente para "tomada"
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(440, now);
+  osc.frequency.linearRampToValueAtTime(660, now + 0.15);
+
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.3);
+}
+
+function confettiBurst(x, y) {
+  const colors = ['#c4634a', '#5b7a4e', '#c89b3c', '#7ba0b8', '#e08a8a'];
+  for (let i = 0; i < 14; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'confetti-piece';
+    piece.style.left = x + 'px';
+    piece.style.top = y + 'px';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.transform = `rotate(${Math.random()*360}deg)`;
+    piece.style.setProperty('--tx', (Math.random()-0.5)*120 + 'px');
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 900);
+  }
+}
+
+/* ===== PERSISTENCIA ===== */
+function save() {
+  // Persistencia local (siempre)
+  try {
+    localStorage.setItem('casita_state', JSON.stringify(state));
+  } catch(e) { console.warn('localStorage error', e); }
+
+  // Sincronización remota si Firebase está activo
+  if (useFirebase && db) {
+    db.ref('casita').set({
+      date: state.date,
+      daily: state.daily,
+      sporadic: state.sporadic,
+      details: state.details,
+      history: state.history.slice(-200),
+      scores: state.scores
+    }).catch(e => console.warn('Firebase save error', e));
+  }
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('casita_state');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      Object.assign(state, parsed);
+    }
+    const savedMe = localStorage.getItem('casita_me');
+    if (savedMe) state.me = savedMe;
+    const savedTheme = localStorage.getItem('casita_theme');
+    if (savedTheme) state.theme = savedTheme;
+    state.muted = localStorage.getItem('casita_muted') === '1';
+  } catch(e) { console.warn('load error', e); }
+
+  // Reset diario automático: si la fecha guardada ≠ hoy, resetea diarias
+  if (state.date !== todayKey()) {
+    // Antes del reset, mover lo de ayer al historial si quieres conservar
+    state.daily = {};
+    state.details = {}; // los detalles también son del día
+    state.date = todayKey();
+    save();
+  }
+}
+
+/* ===== FIREBASE (opcional) ===== */
+async function initFirebase() {
+  if (!FIREBASE_CONFIG) return;
+  try {
+    // Carga dinámica del SDK de Firebase
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    useFirebase = true;
+    document.getElementById('conn-status').classList.remove('offline');
+    document.getElementById('conn-status').classList.add('online');
+    document.getElementById('conn-text').textContent = 'En vivo';
+
+    // Listener en tiempo real
+    db.ref('casita').on('value', snap => {
+      const data = snap.val();
+      if (!data) return;
+      // Reset diario si cambió la fecha en remoto
+      if (data.date && data.date !== todayKey()) {
+        state.daily = {};
+        state.details = {};
+        state.date = todayKey();
+        save();
+      } else {
+        state.daily = data.daily || {};
+        state.sporadic = data.sporadic || {};
+        state.details = data.details || {};
+        state.history = data.history || [];
+        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+      }
+      renderAll();
+    });
+  } catch(e) {
+    console.warn('Firebase init failed, modo local', e);
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = res;
+    s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+/* ===== INICIO ===== */
+function init() {
+  load();
+  document.documentElement.setAttribute('data-theme', state.theme);
+  updateThemeBtn();
+  updateMuteBtn();
+  document.getElementById('brand-date').textContent = formatDate();
+
+  if (state.me) {
+    showApp();
+  } else {
+    document.getElementById('welcome').classList.remove('hidden');
+  }
+
+  initFirebase();
+}
+
+function selectProfile(p) {
+  state.me = p;
+  localStorage.setItem('casita_me', p);
+  showApp();
+}
+
+function showApp() {
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('me-avatar').textContent = PEOPLE[state.me].initial;
+  document.getElementById('me-avatar').style.background = `var(--${state.me})`;
+  document.getElementById('me-name').textContent = PEOPLE[state.me].name;
+  renderAll();
+}
+
+function showProfileSwitcher() {
+  document.getElementById('welcome').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+/* ===== TEMA ===== */
+function toggleTheme() {
+  state.theme = state.theme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  localStorage.setItem('casita_theme', state.theme);
+  updateThemeBtn();
+}
+
+function updateThemeBtn() {
+  document.getElementById('theme-sun').style.display = state.theme === 'light' ? '' : 'none';
+  document.getElementById('theme-moon').style.display = state.theme === 'dark' ? '' : 'none';
+}
+
+function toggleMute() {
+  state.muted = !state.muted;
+  localStorage.setItem('casita_muted', state.muted ? '1' : '0');
+  document.getElementById('sound-on').style.display = state.muted ? 'none' : '';
+  document.getElementById('sound-off').style.display = state.muted ? '' : 'none';
+  if (!state.muted) {
+    // Pequeño "ding" de confirmación al activar
+    playClaimSound();
+    toast('Sonido activado');
+  } else {
+    toast('Sonido silenciado');
+  }
+}
+
+function updateMuteBtn() {
+  document.getElementById('sound-on').style.display = state.muted ? 'none' : '';
+  document.getElementById('sound-off').style.display = state.muted ? '' : 'none';
+}
+
+/* ===== TABS ===== */
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === t));
+}
+
+/* ===== RENDERIZADO ===== */
+function renderAll() {
+  renderLiveStrip();
+  renderNow();
+  renderDaily();
+  renderSporadic();
+  renderDetails();
+  renderFamily();
+  renderHistory();
+  renderNotifs();
+  updateCounts();
+}
+
+/* ===== Recolecta todas las tareas tomadas (daily + sporadic) ===== */
+function getActiveTakes() {
+  const takes = [];
+  DAILY_TASKS.forEach(t => {
+    const e = state.daily[t.id];
+    if (e?.takenBy && !e.done) takes.push({ task: t, entry: e, kind: 'daily' });
+  });
+  SPORADIC_TASKS.forEach(t => {
+    const e = state.sporadic[t.id];
+    if (e?.takenBy && !e.done) takes.push({ task: t, entry: e, kind: 'sporadic' });
+  });
+  return takes;
+}
+
+/* ===== Live strip — banner en pestaña Hoy ===== */
+function renderLiveStrip() {
+  const el = document.getElementById('live-strip');
+  const takes = getActiveTakes();
+  if (!takes.length) {
+    el.innerHTML = '';
+    return;
+  }
+
+  let text;
+  if (takes.length === 1) {
+    const { task, entry } = takes[0];
+    const p = PEOPLE[entry.takenBy];
+    text = `<strong>${p.name}</strong> está en <em>"${task.name}"</em> · ${timeAgo(entry.takenAt)}`;
+  } else {
+    // Agrupar por persona
+    const byPerson = {};
+    takes.forEach(({ entry }) => {
+      byPerson[entry.takenBy] = (byPerson[entry.takenBy] || 0) + 1;
+    });
+    const parts = Object.entries(byPerson).map(([key, count]) =>
+      `<strong>${PEOPLE[key].name}</strong> (${count})`
+    );
+    text = `En este momento: ${parts.join(' · ')}`;
+  }
+
+  el.innerHTML = `
+    <div class="live-strip">
+      <span class="live-pulse"></span>
+      <span class="live-text">${text}</span>
+      <button class="live-go" onclick="switchTab('ahora')">VER →</button>
+    </div>
+  `;
+}
+
+/* ===== Panel completo "Ahora mismo" ===== */
+function renderNow() {
+  const el = document.getElementById('now-content');
+  const takes = getActiveTakes();
+
+  // Contador en la pestaña
+  const tabCount = document.getElementById('count-ahora');
+  if (takes.length > 0) {
+    tabCount.style.display = '';
+    tabCount.textContent = takes.length;
+  } else {
+    tabCount.style.display = 'none';
+  }
+
+  if (!takes.length) {
+    el.innerHTML = `
+      <div class="now-empty">
+        <div class="now-empty-icon">✿</div>
+        <div class="now-empty-text">Nadie tiene tareas tomadas</div>
+        <div class="now-empty-sub">Cuando alguien tome una tarea aparecerá aquí en vivo.</div>
+      </div>
+    `;
+    return;
+  }
+
+  // Agrupar por persona
+  const byPerson = {};
+  takes.forEach(item => {
+    if (!byPerson[item.entry.takenBy]) byPerson[item.entry.takenBy] = [];
+    byPerson[item.entry.takenBy].push(item);
+  });
+
+  let html = `<div class="now-grid">`;
+  Object.entries(byPerson).forEach(([who, items]) => {
+    const p = PEOPLE[who];
+    items.forEach(({ task, entry, kind }) => {
+      const isMe = who === state.me;
+      html += `
+        <div class="now-card" style="--p-color: var(--${who})">
+          <div class="now-card-head">
+            <div class="now-card-avatar" style="background: var(--${who})">${p.initial}</div>
+            <div>
+              <div class="now-card-who">${p.name}${isMe ? ' <span style="color:var(--muted);font-size:13px;font-style:italic">· tú</span>' : ''}</div>
+              <div class="now-card-status">En progreso</div>
+            </div>
+          </div>
+          <div class="now-card-task">${task.name}</div>
+          <div class="now-card-time">Tomada ${timeAgo(entry.takenAt)}</div>
+          <div class="now-card-actions">
+            ${isMe
+              ? `<button class="claim-btn primary" onclick="markDoneFromNow('${kind}','${task.id}', event)">¡Hecho!</button>
+                 <button class="claim-btn ghost" onclick="releaseFromNow('${kind}','${task.id}')">Soltar</button>`
+              : `<button class="claim-btn ghost" onclick="markDoneFromNow('${kind}','${task.id}', event)">Marcar hecho</button>`
+            }
+          </div>
+        </div>
+      `;
+    });
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+/* Acciones desde panel Ahora */
+function markDoneFromNow(kind, taskId, evt) {
+  const store = kind === 'daily' ? state.daily : state.sporadic;
+  const list = kind === 'daily' ? DAILY_TASKS : SPORADIC_TASKS;
+  const t = list.find(x => x.id === taskId);
+  if (t) markDone(t, store, kind, evt);
+}
+
+function releaseFromNow(kind, taskId) {
+  const store = kind === 'daily' ? state.daily : state.sporadic;
+  const list = kind === 'daily' ? DAILY_TASKS : SPORADIC_TASKS;
+  const t = list.find(x => x.id === taskId);
+  if (t) releaseTask(t, store, kind);
+}
+
+function renderDaily() {
+  const sections = { morning: 'daily-morning', noon: 'daily-noon', evening: 'daily-evening' };
+  for (const [sec, elId] of Object.entries(sections)) {
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    DAILY_TASKS.filter(t => t.section === sec).forEach(t => {
+      el.appendChild(buildTaskRow(t, state.daily, 'daily'));
+    });
+  }
+
+  const total = DAILY_TASKS.length;
+  const done = DAILY_TASKS.filter(t => state.daily[t.id]?.done).length;
+  const taken = DAILY_TASKS.filter(t => state.daily[t.id]?.takenBy && !state.daily[t.id]?.done).length;
+  const free = total - done - taken;
+  let sub;
+  if (done === total) {
+    sub = `✦ ¡Todo listo! Hoy la casita brilla.`;
+  } else {
+    const parts = [`${done} hechas`];
+    if (taken) parts.push(`${taken} en progreso`);
+    if (free) parts.push(`${free} libres`);
+    sub = parts.join(' · ');
+  }
+  document.getElementById('hoy-sub').textContent = sub;
+}
+
+function renderSporadic() {
+  const el = document.getElementById('esp-list');
+  el.innerHTML = '';
+  SPORADIC_TASKS.forEach(t => {
+    el.appendChild(buildTaskRow({...t, meta: t.when}, state.sporadic, 'sporadic'));
+  });
+}
+
+function buildTaskRow(t, store, kind) {
+  const row = document.createElement('div');
+  const entry = store[t.id] || {};
+  const status = entry.done ? 'done' : (entry.takenBy ? 'taken' : 'free');
+  row.className = 'task-row' + (status === 'done' ? ' done' : status === 'taken' ? ' taken' : '');
+
+  // ---- Círculo de check (izquierda) ----
+  const check = document.createElement('button');
+  check.className = 'check';
+  if (status === 'done') {
+    check.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    check.title = 'Desmarcar como hecha';
+    check.onclick = (e) => { e.stopPropagation(); unmarkDone(t, store, kind); };
+  } else if (status === 'taken') {
+    // Punto pulsante que indica "en progreso"
+    check.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';
+    check.title = `${PEOPLE[entry.takenBy].name} está en esta tarea`;
+    check.onclick = (e) => {
+      e.stopPropagation();
+      // Solo quien la tomó puede marcarla como hecha desde el círculo
+      if (entry.takenBy === state.me) {
+        markDone(t, store, kind, e);
+      } else {
+        toast(`${PEOPLE[entry.takenBy].name} está haciendo esta tarea`);
+      }
+    };
+  } else {
+    check.title = 'Tomar esta tarea';
+    check.onclick = (e) => { e.stopPropagation(); claimTask(t, store, kind, state.me); };
+  }
+
+  // ---- Texto central ----
+  const main = document.createElement('div');
+  const name = document.createElement('div');
+  name.className = 'task-name';
+  name.textContent = t.name;
+  const meta = document.createElement('div');
+  meta.className = 'task-meta';
+
+  if (status === 'done') {
+    const p = PEOPLE[entry.by];
+    meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}`;
+  } else if (status === 'taken') {
+    const p = PEOPLE[entry.takenBy];
+    meta.innerHTML = `<strong style="color:var(--gold)">${p.name}</strong> la tomó · ${timeAgo(entry.takenAt)}`;
+  } else {
+    meta.textContent = t.meta || '';
+  }
+
+  main.appendChild(name);
+  main.appendChild(meta);
+
+  // ---- Acciones (derecha) ----
+  const claim = document.createElement('div');
+  claim.className = 'task-claim';
+
+  if (status === 'done') {
+    const badge = document.createElement('span');
+    badge.className = 'who-badge';
+    badge.dataset.p = entry.by;
+    badge.innerHTML = `<span class="who-avatar-dot" data-p="${entry.by}"></span>${PEOPLE[entry.by].name}`;
+    claim.appendChild(badge);
+  } else if (status === 'taken') {
+    const info = document.createElement('div');
+    info.className = 'taken-info';
+
+    if (entry.takenBy === state.me) {
+      // Es mía: botón grande "¡Hecho!" + opción de soltar
+      const doneBtn = document.createElement('button');
+      doneBtn.className = 'claim-btn primary';
+      doneBtn.textContent = '¡Hecho!';
+      doneBtn.onclick = (e) => { e.stopPropagation(); markDone(t, store, kind, e); };
+
+      const releaseBtn = document.createElement('button');
+      releaseBtn.className = 'claim-btn ghost';
+      releaseBtn.textContent = 'soltar';
+      releaseBtn.onclick = (e) => { e.stopPropagation(); releaseTask(t, store, kind); };
+
+      info.appendChild(doneBtn);
+      info.appendChild(releaseBtn);
+    } else {
+      // La tomó alguien más: mostrar quién, y permitir marcar hecho si yo ayudo
+      const badge = document.createElement('span');
+      badge.className = 'who-badge';
+      badge.dataset.p = entry.takenBy;
+      badge.innerHTML = `<span class="who-avatar-dot" data-p="${entry.takenBy}"></span>${PEOPLE[entry.takenBy].name}`;
+      info.appendChild(badge);
+
+      const helpBtn = document.createElement('button');
+      helpBtn.className = 'claim-btn ghost';
+      helpBtn.textContent = 'marcar hecho';
+      helpBtn.onclick = (e) => { e.stopPropagation(); markDone(t, store, kind, e); };
+      info.appendChild(helpBtn);
+    }
+    claim.appendChild(info);
+  } else {
+    // Libre
+    const btn = document.createElement('button');
+    btn.className = 'claim-btn';
+    btn.textContent = 'Yo lo hago';
+    btn.onclick = (e) => { e.stopPropagation(); claimTask(t, store, kind, state.me); };
+    claim.appendChild(btn);
+  }
+
+  row.appendChild(check);
+  row.appendChild(main);
+  row.appendChild(claim);
+  return row;
+}
+
+function renderDetails() {
+  const el = document.getElementById('details-list');
+  el.innerHTML = '';
+  DETAILS.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'detail-item' + (state.details[d.id]?.done ? ' done' : '');
+    item.innerHTML = `
+      <div class="detail-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="detail-text">
+        <span class="detail-title">${d.title}</span>
+        <span class="detail-desc">${d.desc}</span>
+      </div>
+    `;
+    item.onclick = (e) => toggleDetail(d, e);
+    el.appendChild(item);
+  });
+}
+
+function renderFamily() {
+  const el = document.getElementById('family-grid');
+  el.innerHTML = '';
+  Object.entries(PEOPLE).forEach(([key, p]) => {
+    const today = Object.values(state.daily).filter(v => v.by === key && v.done).length
+                + Object.values(state.details).filter(v => v.by === key && v.done).length;
+    const total = state.scores[key] || 0;
+
+    const badges = [];
+    if (today >= 5) badges.push({ icon: '✦', label: 'Día estrella' });
+    if (today >= 3) badges.push({ icon: '✿', label: 'En racha' });
+    if (total >= 50) badges.push({ icon: '◈', label: 'Pilar de la casa' });
+    if (total >= 20) badges.push({ icon: '☼', label: 'Constante' });
+
+    const dones = { emm: 'El que organiza', jov: 'El que cocina', mar: 'La que cuida', lup: 'La que brilla' };
+
+    const card = document.createElement('div');
+    card.className = 'family-card';
+    card.dataset.p = key;
+    card.innerHTML = `
+      <div class="family-avatar">${p.initial}</div>
+      <div class="family-name">${p.name}</div>
+      <div class="family-don">${dones[key]}</div>
+      <div class="family-stats">
+        <div>
+          <div class="family-stat-num">${today}</div>
+          <div class="family-stat-label">Hoy</div>
+        </div>
+        <div>
+          <div class="family-stat-num">${total}</div>
+          <div class="family-stat-label">Total</div>
+        </div>
+      </div>
+      ${badges.length ? `<div class="family-badges">${badges.map(b => `<span class="badge-pill">${b.icon} ${b.label}</span>`).join('')}</div>` : ''}
+    `;
+    el.appendChild(card);
+  });
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '';
+  if (!state.history.length) {
+    el.innerHTML = '<div class="empty">Aún no hay actividad registrada.<br>Marca una tarea y aparecerá aquí.</div>';
+    return;
+  }
+  const recent = [...state.history].reverse().slice(0, 50);
+  recent.forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    const p = PEOPLE[h.by];
+    row.style.setProperty('--p-color', `var(--${h.by})`);
+    row.innerHTML = `
+      <span class="history-time">${timeAgo(h.ts)}</span>
+      <span class="history-text"><strong>${p.name}</strong> ${h.action} <em>${h.taskName}</em></span>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderNotifs() {
+  const pendingDaily = DAILY_TASKS.filter(t => !state.daily[t.id]?.done);
+  const free = pendingDaily.filter(t => !state.daily[t.id]?.takenBy);
+  const taken = pendingDaily.filter(t => state.daily[t.id]?.takenBy);
+
+  const bell = document.getElementById('bell-btn');
+  bell.classList.toggle('has-pending', free.length > 0);
+
+  const list = document.getElementById('notif-list');
+  list.innerHTML = '';
+  if (!pendingDaily.length) {
+    list.innerHTML = '<div class="notif-item">✦ Todas las tareas de hoy están listas.</div>';
+    return;
+  }
+
+  if (taken.length) {
+    const head = document.createElement('div');
+    head.style.cssText = 'font-family:Inter;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin:4px 0 8px';
+    head.textContent = 'En progreso';
+    list.appendChild(head);
+    taken.slice(0, 5).forEach(t => {
+      const entry = state.daily[t.id];
+      const item = document.createElement('div');
+      item.className = 'notif-item';
+      item.innerHTML = `<strong style="color:var(--gold)">${t.name}</strong><br>${PEOPLE[entry.takenBy].name} la está haciendo`;
+      list.appendChild(item);
+    });
+  }
+
+  if (free.length) {
+    const head = document.createElement('div');
+    head.style.cssText = 'font-family:Inter;font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--terra);margin:14px 0 8px';
+    head.textContent = 'Libres';
+    list.appendChild(head);
+    free.slice(0, 8).forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'notif-item';
+      item.innerHTML = `<strong>${t.name}</strong><br>${t.meta || ''}`;
+      list.appendChild(item);
+    });
+  }
+}
+
+function updateCounts() {
+  const dailyPending = DAILY_TASKS.filter(t => !state.daily[t.id]?.done).length;
+  const espPending = SPORADIC_TASKS.filter(t => !state.sporadic[t.id]?.done).length;
+  document.getElementById('count-hoy').textContent = dailyPending;
+  document.getElementById('count-esp').textContent = espPending;
+}
+
+/* ===== ACCIONES — Flujo de 3 estados: libre → tomada → hecha ===== */
+
+// 1. TOMAR una tarea libre
+function claimTask(t, store, kind, who) {
+  // Si alguien más ya la tomó, no permitir robarla a menos que sea yo confirmando
+  if (store[t.id]?.takenBy && store[t.id].takenBy !== who) {
+    toast(`${PEOPLE[store[t.id].takenBy].name} ya tomó esta tarea`);
+    return;
+  }
+  store[t.id] = { takenBy: who, takenAt: Date.now() };
+  state.history.push({ ts: Date.now(), by: who, taskName: t.name, action: 'tomó' });
+  playClaimSound();
+  toast(`✦ ${PEOPLE[who].name} tomó "${t.name}"`);
+  save();
+  renderAll();
+}
+
+// 2. SOLTAR una tarea (cancelar la toma)
+function releaseTask(t, store, kind) {
+  const prevBy = store[t.id]?.takenBy;
+  if (!prevBy) return;
+  delete store[t.id];
+  state.history.push({ ts: Date.now(), by: prevBy, taskName: t.name, action: 'soltó' });
+  toast(`Tarea liberada — alguien más puede tomarla`);
+  save();
+  renderAll();
+}
+
+// 3. MARCAR COMO HECHA (desde estado tomada)
+function markDone(t, store, kind, evt) {
+  const entry = store[t.id] || {};
+  // Quien la completa: si está tomada, mantener ese dueño; si no, el actual
+  const finisher = entry.takenBy || state.me;
+  store[t.id] = {
+    done: true,
+    by: finisher,
+    at: Date.now(),
+    takenBy: entry.takenBy,
+    takenAt: entry.takenAt
+  };
+  state.scores[finisher] = (state.scores[finisher] || 0) + 1;
+  state.history.push({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
+  playDoneSound();
+  if (evt) {
+    const rect = evt.currentTarget.getBoundingClientRect();
+    confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+  }
+  toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+  save();
+  renderAll();
+}
+
+// 4. DESMARCAR una tarea hecha (vuelve a libre)
+function unmarkDone(t, store, kind) {
+  const prevBy = store[t.id]?.by;
+  if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
+  delete store[t.id];
+  state.history.push({ ts: Date.now(), by: state.me, taskName: t.name, action: 'desmarcó' });
+  toast('Tarea desmarcada');
+  save();
+  renderAll();
+}
+
+function toggleDetail(d, evt) {
+  if (state.details[d.id]?.done) {
+    const prevBy = state.details[d.id].by;
+    if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
+    delete state.details[d.id];
+    state.history.push({ ts: Date.now(), by: state.me, taskName: d.title, action: 'desmarcó el detalle' });
+  } else {
+    state.details[d.id] = { done: true, by: state.me, at: Date.now() };
+    state.scores[state.me] = (state.scores[state.me] || 0) + 1;
+    state.history.push({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
+    playDoneSound();
+    if (evt) {
+      const rect = evt.currentTarget.getBoundingClientRect();
+      confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+    }
+    toast(`✿ ${d.title} ✓`);
+  }
+  save();
+  renderAll();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function toggleNotifs() {
+  document.getElementById('notif-panel').classList.toggle('open');
+}
+
+// Cerrar notificaciones al hacer click fuera
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notif-panel');
+  const bell = document.getElementById('bell-btn');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !bell.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+
+// Detectar cambio de día mientras la app está abierta
+setInterval(() => {
+  if (state.date !== todayKey()) {
+    state.daily = {};
+    state.details = {};
+    state.date = todayKey();
+    save();
+    renderAll();
+    document.getElementById('brand-date').textContent = formatDate();
+    toast('🌅 Nuevo día — tareas reiniciadas');
+  } else {
+    // Refrescar tiempos "hace X min" en panel Ahora y strip
+    renderLiveStrip();
+    renderNow();
+  }
+}, 60000);
+
+// Service worker — opcional, para uso offline
+if ('serviceWorker' in navigator) {
+  // Solo registrar si está disponible el archivo
+}
+
+init();
+</script>
+
+</body>
+</html>
