@@ -1,7 +1,7 @@
 {
-  "name": "Casita Madrigal",
+  "name": "Casita Corrales",
   "short_name": "Casita",
-  "description": "Planificador familiar de la Casita Madrigal",
+  "description": "Planificador familiar de la Casita Corrales",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f6ece0",
