@@ -84,6 +84,7 @@ html, body {
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
 /* Textura de papel orgánica */
@@ -509,6 +510,9 @@ body::before {
   font-weight: 400;
   color: var(--ink);
   line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .task-meta {
@@ -622,12 +626,14 @@ body::before {
   gap: 12px;
 }
 
+.section-label > .add-btn { order: 2; flex-shrink: 0; }
 .section-label::after {
   content: '';
   flex: 1;
   height: 1px;
   background: linear-gradient(to right, var(--terra-deep), transparent);
   opacity: 0.3;
+  order: 1;
 }
 
 /* === DETALLES — Lista delicada === */
@@ -682,7 +688,9 @@ body::before {
   font-size: 14px;
   font-weight: 500;
   color: var(--rose);
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 2px;
 }
 .detail-desc {
@@ -751,6 +759,48 @@ body::before {
   font-style: italic;
   color: var(--muted);
   margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+
+.family-don .don-text { min-width: 0; }
+.family-don .don-text:empty::before {
+  content: 'Sin subtítulo';
+  opacity: 0.5;
+}
+
+.don-edit {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.5;
+  transition: opacity 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+.don-edit:hover { color: var(--p-color); opacity: 1; }
+.don-edit svg { width: 13px; height: 13px; }
+
+.me-tag {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--p-color);
+  background: color-mix(in srgb, var(--p-color) 12%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
 }
 
 .family-stats {
@@ -1032,6 +1082,319 @@ body::before {
   margin-bottom: 32px;
 }
 
+/* === TABLÓN === */
+.add-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--terra) 50%, var(--line));
+  color: var(--terra);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s;
+}
+.add-btn:hover {
+  background: var(--terra);
+  color: var(--paper);
+  border-style: solid;
+  border-color: var(--terra);
+}
+
+.section-label .add-btn { margin-left: 12px; }
+
+/* AVISOS */
+.notice-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--rose);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.notice-card.taken { border-left-color: var(--gold); background: color-mix(in srgb, var(--gold) 5%, var(--paper)); }
+.notice-card.done { border-left-color: var(--leaf); background: color-mix(in srgb, var(--leaf-soft) 18%, var(--paper)); opacity: 0.75; }
+
+.notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+.notice-author {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.notice-author strong { color: var(--ink-soft); }
+.notice-delete {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 6px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.notice-delete:hover { color: var(--terra-deep); background: color-mix(in srgb, var(--terra) 10%, transparent); }
+
+.notice-text {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+.notice-card.done .notice-text {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--muted);
+}
+
+.notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* PROPUESTAS */
+.proposal-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.proposal-kind {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+.proposal-kind[data-kind="daily"]    { background: color-mix(in srgb, var(--terra) 12%, transparent); color: var(--terra); }
+.proposal-kind[data-kind="sporadic"] { background: color-mix(in srgb, var(--sky) 18%, transparent); color: var(--sky); }
+.proposal-kind[data-kind="detail"]   { background: color-mix(in srgb, var(--rose) 18%, transparent); color: var(--rose); }
+
+.proposal-name {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+.proposal-meta {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.proposal-author {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.proposal-author strong { color: var(--ink-soft); }
+
+.proposal-votes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.vote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--line-soft);
+  color: var(--muted);
+}
+.vote-chip.yes { background: color-mix(in srgb, var(--leaf) 18%, transparent); color: var(--leaf); }
+.vote-chip.no  { background: color-mix(in srgb, var(--terra) 15%, transparent); color: var(--terra-deep); }
+.vote-chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--p-color);
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.vote-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vote-btn.yes { color: var(--leaf); border-color: color-mix(in srgb, var(--leaf) 40%, var(--line)); }
+.vote-btn.yes:hover { background: var(--leaf); color: var(--paper); border-color: var(--leaf); }
+.vote-btn.no { color: var(--terra-deep); border-color: color-mix(in srgb, var(--terra) 35%, var(--line)); }
+.vote-btn.no:hover { background: var(--terra-deep); color: var(--paper); border-color: var(--terra-deep); }
+.vote-btn.active {
+  font-weight: 700;
+}
+.vote-btn.yes.active { background: var(--leaf); color: var(--paper); border-color: var(--leaf); }
+.vote-btn.no.active  { background: var(--terra-deep); color: var(--paper); border-color: var(--terra-deep); }
+
+.proposal-status {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* FORMULARIOS */
+.modal-form { max-width: 460px; }
+
+.form-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 14px 0 8px;
+}
+.form-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.form-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.form-input:focus { border-color: var(--terra); background: var(--paper); }
+.form-textarea { resize: vertical; min-height: 80px; font-family: 'Fraunces', serif; }
+
+.form-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.form-pill {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.form-pill:hover { border-color: var(--terra); color: var(--terra); }
+.form-pill.active {
+  background: var(--terra);
+  color: var(--paper);
+  border-color: var(--terra);
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.empty-soft {
+  text-align: center;
+  padding: 32px 20px;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* Botón pequeño de editar en tareas */
+.task-edit-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+.task-row:hover .task-edit-btn { opacity: 0.6; }
+.task-edit-btn:hover { color: var(--terra); opacity: 1 !important; }
+.task-edit-btn svg { width: 14px; height: 14px; }
+@media (hover: none) {
+  .task-edit-btn { opacity: 0.4; }
+}
+
 /* Empty states */
 .empty {
   text-align: center;
@@ -1259,6 +1622,128 @@ body::before {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* === PULL TO REFRESH === */
+.ptr-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 14px;
+  pointer-events: none;
+  transition: none;
+  width: 100%;
+  max-width: 320px;
+}
+
+.ptr-indicator.transitioning {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ptr-flower {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+  color: var(--terra);
+  transition: transform 0.2s;
+}
+
+.ptr-flower svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ptr-text {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+  background: var(--paper);
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+/* Estado: jalando (rotación según distancia) */
+.ptr-indicator.pulling .ptr-flower {
+  transform: rotate(var(--ptr-rotate, 0deg));
+}
+
+/* Estado: listo para soltar */
+.ptr-indicator.ready .ptr-flower {
+  background: var(--terra);
+  color: var(--paper);
+  border-color: var(--terra);
+  transform: scale(1.1);
+}
+
+/* Estado: refrescando */
+.ptr-indicator.refreshing .ptr-flower {
+  background: var(--terra);
+  color: var(--paper);
+  border-color: var(--terra);
+  animation: ptr-spin 1s linear infinite;
+}
+
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pequeño "destello" al completar */
+.ptr-indicator.completing .ptr-flower {
+  background: var(--leaf);
+  color: var(--paper);
+  border-color: var(--leaf);
+  animation: ptr-pop 0.5s ease;
+}
+
+@keyframes ptr-pop {
+  0% { transform: scale(1.1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Indicador de "refrescando" al hacer click manual también */
+.refreshing-banner {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  z-index: 40;
+  box-shadow: var(--shadow);
+}
+.refreshing-banner.show { display: inline-flex; }
+.refreshing-banner-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--terra);
+  border-radius: 50%;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
 </style>
 </head>
 <body>
@@ -1275,19 +1760,19 @@ body::before {
   <div class="profile-grid">
     <button class="profile-btn" data-p="emm" onclick="selectProfile('emm')">
       Emmanuel
-      <span class="profile-don">El gobernador de Guasave</span>
+      <span class="profile-don" id="welcome-sub-emm">El que organiza</span>
     </button>
     <button class="profile-btn" data-p="jov" onclick="selectProfile('jov')">
       Jovanny
-      <span class="profile-don">El support ADC</span>
+      <span class="profile-don" id="welcome-sub-jov">El que cocina</span>
     </button>
     <button class="profile-btn" data-p="mar" onclick="selectProfile('mar')">
       Mariel
-      <span class="profile-don">La mamá del pollito</span>
+      <span class="profile-don" id="welcome-sub-mar">La que cuida</span>
     </button>
     <button class="profile-btn" data-p="lup" onclick="selectProfile('lup')">
       Lupita
-      <span class="profile-don">El wiwichu más wiwichu</span>
+      <span class="profile-don" id="welcome-sub-lup">La que brilla</span>
     </button>
   </div>
 </div>
@@ -1296,6 +1781,22 @@ body::before {
      APP PRINCIPAL
      ================================================= -->
 <div class="app hidden" id="app">
+
+  <!-- Indicador de Pull-to-Refresh -->
+  <div class="ptr-indicator" id="ptr-indicator">
+    <div class="ptr-flower">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+    </div>
+    <div class="ptr-text" id="ptr-text">Desliza para actualizar</div>
+  </div>
+
+  <!-- Banner de "refrescando" para refresh manual -->
+  <div class="refreshing-banner" id="refreshing-banner">
+    <span class="refreshing-banner-dot"></span>
+    <span>Actualizando…</span>
+  </div>
 
   <header class="header">
     <div class="header-row">
@@ -1307,6 +1808,11 @@ body::before {
         <button class="me-chip" onclick="showProfileSwitcher()" title="Cambiar perfil">
           <span class="me-chip-avatar" id="me-avatar"></span>
           <span id="me-name"></span>
+        </button>
+        <button class="icon-btn" onclick="manualRefresh()" title="Actualizar" id="refresh-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
         </button>
         <button class="icon-btn bell-wrap" id="bell-btn" onclick="toggleNotifs()" title="Notificaciones">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1344,6 +1850,7 @@ body::before {
     <div class="tabs-inner">
       <button class="tab active" data-tab="hoy" onclick="switchTab('hoy')">Hoy<span class="tab-count" id="count-hoy">0</span></button>
       <button class="tab" data-tab="ahora" onclick="switchTab('ahora')">Ahora mismo<span class="tab-count" id="count-ahora" style="display:none">0</span></button>
+      <button class="tab" data-tab="tablon" onclick="switchTab('tablon')">Tablón<span class="tab-count" id="count-tablon" style="display:none">0</span></button>
       <button class="tab" data-tab="esporadicas" onclick="switchTab('esporadicas')">Esporádicas<span class="tab-count" id="count-esp">0</span></button>
       <button class="tab" data-tab="detalles" onclick="switchTab('detalles')">Detalles que cuidan</button>
       <button class="tab" data-tab="familia" onclick="switchTab('familia')">Familia</button>
@@ -1385,6 +1892,34 @@ body::before {
         </div>
       </div>
       <div id="now-content"></div>
+    </section>
+
+    <!-- TABLÓN -->
+    <section class="panel" data-panel="tablon">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">El <em>tablón</em></h1>
+          <p class="panel-sub">Avisos, recados y nuevas ideas para la casa</p>
+        </div>
+      </div>
+
+      <!-- AVISOS -->
+      <div class="section-block">
+        <div class="section-label">
+          Avisos
+          <button class="add-btn" onclick="openNoticeForm()">+ nuevo aviso</button>
+        </div>
+        <div id="notices-list"></div>
+      </div>
+
+      <!-- PROPUESTAS -->
+      <div class="section-block">
+        <div class="section-label">
+          Propuestas a votación
+          <button class="add-btn" onclick="openProposalForm()">+ proponer tarea</button>
+        </div>
+        <div id="proposals-list"></div>
+      </div>
     </section>
 
     <!-- ESPORÁDICAS -->
@@ -1447,6 +1982,85 @@ body::before {
 </div>
 
 <!-- =================================================
+     MODAL — Nueva propuesta
+     ================================================= -->
+<div class="modal-backdrop" id="modal-proposal">
+  <div class="modal modal-form">
+    <div class="modal-title" id="proposal-modal-title">Proponer una tarea nueva</div>
+    <div class="modal-sub">Si todos votan que les late, se agrega al flujo de la casa.</div>
+
+    <label class="form-label">¿Qué tipo de tarea es?</label>
+    <div class="form-pills" id="proposal-kind-pills">
+      <button type="button" class="form-pill active" data-val="daily">Diaria</button>
+      <button type="button" class="form-pill" data-val="sporadic">Esporádica</button>
+      <button type="button" class="form-pill" data-val="detail">Detalle que cuida</button>
+    </div>
+
+    <label class="form-label" id="proposal-name-label">Nombre de la tarea</label>
+    <input type="text" class="form-input" id="proposal-name" placeholder="Ej: Sacar la basura orgánica" maxlength="60" />
+
+    <label class="form-label" id="proposal-meta-label">Detalle o frecuencia <span class="form-hint">(opcional)</span></label>
+    <input type="text" class="form-input" id="proposal-meta" placeholder="" maxlength="80" />
+
+    <div id="proposal-section-row" style="display:none">
+      <label class="form-label">¿En qué momento del día?</label>
+      <div class="form-pills" id="proposal-section-pills">
+        <button type="button" class="form-pill active" data-val="morning">Mañana</button>
+        <button type="button" class="form-pill" data-val="noon">Mediodía</button>
+        <button type="button" class="form-pill" data-val="evening">Tarde/Noche</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="claim-btn primary" onclick="submitProposal()">Enviar a votación</button>
+      <button class="modal-cancel" onclick="closeProposalForm()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
+     MODAL — Nuevo aviso
+     ================================================= -->
+<div class="modal-backdrop" id="modal-notice">
+  <div class="modal modal-form">
+    <div class="modal-title">Nuevo aviso para la casa</div>
+    <div class="modal-sub">Algo que toda la familia debe saber o atender.</div>
+
+    <label class="form-label">El aviso</label>
+    <textarea class="form-input form-textarea" id="notice-text" placeholder="Ej: Llegó el recibo del agua y vence el viernes" maxlength="200"></textarea>
+
+    <div class="modal-actions">
+      <button class="claim-btn primary" onclick="submitNotice()">Publicar aviso</button>
+      <button class="modal-cancel" onclick="closeNoticeForm()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
+     MODAL — Editar tarea existente
+     ================================================= -->
+<div class="modal-backdrop" id="modal-edit">
+  <div class="modal modal-form">
+    <div class="modal-title">Editar tarea</div>
+    <div class="modal-sub">Cambia el nombre o el detalle. Si la quitas, deja de aparecer.</div>
+
+    <label class="form-label">Nombre</label>
+    <input type="text" class="form-input" id="edit-name" maxlength="60" />
+
+    <label class="form-label">Detalle <span class="form-hint">(opcional)</span></label>
+    <input type="text" class="form-input" id="edit-meta" maxlength="80" />
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="claim-btn ghost" style="color:var(--terra-deep)" onclick="confirmDeleteTask()">Eliminar</button>
+      <div style="display:flex;gap:8px">
+        <button class="claim-btn primary" onclick="saveEditTask()">Guardar</button>
+        <button class="modal-cancel" onclick="closeEditForm()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
      NOTIFICACIONES
      ================================================= -->
 <div class="notif-panel" id="notif-panel">
@@ -1465,7 +2079,7 @@ body::before {
 
 <script>
 /* ===================================================================
-   CASITA MADRIGAL — Planificador familiar
+   CASITA CORRALES — Planificador familiar
    Funciona sin Firebase (modo local). Si se configura, sincroniza en
    tiempo real entre todos los dispositivos.
    =================================================================== */
@@ -1485,7 +2099,7 @@ const FIREBASE_CONFIG =  {
   messagingSenderId: "681740870700",
   appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
-  
+
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm' },
@@ -1494,7 +2108,7 @@ const PEOPLE = {
   lup: { name: 'Lupita',    initial: 'L', color: 'lup' }
 };
 
-const DAILY_TASKS = [
+const SEED_DAILY = [
   { id: 'd01', name: 'Hacer desayuno', meta: 'Empezar el día bien', section: 'morning' },
   { id: 'd02', name: 'Lavar losa del desayuno', meta: 'Después del desayuno', section: 'morning' },
   { id: 'd03', name: 'Limpiar cocina (Mañana)', meta: 'Dejar lista para el día', section: 'morning' },
@@ -1508,21 +2122,21 @@ const DAILY_TASKS = [
   { id: 'd11', name: 'Limpiar cocina (Noche)', meta: 'Dejarla lista para mañana', section: 'evening' }
 ];
 
-const SPORADIC_TASKS = [
-  { id: 's01', name: 'Regar las flores', when: '2× semana' },
-  { id: 's02', name: 'Barrer frente de la casa', when: 'Semanal' },
-  { id: 's03', name: 'Aspirar las escaleras', when: 'Semanal' },
-  { id: 's04', name: 'Ventanas planta baja', when: 'Mensual' },
-  { id: 's05', name: 'Lavamanos y espejo', when: 'Semanal' },
-  { id: 's06', name: 'Limpiar el refrigerador', when: 'Quincenal' },
-  { id: 's07', name: 'Limpiar el baño', when: 'Semanal' },
-  { id: 's08', name: 'Lavar el patio', when: 'Mensual' },
-  { id: 's09', name: 'Baño de Nana', when: 'Quincenal' },
-  { id: 's10', name: 'Bolsas de proteínas', when: 'Quincenal' },
-  { id: 's11', name: 'Alacena y refrigerador', when: 'Mensual' }
+const SEED_SPORADIC = [
+  { id: 's01', name: 'Regar las flores', meta: '2× semana' },
+  { id: 's02', name: 'Barrer frente de la casa', meta: 'Semanal' },
+  { id: 's03', name: 'Aspirar las escaleras', meta: 'Semanal' },
+  { id: 's04', name: 'Ventanas planta baja', meta: 'Mensual' },
+  { id: 's05', name: 'Lavamanos y espejo', meta: 'Semanal' },
+  { id: 's06', name: 'Limpiar el refrigerador', meta: 'Quincenal' },
+  { id: 's07', name: 'Limpiar el baño', meta: 'Semanal' },
+  { id: 's08', name: 'Lavar el patio', meta: 'Mensual' },
+  { id: 's09', name: 'Baño de Nana', meta: 'Quincenal' },
+  { id: 's10', name: 'Bolsas de proteínas', meta: 'Quincenal' },
+  { id: 's11', name: 'Alacena y refrigerador', meta: 'Mensual' }
 ];
 
-const DETAILS = [
+const SEED_DETAILS = [
   { id: 'x01', title: 'Agua siempre lista', desc: 'Llenar jarra si garrafón pesa.' },
   { id: 'x02', title: 'Cierre de cocina', desc: 'Sin bolsas de basura por la noche.' },
   { id: 'x03', title: 'Control de basura', desc: 'Si se llena en el día, sacarla.' },
@@ -1536,18 +2150,61 @@ const DETAILS = [
   { id: 'x11', title: 'Lavaplatos seco', desc: 'Dejar el área limpia y sin humedad.' }
 ];
 
+// Estas variables se llenan desde state al cargar — ya no son fijas
+let DAILY_TASKS = [];
+let SPORADIC_TASKS = [];
+let DETAILS = [];
+
 /* ===== ESTADO ===== */
 let state = {
   me: null,                      // perfil actual
   theme: 'light',
   muted: false,                  // sonidos on/off
   date: todayKey(),              // YYYY-MM-DD
+  // CATÁLOGOS — listas de tareas (modificables)
+  catalogDaily: null,            // se inicializa con SEED_DAILY si es null
+  catalogSporadic: null,
+  catalogDetails: null,
+  // ESTADO DEL DÍA
   daily: {},                     // { taskId: { done, by, at, takenBy, takenAt } }
   sporadic: {},                  // { taskId: { ... } }
   details: {},                   // { detailId: { done, by, at } }
   history: [],                   // [{ ts, by, taskName, action }]
-  scores: { emm: 0, jov: 0, mar: 0, lup: 0 } // total tareas históricas
+  scores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // total tareas históricas
+  // SUBTÍTULOS personalizables por cada miembro
+  subtitles: {
+    emm: 'El que organiza',
+    jov: 'El que cocina',
+    mar: 'La que cuida',
+    lup: 'La que brilla'
+  },
+  // TABLÓN
+  proposals: {},                 // { id: { kind, name, meta/desc, section?, proposedBy, proposedAt, votes: {emm:'yes'|'no', ...} } }
+  notices: {}                    // { id: { text, createdBy, createdAt, takenBy?, takenAt?, done?, doneBy?, doneAt? } }
 };
+
+function ensureCatalogs() {
+  if (!state.catalogDaily)    state.catalogDaily    = JSON.parse(JSON.stringify(SEED_DAILY));
+  if (!state.catalogSporadic) state.catalogSporadic = JSON.parse(JSON.stringify(SEED_SPORADIC));
+  if (!state.catalogDetails)  state.catalogDetails  = JSON.parse(JSON.stringify(SEED_DETAILS));
+  DAILY_TASKS    = state.catalogDaily;
+  SPORADIC_TASKS = state.catalogSporadic;
+  DETAILS        = state.catalogDetails;
+  if (!state.proposals) state.proposals = {};
+  if (!state.notices) state.notices = {};
+  if (!state.subtitles) {
+    state.subtitles = {
+      emm: 'El que organiza',
+      jov: 'El que cocina',
+      mar: 'La que cuida',
+      lup: 'La que brilla'
+    };
+  }
+  // Asegurar que cada persona tenga subtítulo (por si se añaden personas)
+  Object.keys(PEOPLE).forEach(k => {
+    if (!state.subtitles[k]) state.subtitles[k] = '';
+  });
+}
 
 let useFirebase = false;
 let db = null;
@@ -1684,11 +2341,17 @@ function save() {
   if (useFirebase && db) {
     db.ref('casita').set({
       date: state.date,
+      catalogDaily: state.catalogDaily,
+      catalogSporadic: state.catalogSporadic,
+      catalogDetails: state.catalogDetails,
       daily: state.daily,
       sporadic: state.sporadic,
       details: state.details,
       history: state.history.slice(-200),
-      scores: state.scores
+      scores: state.scores,
+      subtitles: state.subtitles,
+      proposals: state.proposals,
+      notices: state.notices
     }).catch(e => console.warn('Firebase save error', e));
   }
 }
@@ -1706,6 +2369,8 @@ function load() {
     if (savedTheme) state.theme = savedTheme;
     state.muted = localStorage.getItem('casita_muted') === '1';
   } catch(e) { console.warn('load error', e); }
+
+  ensureCatalogs();
 
   // Reset diario automático: si la fecha guardada ≠ hoy, resetea diarias
   if (state.date !== todayKey()) {
@@ -1743,11 +2408,18 @@ async function initFirebase() {
         state.date = todayKey();
         save();
       } else {
+        if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
+        if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
+        if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
         state.daily = data.daily || {};
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
         state.history = data.history || [];
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        if (data.subtitles) state.subtitles = data.subtitles;
+        state.proposals = data.proposals || {};
+        state.notices = data.notices || {};
+        ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
       }
       renderAll();
     });
@@ -1777,10 +2449,235 @@ function init() {
   if (state.me) {
     showApp();
   } else {
+    refreshWelcomeSubtitles();
     document.getElementById('welcome').classList.remove('hidden');
   }
 
   initFirebase();
+  initPullToRefresh();
+}
+
+/* ===================================================================
+   PULL TO REFRESH — desliza hacia abajo para actualizar
+   =================================================================== */
+
+const PTR_THRESHOLD = 70;       // distancia para activar el refresh
+const PTR_MAX = 140;            // distancia máxima visible (resistance)
+
+let ptrState = {
+  startY: 0,
+  currentY: 0,
+  pulling: false,
+  refreshing: false
+};
+
+function initPullToRefresh() {
+  // Usar passive: false en touchmove para poder hacer preventDefault
+  // cuando estemos pulling (para que el scroll no interfiera)
+  document.addEventListener('touchstart', onPtrStart, { passive: true });
+  document.addEventListener('touchmove', onPtrMove, { passive: false });
+  document.addEventListener('touchend', onPtrEnd, { passive: true });
+  document.addEventListener('touchcancel', onPtrEnd, { passive: true });
+}
+
+function onPtrStart(e) {
+  // Solo si estamos en el tope de la página, no refrescando, y la app visible
+  if (window.scrollY > 0) return;
+  if (ptrState.refreshing) return;
+  if (document.getElementById('app').classList.contains('hidden')) return;
+  // No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
+  const target = e.target;
+  if (target.closest('.modal-backdrop.open')) return;
+  if (target.closest('.notif-panel.open')) return;
+  // No iniciar si el toque empezó en un input/textarea/button
+  if (target.matches('input, textarea, select, button')) return;
+
+  ptrState.startY = e.touches[0].clientY;
+  ptrState.currentY = ptrState.startY;
+  ptrState.pulling = false;
+}
+
+function onPtrMove(e) {
+  if (ptrState.refreshing) return;
+  if (!ptrState.startY) return;
+  if (window.scrollY > 0) {
+    // Si el usuario ya scrolleó hacia abajo, cancelar
+    ptrState.startY = 0;
+    return;
+  }
+
+  ptrState.currentY = e.touches[0].clientY;
+  const delta = ptrState.currentY - ptrState.startY;
+
+  if (delta <= 0) {
+    // Movió hacia arriba — no es pull-down
+    if (ptrState.pulling) {
+      hidePtrIndicator();
+      ptrState.pulling = false;
+    }
+    return;
+  }
+
+  if (!ptrState.pulling) {
+    ptrState.pulling = true;
+  }
+
+  // Aplicar resistencia: la distancia mostrada es menor que la real
+  const resisted = Math.min(PTR_MAX, delta * 0.55);
+
+  // Prevenir el bounce del navegador / scroll superior
+  if (delta > 5) {
+    e.preventDefault();
+  }
+
+  showPtrIndicator(resisted);
+}
+
+function onPtrEnd() {
+  if (ptrState.refreshing) {
+    ptrState.startY = 0;
+    return;
+  }
+  if (!ptrState.pulling) {
+    ptrState.startY = 0;
+    return;
+  }
+  const delta = ptrState.currentY - ptrState.startY;
+  const resisted = Math.min(PTR_MAX, delta * 0.55);
+
+  if (resisted >= PTR_THRESHOLD) {
+    triggerRefresh();
+  } else {
+    hidePtrIndicator();
+  }
+  ptrState.startY = 0;
+  ptrState.pulling = false;
+}
+
+function showPtrIndicator(distance) {
+  const ind = document.getElementById('ptr-indicator');
+  ind.classList.remove('transitioning');
+  // La flor aparece y baja con la distancia. Translate negativo = arriba.
+  // Queremos que en distance=0 esté oculto (translate -100%), y en distance=THRESHOLD esté visible justo abajo del top
+  const visible = Math.min(distance, PTR_MAX);
+  ind.style.transform = `translateX(-50%) translateY(${visible - 80}px)`;
+  // Rotación de la flor proporcional al pull
+  const rotation = (visible / PTR_THRESHOLD) * 180;
+  ind.style.setProperty('--ptr-rotate', rotation + 'deg');
+
+  ind.classList.add('pulling');
+  ind.classList.toggle('ready', visible >= PTR_THRESHOLD);
+
+  const text = document.getElementById('ptr-text');
+  text.textContent = visible >= PTR_THRESHOLD ? 'Suelta para actualizar' : 'Desliza para actualizar';
+}
+
+function hidePtrIndicator() {
+  const ind = document.getElementById('ptr-indicator');
+  ind.classList.add('transitioning');
+  ind.classList.remove('pulling', 'ready', 'refreshing', 'completing');
+  ind.style.transform = 'translateX(-50%) translateY(-100%)';
+}
+
+async function triggerRefresh() {
+  if (ptrState.refreshing) return;
+  ptrState.refreshing = true;
+
+  const ind = document.getElementById('ptr-indicator');
+  ind.classList.add('transitioning');
+  ind.classList.remove('pulling', 'ready');
+  ind.classList.add('refreshing');
+  ind.style.transform = 'translateX(-50%) translateY(10px)';
+  document.getElementById('ptr-text').textContent = 'Actualizando…';
+
+  // Pequeño sonido sutil
+  playClaimSound();
+
+  // Vibración táctil si está disponible (solo móvil)
+  if (navigator.vibrate) {
+    try { navigator.vibrate(15); } catch(e) {}
+  }
+
+  await performRefresh();
+
+  // Estado de "completado" brevemente
+  ind.classList.remove('refreshing');
+  ind.classList.add('completing');
+  document.getElementById('ptr-text').textContent = '✦ Listo';
+
+  setTimeout(() => {
+    hidePtrIndicator();
+    ptrState.refreshing = false;
+  }, 600);
+}
+
+/* Refresh manual desde el botón del header */
+async function manualRefresh() {
+  if (ptrState.refreshing) return;
+  ptrState.refreshing = true;
+
+  const btn = document.getElementById('refresh-btn');
+  const banner = document.getElementById('refreshing-banner');
+  btn.style.transition = 'transform 0.8s linear';
+  btn.style.transform = 'rotate(360deg)';
+  banner.classList.add('show');
+
+  playClaimSound();
+  await performRefresh();
+
+  banner.classList.remove('show');
+  setTimeout(() => {
+    btn.style.transition = 'none';
+    btn.style.transform = 'rotate(0deg)';
+    ptrState.refreshing = false;
+  }, 100);
+  toast('✦ Actualizado');
+}
+
+async function performRefresh() {
+  // Tiempo mínimo de animación para que se vea
+  const minTime = new Promise(res => setTimeout(res, 600));
+
+  if (useFirebase && db) {
+    // Re-leer datos de Firebase (force fetch)
+    try {
+      const snap = await db.ref('casita').once('value');
+      const data = snap.val();
+      if (data) {
+        if (data.date && data.date !== todayKey()) {
+          state.daily = {};
+          state.details = {};
+          state.date = todayKey();
+        } else {
+          if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
+          if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
+          if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
+          state.daily = data.daily || {};
+          state.sporadic = data.sporadic || {};
+          state.details = data.details || {};
+          state.history = data.history || [];
+          state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+          if (data.subtitles) state.subtitles = data.subtitles;
+          state.proposals = data.proposals || {};
+          state.notices = data.notices || {};
+          ensureCatalogs();
+        }
+        save();
+      }
+    } catch(e) {
+      console.warn('Refresh error:', e);
+      toast('No se pudo actualizar — revisa tu conexión');
+    }
+  } else {
+    // Modo local: recargar desde localStorage (por si otra pestaña cambió algo)
+    load();
+  }
+
+  // Refrescar la fecha por si cambió el día
+  document.getElementById('brand-date').textContent = formatDate();
+
+  renderAll();
+  await minTime;
 }
 
 function selectProfile(p) {
@@ -1798,7 +2695,15 @@ function showApp() {
   renderAll();
 }
 
+function refreshWelcomeSubtitles() {
+  Object.keys(PEOPLE).forEach(k => {
+    const el = document.getElementById('welcome-sub-' + k);
+    if (el && state.subtitles?.[k]) el.textContent = state.subtitles[k];
+  });
+}
+
 function showProfileSwitcher() {
+  refreshWelcomeSubtitles();
   document.getElementById('welcome').classList.remove('hidden');
   document.getElementById('app').classList.add('hidden');
 }
@@ -1848,6 +2753,7 @@ function renderAll() {
   renderDaily();
   renderSporadic();
   renderDetails();
+  renderTablon();
   renderFamily();
   renderHistory();
   renderNotifs();
@@ -2051,6 +2957,13 @@ function buildTaskRow(t, store, kind) {
   const name = document.createElement('div');
   name.className = 'task-name';
   name.textContent = t.name;
+  // Botón de editar (aparece al hover)
+  const editBtn = document.createElement('button');
+  editBtn.className = 'task-edit-btn';
+  editBtn.title = 'Editar tarea';
+  editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  editBtn.onclick = (e) => { e.stopPropagation(); openEditTask(kind, t.id); };
+  name.appendChild(editBtn);
   const meta = document.createElement('div');
   meta.className = 'task-meta';
 
@@ -2136,8 +3049,12 @@ function renderDetails() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div class="detail-text">
-        <span class="detail-title">${d.title}</span>
-        <span class="detail-desc">${d.desc}</span>
+        <span class="detail-title">${escapeHtml(d.title)}
+          <button class="task-edit-btn" onclick="event.stopPropagation(); openEditTask('detail','${d.id}')" title="Editar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </span>
+        <span class="detail-desc">${escapeHtml(d.desc || '')}</span>
       </div>
     `;
     item.onclick = (e) => toggleDetail(d, e);
@@ -2159,15 +3076,21 @@ function renderFamily() {
     if (total >= 50) badges.push({ icon: '◈', label: 'Pilar de la casa' });
     if (total >= 20) badges.push({ icon: '☼', label: 'Constante' });
 
-    const dones = { emm: 'El gobernador de Guasave', jov: 'El support ADC', mar: 'La mamá del pollito', lup: 'El wiwichu más wiwichu' };
+    const subtitle = state.subtitles?.[key] || '';
+    const isMe = key === state.me;
 
     const card = document.createElement('div');
     card.className = 'family-card';
     card.dataset.p = key;
     card.innerHTML = `
       <div class="family-avatar">${p.initial}</div>
-      <div class="family-name">${p.name}</div>
-      <div class="family-don">${dones[key]}</div>
+      <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}</div>
+      <div class="family-don" id="don-${key}">
+        <span class="don-text">${escapeHtml(subtitle)}</span>
+        ${isMe ? `<button class="don-edit" onclick="editMySubtitle()" title="Cambiar mi subtítulo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>` : ''}
+      </div>
       <div class="family-stats">
         <div>
           <div class="family-stat-num">${today}</div>
@@ -2182,6 +3105,19 @@ function renderFamily() {
     `;
     el.appendChild(card);
   });
+}
+
+/* Editar mi propio subtítulo (solo el del perfil activo) */
+function editMySubtitle() {
+  const current = state.subtitles?.[state.me] || '';
+  const newVal = prompt('Tu subtítulo (cómo brillas en la casa):', current);
+  if (newVal === null) return; // canceló
+  const trimmed = newVal.trim().slice(0, 40);
+  if (!state.subtitles) state.subtitles = {};
+  state.subtitles[state.me] = trimmed;
+  save();
+  renderAll();
+  toast('✦ Subtítulo actualizado');
 }
 
 function renderHistory() {
@@ -2253,6 +3189,504 @@ function updateCounts() {
   const espPending = SPORADIC_TASKS.filter(t => !state.sporadic[t.id]?.done).length;
   document.getElementById('count-hoy').textContent = dailyPending;
   document.getElementById('count-esp').textContent = espPending;
+
+  // Contador del tablón: propuestas donde yo aún no he votado + avisos activos
+  const pendingProposals = Object.values(state.proposals || {}).filter(p => !p.votes?.[state.me]).length;
+  const activeNotices = Object.values(state.notices || {}).filter(n => !n.done).length;
+  const tablonCount = pendingProposals + activeNotices;
+  const tablonEl = document.getElementById('count-tablon');
+  if (tablonCount > 0) {
+    tablonEl.style.display = '';
+    tablonEl.textContent = tablonCount;
+  } else {
+    tablonEl.style.display = 'none';
+  }
+}
+
+/* =====================================================================
+   TABLÓN — Propuestas y avisos
+   ===================================================================== */
+
+function uid(prefix) {
+  return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+/* --- AVISOS --- */
+
+function openNoticeForm() {
+  document.getElementById('notice-text').value = '';
+  document.getElementById('modal-notice').classList.add('open');
+  setTimeout(() => document.getElementById('notice-text').focus(), 100);
+}
+
+function closeNoticeForm() {
+  document.getElementById('modal-notice').classList.remove('open');
+}
+
+function submitNotice() {
+  const text = document.getElementById('notice-text').value.trim();
+  if (!text) { toast('Escribe el aviso'); return; }
+  const id = uid('n');
+  state.notices[id] = {
+    text,
+    createdBy: state.me,
+    createdAt: Date.now()
+  };
+  state.history.push({ ts: Date.now(), by: state.me, taskName: text.slice(0, 40), action: 'publicó un aviso' });
+  closeNoticeForm();
+  toast('✦ Aviso publicado');
+  save();
+  renderAll();
+}
+
+function takeNotice(id) {
+  const n = state.notices[id];
+  if (!n) return;
+  if (n.takenBy && n.takenBy !== state.me) {
+    toast(`${PEOPLE[n.takenBy].name} ya tomó este aviso`);
+    return;
+  }
+  n.takenBy = state.me;
+  n.takenAt = Date.now();
+  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'tomó el aviso' });
+  playClaimSound();
+  toast(`✦ Tomaste el aviso`);
+  save();
+  renderAll();
+}
+
+function releaseNotice(id) {
+  const n = state.notices[id];
+  if (!n) return;
+  delete n.takenBy;
+  delete n.takenAt;
+  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'soltó el aviso' });
+  toast('Aviso liberado');
+  save();
+  renderAll();
+}
+
+function doneNotice(id, evt) {
+  const n = state.notices[id];
+  if (!n) return;
+  const finisher = n.takenBy || state.me;
+  n.done = true;
+  n.doneBy = finisher;
+  n.doneAt = Date.now();
+  state.scores[finisher] = (state.scores[finisher] || 0) + 1;
+  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
+  playDoneSound();
+  if (evt) {
+    const rect = evt.currentTarget.getBoundingClientRect();
+    confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+  }
+  toast(`✦ ¡Aviso atendido!`);
+  save();
+  renderAll();
+}
+
+function deleteNotice(id) {
+  const n = state.notices[id];
+  if (!n) return;
+  // Solo quien lo creó o cualquiera si ya está hecho
+  if (n.createdBy !== state.me && !n.done) {
+    if (!confirm('Este aviso lo creó ' + PEOPLE[n.createdBy].name + '. ¿Eliminarlo de todas formas?')) return;
+  }
+  delete state.notices[id];
+  save();
+  renderAll();
+  toast('Aviso eliminado');
+}
+
+/* --- PROPUESTAS --- */
+
+let proposalKind = 'daily';
+let proposalSection = 'morning';
+
+function openProposalForm() {
+  document.getElementById('proposal-name').value = '';
+  document.getElementById('proposal-meta').value = '';
+  proposalKind = 'daily';
+  proposalSection = 'morning';
+  updateProposalForm();
+  document.getElementById('modal-proposal').classList.add('open');
+  setTimeout(() => document.getElementById('proposal-name').focus(), 100);
+}
+
+function closeProposalForm() {
+  document.getElementById('modal-proposal').classList.remove('open');
+}
+
+function updateProposalForm() {
+  document.querySelectorAll('#proposal-kind-pills .form-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === proposalKind);
+  });
+  document.querySelectorAll('#proposal-section-pills .form-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === proposalSection);
+  });
+  // Mostrar/ocultar selector de sección (solo aplica a diarias)
+  document.getElementById('proposal-section-row').style.display = proposalKind === 'daily' ? '' : 'none';
+  // Ajustar placeholders y labels según tipo
+  const metaInput = document.getElementById('proposal-meta');
+  const nameLabel = document.getElementById('proposal-name-label');
+  const metaLabel = document.getElementById('proposal-meta-label');
+  if (proposalKind === 'daily') {
+    nameLabel.textContent = 'Nombre de la tarea';
+    metaLabel.firstChild.textContent = 'Detalle ';
+    metaInput.placeholder = 'Ej: Después del desayuno';
+  } else if (proposalKind === 'sporadic') {
+    nameLabel.textContent = 'Nombre de la tarea';
+    metaLabel.firstChild.textContent = 'Frecuencia ';
+    metaInput.placeholder = 'Ej: Semanal, Quincenal, Mensual';
+  } else {
+    nameLabel.textContent = 'Título del detalle';
+    metaLabel.firstChild.textContent = 'Descripción ';
+    metaInput.placeholder = 'Ej: Limpiar cada vez que se use';
+  }
+}
+
+// Click handlers para los pills (delegación)
+document.addEventListener('click', (e) => {
+  if (e.target.matches('#proposal-kind-pills .form-pill')) {
+    proposalKind = e.target.dataset.val;
+    updateProposalForm();
+  }
+  if (e.target.matches('#proposal-section-pills .form-pill')) {
+    proposalSection = e.target.dataset.val;
+    updateProposalForm();
+  }
+});
+
+function submitProposal() {
+  const name = document.getElementById('proposal-name').value.trim();
+  const meta = document.getElementById('proposal-meta').value.trim();
+  if (!name) { toast('Pon un nombre'); return; }
+
+  const id = uid('p');
+  state.proposals[id] = {
+    kind: proposalKind,
+    name,
+    meta,
+    section: proposalKind === 'daily' ? proposalSection : null,
+    proposedBy: state.me,
+    proposedAt: Date.now(),
+    votes: { [state.me]: 'yes' } // quien propone vota sí por defecto
+  };
+  state.history.push({ ts: Date.now(), by: state.me, taskName: name, action: 'propuso' });
+  closeProposalForm();
+  toast(`✦ Propuesta enviada a votación`);
+  playClaimSound();
+  save();
+  renderAll();
+}
+
+function vote(proposalId, value) {
+  const p = state.proposals[proposalId];
+  if (!p) return;
+  if (!p.votes) p.votes = {};
+  p.votes[state.me] = value;
+
+  // Verificar si ya votaron todos
+  const everyone = Object.keys(PEOPLE);
+  const allVoted = everyone.every(k => p.votes[k]);
+  const allYes = everyone.every(k => p.votes[k] === 'yes');
+  const anyNo = everyone.some(k => p.votes[k] === 'no');
+
+  if (allYes) {
+    // ¡Aprobada! Agregar al catálogo
+    approveProposal(proposalId);
+    return;
+  }
+  if (allVoted && anyNo) {
+    // Rechazada
+    rejectProposal(proposalId);
+    return;
+  }
+  // Voto registrado, esperar más
+  toast(value === 'yes' ? '👍 Voto registrado' : '👎 Voto registrado');
+  save();
+  renderAll();
+}
+
+function approveProposal(id) {
+  const p = state.proposals[id];
+  if (!p) return;
+
+  // Generar nuevo id y agregar al catálogo correspondiente
+  if (p.kind === 'daily') {
+    const newId = uid('d');
+    state.catalogDaily.push({
+      id: newId,
+      name: p.name,
+      meta: p.meta || '',
+      section: p.section || 'morning',
+      addedBy: p.proposedBy,
+      addedAt: Date.now()
+    });
+  } else if (p.kind === 'sporadic') {
+    const newId = uid('s');
+    state.catalogSporadic.push({
+      id: newId,
+      name: p.name,
+      meta: p.meta || '',
+      addedBy: p.proposedBy,
+      addedAt: Date.now()
+    });
+  } else if (p.kind === 'detail') {
+    const newId = uid('x');
+    state.catalogDetails.push({
+      id: newId,
+      title: p.name,
+      desc: p.meta || '',
+      addedBy: p.proposedBy,
+      addedAt: Date.now()
+    });
+  }
+  ensureCatalogs();
+
+  delete state.proposals[id];
+  state.history.push({ ts: Date.now(), by: state.me, taskName: p.name, action: '¡aprobó por unanimidad!' });
+  playDoneSound();
+  toast(`✦ ¡"${p.name}" se agregó al flujo!`);
+  // Confeti grande
+  setTimeout(() => {
+    confettiBurst(window.innerWidth/2, window.innerHeight/2);
+    confettiBurst(window.innerWidth/2 - 60, window.innerHeight/2);
+    confettiBurst(window.innerWidth/2 + 60, window.innerHeight/2);
+  }, 100);
+  save();
+  renderAll();
+}
+
+function rejectProposal(id) {
+  const p = state.proposals[id];
+  if (!p) return;
+  state.history.push({ ts: Date.now(), by: state.me, taskName: p.name, action: 'fue rechazada' });
+  delete state.proposals[id];
+  toast(`Propuesta rechazada`);
+  save();
+  renderAll();
+}
+
+function cancelProposal(id) {
+  const p = state.proposals[id];
+  if (!p) return;
+  if (p.proposedBy !== state.me) { toast('Solo quien la propuso puede cancelarla'); return; }
+  delete state.proposals[id];
+  toast('Propuesta cancelada');
+  save();
+  renderAll();
+}
+
+/* --- RENDER DEL TABLÓN --- */
+
+function renderTablon() {
+  renderNotices();
+  renderProposals();
+}
+
+function renderNotices() {
+  const el = document.getElementById('notices-list');
+  if (!el) return;
+  const all = Object.entries(state.notices || {}).map(([id, n]) => ({ id, ...n }));
+  // Activos primero (no done), luego hechos abajo
+  const active = all.filter(n => !n.done).sort((a, b) => b.createdAt - a.createdAt);
+  const done = all.filter(n => n.done).sort((a, b) => b.doneAt - a.doneAt).slice(0, 5);
+
+  if (!active.length && !done.length) {
+    el.innerHTML = `<div class="empty-soft">No hay avisos en este momento.<br>Publica uno con el botón de arriba.</div>`;
+    return;
+  }
+
+  let html = '';
+  [...active, ...done].forEach(n => {
+    const author = PEOPLE[n.createdBy];
+    let statusClass = '';
+    if (n.done) statusClass = 'done';
+    else if (n.takenBy) statusClass = 'taken';
+
+    const isMine = n.createdBy === state.me;
+    const canTake = !n.takenBy && !n.done;
+    const isHandler = n.takenBy === state.me;
+
+    let actions = '';
+    if (n.done) {
+      const finisher = PEOPLE[n.doneBy];
+      actions = `<span class="who-badge" data-p="${n.doneBy}"><span class="who-avatar-dot" data-p="${n.doneBy}"></span>${finisher.name} lo atendió · ${timeAgo(n.doneAt)}</span>`;
+    } else if (n.takenBy) {
+      const handler = PEOPLE[n.takenBy];
+      if (isHandler) {
+        actions = `
+          <button class="claim-btn primary" onclick="doneNotice('${n.id}', event)">¡Hecho!</button>
+          <button class="claim-btn ghost" onclick="releaseNotice('${n.id}')">soltar</button>
+        `;
+      } else {
+        actions = `
+          <span class="who-badge" data-p="${n.takenBy}"><span class="who-avatar-dot" data-p="${n.takenBy}"></span>${handler.name} lo está atendiendo</span>
+          <button class="claim-btn ghost" onclick="doneNotice('${n.id}', event)">marcar hecho</button>
+        `;
+      }
+    } else {
+      actions = `<button class="claim-btn" onclick="takeNotice('${n.id}')">Yo lo hago</button>`;
+    }
+
+    html += `
+      <div class="notice-card ${statusClass}">
+        <div class="notice-head">
+          <span class="notice-author">Por <strong>${author.name}</strong> · ${timeAgo(n.createdAt)}</span>
+          ${(isMine || n.done) ? `<button class="notice-delete" onclick="deleteNotice('${n.id}')" title="Eliminar">×</button>` : ''}
+        </div>
+        <div class="notice-text">${escapeHtml(n.text)}</div>
+        <div class="notice-actions">${actions}</div>
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+function renderProposals() {
+  const el = document.getElementById('proposals-list');
+  if (!el) return;
+  const all = Object.entries(state.proposals || {}).map(([id, p]) => ({ id, ...p }))
+    .sort((a, b) => b.proposedAt - a.proposedAt);
+
+  if (!all.length) {
+    el.innerHTML = `<div class="empty-soft">No hay propuestas pendientes.<br>Si tienes una idea para mejorar la casa, propónla con el botón de arriba.</div>`;
+    return;
+  }
+
+  const kindLabels = { daily: 'Diaria', sporadic: 'Esporádica', detail: 'Detalle que cuida' };
+  let html = '';
+
+  all.forEach(p => {
+    const proposer = PEOPLE[p.proposedBy];
+    const votes = p.votes || {};
+    const myVote = votes[state.me];
+    const isMine = p.proposedBy === state.me;
+
+    // Resumen de votos
+    const everyone = Object.keys(PEOPLE);
+    const voted = everyone.filter(k => votes[k]);
+    const yesCount = everyone.filter(k => votes[k] === 'yes').length;
+    const pending = everyone.filter(k => !votes[k]);
+
+    let statusText = '';
+    if (voted.length === 4) {
+      statusText = yesCount === 4 ? '¡Aprobada por todos!' : 'Hubo al menos un voto en contra';
+    } else {
+      statusText = `Faltan ${pending.length} ${pending.length === 1 ? 'voto' : 'votos'}: ${pending.map(k => PEOPLE[k].name).join(', ')}`;
+    }
+
+    // Chips de votos
+    let voteChips = '';
+    everyone.forEach(k => {
+      const v = votes[k];
+      const cls = v === 'yes' ? 'yes' : v === 'no' ? 'no' : '';
+      const icon = v === 'yes' ? '✓' : v === 'no' ? '✗' : '?';
+      voteChips += `<span class="vote-chip ${cls}" style="--p-color: var(--${k})"><span class="vote-chip-dot"></span>${PEOPLE[k].name} ${icon}</span>`;
+    });
+
+    // Acciones (solo si no he votado, y no es mía y ya voté implícitamente al proponer)
+    let actions = '';
+    if (!myVote) {
+      actions = `
+        <button class="vote-btn yes" onclick="vote('${p.id}', 'yes')">👍 Me late</button>
+        <button class="vote-btn no" onclick="vote('${p.id}', 'no')">👎 Mejor no</button>
+      `;
+    } else {
+      actions = `
+        <button class="vote-btn yes ${myVote === 'yes' ? 'active' : ''}" onclick="vote('${p.id}', 'yes')">👍 Me late</button>
+        <button class="vote-btn no ${myVote === 'no' ? 'active' : ''}" onclick="vote('${p.id}', 'no')">👎 Mejor no</button>
+      `;
+    }
+    if (isMine) {
+      actions += `<button class="claim-btn ghost" style="margin-left:auto" onclick="cancelProposal('${p.id}')">Cancelar</button>`;
+    }
+
+    html += `
+      <div class="proposal-card">
+        <span class="proposal-kind" data-kind="${p.kind}">${kindLabels[p.kind]}</span>
+        <div class="proposal-name">${escapeHtml(p.name)}</div>
+        ${p.meta ? `<div class="proposal-meta">${escapeHtml(p.meta)}</div>` : ''}
+        <div class="proposal-author">Propuesto por <strong>${proposer.name}</strong> · ${timeAgo(p.proposedAt)}</div>
+        <div class="proposal-votes">${voteChips}</div>
+        <div class="proposal-status">${statusText}</div>
+        <div class="proposal-actions">${actions}</div>
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =====================================================================
+   EDICIÓN DE TAREAS DEL CATÁLOGO
+   ===================================================================== */
+
+let editTarget = null; // { kind, id }
+
+function openEditTask(kind, id) {
+  const list = kind === 'daily' ? state.catalogDaily
+             : kind === 'sporadic' ? state.catalogSporadic
+             : state.catalogDetails;
+  const item = list.find(t => t.id === id);
+  if (!item) return;
+  editTarget = { kind, id };
+  document.getElementById('edit-name').value = kind === 'detail' ? item.title : item.name;
+  document.getElementById('edit-meta').value = kind === 'detail' ? (item.desc || '') : (item.meta || '');
+  document.getElementById('modal-edit').classList.add('open');
+}
+
+function closeEditForm() {
+  document.getElementById('modal-edit').classList.remove('open');
+  editTarget = null;
+}
+
+function saveEditTask() {
+  if (!editTarget) return;
+  const { kind, id } = editTarget;
+  const list = kind === 'daily' ? state.catalogDaily
+             : kind === 'sporadic' ? state.catalogSporadic
+             : state.catalogDetails;
+  const item = list.find(t => t.id === id);
+  if (!item) return;
+  const name = document.getElementById('edit-name').value.trim();
+  const meta = document.getElementById('edit-meta').value.trim();
+  if (!name) { toast('El nombre no puede quedar vacío'); return; }
+  if (kind === 'detail') {
+    item.title = name;
+    item.desc = meta;
+  } else {
+    item.name = name;
+    item.meta = meta;
+  }
+  ensureCatalogs();
+  closeEditForm();
+  save();
+  renderAll();
+  toast('✦ Tarea actualizada');
+}
+
+function confirmDeleteTask() {
+  if (!editTarget) return;
+  if (!confirm('¿Eliminar esta tarea del catálogo de la casa?')) return;
+  const { kind, id } = editTarget;
+  const listKey = kind === 'daily' ? 'catalogDaily'
+                : kind === 'sporadic' ? 'catalogSporadic'
+                : 'catalogDetails';
+  state[listKey] = state[listKey].filter(t => t.id !== id);
+  // Limpiar también el estado del día
+  if (kind === 'daily') delete state.daily[id];
+  else if (kind === 'sporadic') delete state.sporadic[id];
+  else delete state.details[id];
+  ensureCatalogs();
+  closeEditForm();
+  save();
+  renderAll();
+  toast('Tarea eliminada');
 }
 
 /* ===== ACCIONES — Flujo de 3 estados: libre → tomada → hecha ===== */
