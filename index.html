@@ -2309,7 +2309,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.3';
+const APP_VERSION = '2026.05.22.4';
 
 async function checkForUpdate() {
   try {
@@ -2880,43 +2880,37 @@ function init() {
 
 /* ===================================================================
    PULL TO REFRESH — desliza hacia abajo para actualizar
-   Implementación conservadora: solo intercepta el scroll cuando estamos
-   100% seguros de que el usuario quiere refrescar, no antes.
+   Implementación CSS-driven: no usa preventDefault para no interferir
+   con el scroll nativo de Android. En su lugar usa touch-action.
    =================================================================== */
 
 const PTR_THRESHOLD = 70;       // distancia para activar el refresh
-const PTR_MAX = 140;            // distancia máxima visible (resistance)
-const PTR_LOCK_DISTANCE = 15;   // distancia mínima vertical antes de bloquear el scroll
+const PTR_MAX = 140;            // distancia máxima visible
+const PTR_LOCK_DISTANCE = 15;   // distancia vertical antes de confirmar PTR
 
 let ptrState = {
   startY: 0,
   startX: 0,
   currentY: 0,
-  pulling: false,       // estamos mostrando el indicador
-  locked: false,        // hemos confirmado que es PTR, ya bloqueamos scroll
-  cancelled: false,     // el touch ya no califica para PTR
-  refreshing: false
+  pulling: false,
+  locked: false,
+  cancelled: false,
+  refreshing: false,
+  active: false           // si hay un touch en curso
 };
 
 function initPullToRefresh() {
-  // touchstart y touchend pueden ser passive (no bloquean nada)
+  // TODOS los listeners pasivos: no interferimos con el scroll nativo
   document.addEventListener('touchstart', onPtrStart, { passive: true });
-  // touchmove necesita passive: false porque podríamos llamar preventDefault
-  // PERO solo lo hacemos cuando ya estamos seguros de que es PTR
-  document.addEventListener('touchmove', onPtrMove, { passive: false });
+  document.addEventListener('touchmove', onPtrMove, { passive: true });
   document.addEventListener('touchend', onPtrEnd, { passive: true });
   document.addEventListener('touchcancel', onPtrEnd, { passive: true });
 }
 
 function onPtrStart(e) {
   // Reset siempre
-  ptrState.startY = 0;
-  ptrState.startX = 0;
-  ptrState.pulling = false;
-  ptrState.locked = false;
-  ptrState.cancelled = false;
+  resetPtrState();
 
-  // Solo si estamos en el tope de la página, no refrescando, y la app visible
   if (window.scrollY > 0) return;
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
@@ -2930,14 +2924,15 @@ function onPtrStart(e) {
   ptrState.startY = e.touches[0].clientY;
   ptrState.startX = e.touches[0].clientX;
   ptrState.currentY = ptrState.startY;
+  ptrState.active = true;
 }
 
 function onPtrMove(e) {
   if (ptrState.refreshing) return;
   if (ptrState.cancelled) return;
+  if (!ptrState.active) return;
   if (!ptrState.startY) return;
 
-  // Si el usuario ya scrolleó, abortar
   if (window.scrollY > 0) {
     cancelPtr();
     return;
@@ -2947,59 +2942,65 @@ function onPtrMove(e) {
   const deltaY = ptrState.currentY - ptrState.startY;
   const deltaX = e.touches[0].clientX - ptrState.startX;
 
-  // Si el movimiento es predominantemente horizontal, abortar (es un swipe lateral)
+  // Movimiento predominantemente horizontal: no es PTR
   if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
     cancelPtr();
     return;
   }
 
-  // Si el movimiento neto es hacia arriba, abortar y dejar que scroll funcione
+  // Hacia arriba: no es PTR
   if (deltaY < 0) {
     cancelPtr();
     return;
   }
 
-  // Solo hasta aquí no hemos hecho preventDefault. El scroll nativo funciona normal.
-  // Solo cuando el usuario claramente está jalando hacia abajo Y más allá del umbral,
-  // ahí sí bloqueamos el scroll.
   if (deltaY < PTR_LOCK_DISTANCE) {
-    // Aún no estamos seguros, NO interceptes el scroll todavía
+    // Aún no estamos seguros — el scroll nativo trabaja libre
     return;
   }
 
-  // Pasó el umbral — ahora sí confirmamos que es PTR
-  ptrState.locked = true;
-  ptrState.pulling = true;
-
-  // Aplicar resistencia
-  const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
-
-  // Ahora sí prevenimos el bounce y mostramos el indicador
-  if (e.cancelable) {
-    e.preventDefault();
+  // Confirmado: el usuario quiere refrescar
+  // Aplicamos touch-action al body para bloquear el scroll vertical
+  // sin necesidad de preventDefault
+  if (!ptrState.locked) {
+    ptrState.locked = true;
+    ptrState.pulling = true;
+    document.body.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden';
   }
+
+  const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
   showPtrIndicator(resisted);
 }
 
 function cancelPtr() {
   ptrState.cancelled = true;
+  if (ptrState.locked) {
+    document.body.style.touchAction = '';
+    document.body.style.overflow = '';
+  }
   if (ptrState.pulling) {
     hidePtrIndicator();
     ptrState.pulling = false;
   }
+  ptrState.locked = false;
 }
 
 function onPtrEnd() {
+  // SIEMPRE liberar el bloqueo de scroll, sin importar el estado
+  document.body.style.touchAction = '';
+  document.body.style.overflow = '';
+
   if (ptrState.refreshing) {
-    ptrState.startY = 0;
+    resetPtrState();
     return;
   }
+
   if (!ptrState.locked || !ptrState.pulling) {
-    // Nunca llegamos a confirmar PTR — el scroll normal pasó tranquilo
-    ptrState.startY = 0;
-    ptrState.pulling = false;
+    resetPtrState();
     return;
   }
+
   const deltaY = ptrState.currentY - ptrState.startY;
   const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
 
@@ -3008,10 +3009,27 @@ function onPtrEnd() {
   } else {
     hidePtrIndicator();
   }
+  resetPtrState();
+}
+
+function resetPtrState() {
   ptrState.startY = 0;
+  ptrState.startX = 0;
   ptrState.pulling = false;
   ptrState.locked = false;
+  ptrState.cancelled = false;
+  ptrState.active = false;
 }
+
+/* SEGURIDAD: si por alguna razón el scroll quedó bloqueado, lo liberamos
+   cuando cualquier modal/diálogo se abre o cuando la app pierde foco */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    document.body.style.touchAction = '';
+    document.body.style.overflow = '';
+    resetPtrState();
+  }
+});
 
 function showPtrIndicator(distance) {
   const ind = document.getElementById('ptr-indicator');
