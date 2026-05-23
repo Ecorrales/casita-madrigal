@@ -316,6 +316,7 @@ body::before {
   border-bottom: 1px solid var(--line);
   background: var(--bg-soft);
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
   position: sticky;
   top: 71px;
@@ -323,6 +324,9 @@ body::before {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .tabs::-webkit-scrollbar { display: none; }
@@ -2485,10 +2489,11 @@ function onPtrStart(e) {
   if (window.scrollY > 0) return;
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
-  // No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
+// No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
   const target = e.target;
   if (target.closest('.modal-backdrop.open')) return;
   if (target.closest('.notif-panel.open')) return;
+  if (target.closest('.tabs')) return; // las tabs tienen su propio scroll horizontal
   // No iniciar si el toque empezó en un input/textarea/button
   if (target.matches('input, textarea, select, button')) return;
 
