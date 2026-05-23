@@ -226,6 +226,9 @@ body::before {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .header-row {
@@ -2309,7 +2312,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.4';
+const APP_VERSION = '2026.05.22.5';
 
 async function checkForUpdate() {
   try {
@@ -2900,26 +2903,25 @@ let ptrState = {
 };
 
 function initPullToRefresh() {
-  // TODOS los listeners pasivos: no interferimos con el scroll nativo
-  document.addEventListener('touchstart', onPtrStart, { passive: true });
-  document.addEventListener('touchmove', onPtrMove, { passive: true });
-  document.addEventListener('touchend', onPtrEnd, { passive: true });
-  document.addEventListener('touchcancel', onPtrEnd, { passive: true });
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  // Listeners SOLO en el header — el resto de la app scrollea libre
+  header.addEventListener('touchstart', onPtrStart, { passive: true });
+  header.addEventListener('touchmove', onPtrMove, { passive: true });
+  header.addEventListener('touchend', onPtrEnd, { passive: true });
+  header.addEventListener('touchcancel', onPtrEnd, { passive: true });
 }
 
 function onPtrStart(e) {
-  // Reset siempre
   resetPtrState();
 
   if (window.scrollY > 0) return;
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
 
-  const target = e.target;
-  if (target.closest('.modal-backdrop.open')) return;
-  if (target.closest('.notif-panel.open')) return;
-  if (target.closest('.tabs')) return;
-  if (target.matches('input, textarea, select, button')) return;
+  // No iniciar en botones del header
+  if (e.target.closest('button')) return;
 
   ptrState.startY = e.touches[0].clientY;
   ptrState.startX = e.touches[0].clientX;
