@@ -226,6 +226,7 @@ body::before {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+  /* Permitir gesto vertical hacia abajo desde el header (PTR) */
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
@@ -745,6 +746,157 @@ body::before {
 .family-card[data-p="mar"] { --p-color: var(--mar); }
 .family-card[data-p="lup"] { --p-color: var(--lup); }
 
+/* Tarjeta cuando es su cumpleaños */
+.family-card.is-birthday {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--p-color) 10%, var(--paper)),
+    color-mix(in srgb, var(--rose) 8%, var(--paper)));
+  border-color: color-mix(in srgb, var(--p-color) 40%, var(--line));
+}
+.family-card.is-birthday::before {
+  height: 6px;
+}
+
+.bday-crown {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--rose);
+  background: var(--paper);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--p-color);
+  animation: bday-bounce 2s ease-in-out infinite;
+}
+
+@keyframes bday-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15) rotate(8deg); }
+}
+
+/* Línea de cumpleaños en la tarjeta */
+.family-bday {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin: 12px 0 6px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--p-color) 6%, transparent);
+  border-radius: var(--radius-sm);
+  min-height: 24px;
+}
+.family-bday .bday-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--p-color);
+  flex-shrink: 0;
+}
+.family-bday .bday-today {
+  color: var(--p-color);
+  font-weight: 700;
+}
+.family-bday .bday-soon {
+  color: var(--p-color);
+  font-weight: 600;
+}
+.family-bday .don-edit {
+  margin-left: auto;
+}
+
+.family-bday-add {
+  background: transparent;
+  padding: 4px 0;
+}
+.bday-add-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+.bday-add-btn:hover {
+  border-color: var(--p-color);
+  color: var(--p-color);
+  border-style: solid;
+}
+
+/* Franja de cumpleaños arriba de Hoy */
+.birthday-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--p-color) 14%, var(--paper)),
+    color-mix(in srgb, var(--rose) 10%, var(--paper)));
+  border: 1px solid color-mix(in srgb, var(--p-color) 30%, var(--line));
+  border-left: 4px solid var(--p-color);
+  border-radius: var(--radius);
+}
+
+.birthday-card.is-today {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--p-color) 22%, var(--paper)),
+    color-mix(in srgb, var(--rose) 18%, var(--paper)));
+  border-color: var(--p-color);
+  border-left-width: 5px;
+}
+
+.birthday-icon {
+  font-family: 'Fraunces', serif;
+  font-size: 32px;
+  font-style: italic;
+  color: var(--p-color);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.birthday-card.is-today .birthday-icon {
+  animation: bday-bounce 2s ease-in-out infinite;
+}
+
+.birthday-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.birthday-main {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.birthday-main strong {
+  font-weight: 500;
+  color: var(--p-color);
+}
+
+.birthday-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
 .family-avatar {
   width: 56px;
   height: 56px;
@@ -759,6 +911,7 @@ body::before {
   font-weight: 500;
   font-style: italic;
   margin-bottom: 12px;
+  position: relative;
 }
 
 .family-name {
@@ -2052,6 +2205,7 @@ body::before {
           <p class="panel-sub" id="hoy-sub">Lo que mantiene la casita andando</p>
         </div>
       </div>
+      <div id="birthday-strip"></div>
       <div id="live-strip"></div>
       <div class="section-block">
         <div class="section-label">Mañana</div>
@@ -2312,7 +2466,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.5';
+const APP_VERSION = '2026.05.22.6';
 
 async function checkForUpdate() {
   try {
@@ -2484,6 +2638,8 @@ let state = {
     mar: 'La que cuida',
     lup: 'La que brilla'
   },
+  // CUMPLEAÑOS personalizables por cada miembro (formato YYYY-MM-DD)
+  birthdays: { emm: null, jov: null, mar: null, lup: null },
   // TABLÓN
   proposals: {},                 // { id: { kind, name, meta/desc, section?, proposedBy, proposedAt, votes: {emm:'yes'|'no', ...} } }
   notices: {}                    // { id: { text, createdBy, createdAt, takenBy?, takenAt?, done?, doneBy?, doneAt? } }
@@ -2509,6 +2665,10 @@ function ensureCatalogs() {
   // Asegurar que cada persona tenga subtítulo (por si se añaden personas)
   Object.keys(PEOPLE).forEach(k => {
     if (!state.subtitles[k]) state.subtitles[k] = '';
+  });
+  if (!state.birthdays) state.birthdays = {};
+  Object.keys(PEOPLE).forEach(k => {
+    if (!(k in state.birthdays)) state.birthdays[k] = null;
   });
 }
 
@@ -2596,6 +2756,87 @@ function dueLevel(ts) {
   if (diff < 4 * 60 * 60 * 1000) return 'today';
   if (diff < 24 * 60 * 60 * 1000) return 'soon';
   return 'upcoming';
+}
+
+/* ===== UTILIDADES DE CUMPLEAÑOS ===== */
+
+/* Parsea YYYY-MM-DD a {year, month, day} (mes 1-12) */
+function parseBirthday(str) {
+  if (!str || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return { year: y, month: m, day: d };
+}
+
+/* Edad cumplida HOY (en años enteros) */
+function calcAge(birthdayStr) {
+  const b = parseBirthday(birthdayStr);
+  if (!b) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.year;
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  // Si aún no llega su cumpleaños este año, restar 1
+  if (m < b.month || (m === b.month && d < b.day)) age--;
+  return age;
+}
+
+/* Días hasta el próximo cumpleaños (0 = hoy, 1 = mañana, etc.) */
+function daysUntilBirthday(birthdayStr) {
+  const b = parseBirthday(birthdayStr);
+  if (!b) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let next = new Date(now.getFullYear(), b.month - 1, b.day);
+  if (next < today) next = new Date(now.getFullYear() + 1, b.month - 1, b.day);
+  const diff = Math.round((next - today) / (24 * 60 * 60 * 1000));
+  return diff;
+}
+
+/* Edad que cumplirá en el próximo cumpleaños */
+function ageNextBirthday(birthdayStr) {
+  const b = parseBirthday(birthdayStr);
+  if (!b) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.year;
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  // Si aún no llega su cumple este año, ese es el próximo
+  if (m < b.month || (m === b.month && d < b.day)) {
+    return age;
+  }
+  // Ya pasó: el próximo es el del año que viene
+  return age + 1;
+}
+
+/* Formato "5 de Junio" */
+function formatBirthday(birthdayStr) {
+  const b = parseBirthday(birthdayStr);
+  if (!b) return '';
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return `${b.day} de ${meses[b.month - 1]}`;
+}
+
+/* Devuelve cumpleaños próximos en los siguientes N días (incluyendo hoy) */
+function upcomingBirthdays(daysAhead = 7) {
+  const result = [];
+  Object.entries(PEOPLE).forEach(([key, p]) => {
+    const bday = state.birthdays?.[key];
+    if (!bday) return;
+    const days = daysUntilBirthday(bday);
+    if (days === null) return;
+    if (days <= daysAhead) {
+      result.push({
+        key,
+        person: p,
+        days,
+        ageWillBe: ageNextBirthday(bday),
+        formatted: formatBirthday(bday)
+      });
+    }
+  });
+  result.sort((a, b) => a.days - b.days);
+  return result;
 }
 
 function toast(msg) {
@@ -2715,6 +2956,7 @@ function save() {
       history: state.history.slice(-200),
       scores: state.scores,
       subtitles: state.subtitles,
+      birthdays: state.birthdays,
       proposals: state.proposals,
       notices: state.notices
     }).catch(e => console.warn('Firebase save error', e));
@@ -2825,6 +3067,7 @@ async function initFirebase() {
         state.history = data.history || [];
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
+        if (data.birthdays) state.birthdays = data.birthdays;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
@@ -2841,6 +3084,7 @@ async function initFirebase() {
         state.history = data.history || [];
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
+        if (data.birthdays) state.birthdays = data.birthdays;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
@@ -2882,14 +3126,14 @@ function init() {
 }
 
 /* ===================================================================
-   PULL TO REFRESH — desliza hacia abajo para actualizar
-   Implementación CSS-driven: no usa preventDefault para no interferir
-   con el scroll nativo de Android. En su lugar usa touch-action.
+   PULL TO REFRESH — desliza hacia abajo desde el HEADER
+   Solo el header activa el PTR. El resto de la página tiene scroll
+   nativo sin interferencia.
    =================================================================== */
 
-const PTR_THRESHOLD = 70;       // distancia para activar el refresh
-const PTR_MAX = 140;            // distancia máxima visible
-const PTR_LOCK_DISTANCE = 15;   // distancia vertical antes de confirmar PTR
+const PTR_THRESHOLD = 70;
+const PTR_MAX = 140;
+const PTR_LOCK_DISTANCE = 15;
 
 let ptrState = {
   startY: 0,
@@ -2899,14 +3143,15 @@ let ptrState = {
   locked: false,
   cancelled: false,
   refreshing: false,
-  active: false           // si hay un touch en curso
+  active: false
 };
 
 function initPullToRefresh() {
   const header = document.querySelector('.header');
   if (!header) return;
 
-  // Listeners SOLO en el header — el resto de la app scrollea libre
+  // Listeners SOLO en el header, no en document
+  // Todos passive: nunca interferimos con scroll natural
   header.addEventListener('touchstart', onPtrStart, { passive: true });
   header.addEventListener('touchmove', onPtrMove, { passive: true });
   header.addEventListener('touchend', onPtrEnd, { passive: true });
@@ -2921,7 +3166,8 @@ function onPtrStart(e) {
   if (document.getElementById('app').classList.contains('hidden')) return;
 
   // No iniciar en botones del header
-  if (e.target.closest('button')) return;
+  const target = e.target;
+  if (target.closest('button')) return;
 
   ptrState.startY = e.touches[0].clientY;
   ptrState.startX = e.touches[0].clientX;
@@ -2944,26 +3190,19 @@ function onPtrMove(e) {
   const deltaY = ptrState.currentY - ptrState.startY;
   const deltaX = e.touches[0].clientX - ptrState.startX;
 
-  // Movimiento predominantemente horizontal: no es PTR
   if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
     cancelPtr();
     return;
   }
-
-  // Hacia arriba: no es PTR
   if (deltaY < 0) {
     cancelPtr();
     return;
   }
-
   if (deltaY < PTR_LOCK_DISTANCE) {
-    // Aún no estamos seguros — el scroll nativo trabaja libre
     return;
   }
 
-  // Confirmado: el usuario quiere refrescar
-  // Aplicamos touch-action al body para bloquear el scroll vertical
-  // sin necesidad de preventDefault
+  // Confirmado PTR
   if (!ptrState.locked) {
     ptrState.locked = true;
     ptrState.pulling = true;
@@ -2989,7 +3228,6 @@ function cancelPtr() {
 }
 
 function onPtrEnd() {
-  // SIEMPRE liberar el bloqueo de scroll, sin importar el estado
   document.body.style.touchAction = '';
   document.body.style.overflow = '';
 
@@ -3023,8 +3261,7 @@ function resetPtrState() {
   ptrState.active = false;
 }
 
-/* SEGURIDAD: si por alguna razón el scroll quedó bloqueado, lo liberamos
-   cuando cualquier modal/diálogo se abre o cuando la app pierde foco */
+/* Seguridad: liberar scroll si por algo quedó bloqueado al volver al foco */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     document.body.style.touchAction = '';
@@ -3132,6 +3369,7 @@ async function performRefresh() {
         state.history = data.history || [];
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
+        if (data.birthdays) state.birthdays = data.birthdays;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
@@ -3226,6 +3464,7 @@ function switchTab(t) {
 
 /* ===== RENDERIZADO ===== */
 function renderAll() {
+  renderBirthdayStrip();
   renderLiveStrip();
   renderNow();
   renderDaily();
@@ -3236,6 +3475,51 @@ function renderAll() {
   renderHistory();
   renderNotifs();
   updateCounts();
+}
+
+/* ===== FRANJA DE CUMPLEAÑOS — arriba de pestaña Hoy ===== */
+function renderBirthdayStrip() {
+  const el = document.getElementById('birthday-strip');
+  if (!el) return;
+  const upcoming = upcomingBirthdays(7);
+  if (!upcoming.length) {
+    el.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  upcoming.forEach(b => {
+    const isMe = b.key === state.me;
+    let mainText, subText;
+    if (b.days === 0) {
+      // Hoy
+      mainText = isMe
+        ? `<strong>¡Hoy es tu cumpleaños!</strong>`
+        : `<strong>¡Hoy cumple ${b.person.name}!</strong>`;
+      subText = `Cumple ${b.ageWillBe} años`;
+    } else if (b.days === 1) {
+      mainText = isMe
+        ? `<strong>Mañana es tu cumpleaños</strong>`
+        : `<strong>Mañana cumple ${b.person.name}</strong>`;
+      subText = `Cumplirá ${b.ageWillBe} años`;
+    } else {
+      mainText = isMe
+        ? `<strong>En ${b.days} días es tu cumpleaños</strong>`
+        : `<strong>En ${b.days} días cumple ${b.person.name}</strong>`;
+      subText = `Cumplirá ${b.ageWillBe} años · ${b.formatted}`;
+    }
+    const cls = b.days === 0 ? 'is-today' : '';
+    html += `
+      <div class="birthday-card ${cls}" style="--p-color: var(--${b.key})">
+        <div class="birthday-icon">${b.days === 0 ? '✿' : '✦'}</div>
+        <div class="birthday-text">
+          <div class="birthday-main">${mainText}</div>
+          <div class="birthday-sub">${subText}</div>
+        </div>
+      </div>
+    `;
+  });
+  el.innerHTML = html;
 }
 
 /* ===== Recolecta todas las tareas tomadas (daily + sporadic) ===== */
@@ -3560,13 +3844,45 @@ function renderFamily() {
     if (total >= 20) badges.push({ icon: '☼', label: 'Constante' });
 
     const subtitle = state.subtitles?.[key] || '';
+    const bday = state.birthdays?.[key];
     const isMe = key === state.me;
+    const age = calcAge(bday);
+    const daysToBday = daysUntilBirthday(bday);
+    const isBdayToday = daysToBday === 0;
+
+    // Bloque de cumpleaños
+    let bdayBlock = '';
+    if (bday) {
+      let line2 = '';
+      if (isBdayToday) {
+        line2 = `<span class="bday-today">✿ ¡Hoy cumple ${ageNextBirthday(bday)}!</span>`;
+      } else if (daysToBday !== null && daysToBday <= 7) {
+        line2 = `<span class="bday-soon">En ${daysToBday} día${daysToBday === 1 ? '' : 's'} cumple ${ageNextBirthday(bday)}</span>`;
+      } else {
+        line2 = `${age} años · ${formatBirthday(bday)}`;
+      }
+      bdayBlock = `
+        <div class="family-bday">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="bday-icon"><path d="M20 21v-8H4v8M1 21h22M6 13V8a4 4 0 0 1 4-4M14 13V8a4 4 0 0 1 4-4M10 4a2 2 0 1 0 0-4M18 4a2 2 0 1 0 0-4"/></svg>
+          <span>${line2}</span>
+          ${isMe ? `<button class="don-edit" onclick="editMyBirthday()" title="Cambiar mi cumpleaños">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>` : ''}
+        </div>
+      `;
+    } else if (isMe) {
+      bdayBlock = `
+        <div class="family-bday family-bday-add">
+          <button class="bday-add-btn" onclick="editMyBirthday()">+ Agregar mi cumpleaños</button>
+        </div>
+      `;
+    }
 
     const card = document.createElement('div');
-    card.className = 'family-card';
+    card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '');
     card.dataset.p = key;
     card.innerHTML = `
-      <div class="family-avatar">${p.initial}</div>
+      <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
       <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}</div>
       <div class="family-don" id="don-${key}">
         <span class="don-text">${escapeHtml(subtitle)}</span>
@@ -3574,6 +3890,7 @@ function renderFamily() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>` : ''}
       </div>
+      ${bdayBlock}
       <div class="family-stats">
         <div>
           <div class="family-stat-num">${today}</div>
@@ -3601,6 +3918,33 @@ function editMySubtitle() {
   save();
   renderAll();
   toast('✦ Subtítulo actualizado');
+}
+
+/* Editar mi propio cumpleaños */
+function editMyBirthday() {
+  const current = state.birthdays?.[state.me] || '';
+  const newVal = prompt('Tu fecha de nacimiento (formato AAAA-MM-DD, ej: 1992-05-23):', current);
+  if (newVal === null) return; // canceló
+  const trimmed = newVal.trim();
+  if (trimmed === '') {
+    // Quitar el cumple
+    if (!state.birthdays) state.birthdays = {};
+    state.birthdays[state.me] = null;
+    save();
+    renderAll();
+    toast('Cumpleaños eliminado');
+    return;
+  }
+  // Validar
+  if (!parseBirthday(trimmed)) {
+    toast('Formato inválido — usa AAAA-MM-DD');
+    return;
+  }
+  if (!state.birthdays) state.birthdays = {};
+  state.birthdays[state.me] = trimmed;
+  save();
+  renderAll();
+  toast('✿ Cumpleaños guardado');
 }
 
 function renderHistory() {
