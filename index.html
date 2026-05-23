@@ -87,7 +87,6 @@ html, body {
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
 }
 
 /* Textura de papel orgánica */
@@ -226,8 +225,6 @@ body::before {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
-  /* Permitir gesto vertical hacia abajo desde el header (PTR) */
-  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -2466,7 +2463,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.6';
+const APP_VERSION = '2026.05.22.7';
 
 async function checkForUpdate() {
   try {
@@ -3127,8 +3124,8 @@ function init() {
 
 /* ===================================================================
    PULL TO REFRESH — desliza hacia abajo desde el HEADER
-   Solo el header activa el PTR. El resto de la página tiene scroll
-   nativo sin interferencia.
+   Versión sin bloqueo de scroll: el scroll natural siempre funciona,
+   el indicador visual del PTR aparece encima sin interferir.
    =================================================================== */
 
 const PTR_THRESHOLD = 70;
@@ -3150,8 +3147,8 @@ function initPullToRefresh() {
   const header = document.querySelector('.header');
   if (!header) return;
 
-  // Listeners SOLO en el header, no en document
-  // Todos passive: nunca interferimos con scroll natural
+  // Listeners SOLO en el header — el resto de la app scrollea libre
+  // TODOS passive: nunca interferimos con el scroll natural
   header.addEventListener('touchstart', onPtrStart, { passive: true });
   header.addEventListener('touchmove', onPtrMove, { passive: true });
   header.addEventListener('touchend', onPtrEnd, { passive: true });
@@ -3165,9 +3162,7 @@ function onPtrStart(e) {
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
 
-  // No iniciar en botones del header
-  const target = e.target;
-  if (target.closest('button')) return;
+  if (e.target.closest('button')) return;
 
   ptrState.startY = e.touches[0].clientY;
   ptrState.startX = e.touches[0].clientX;
@@ -3202,12 +3197,10 @@ function onPtrMove(e) {
     return;
   }
 
-  // Confirmado PTR
+  // Confirmado PTR — solo mostramos el indicador, NO bloqueamos el scroll
   if (!ptrState.locked) {
     ptrState.locked = true;
     ptrState.pulling = true;
-    document.body.style.touchAction = 'none';
-    document.body.style.overflow = 'hidden';
   }
 
   const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
@@ -3216,10 +3209,6 @@ function onPtrMove(e) {
 
 function cancelPtr() {
   ptrState.cancelled = true;
-  if (ptrState.locked) {
-    document.body.style.touchAction = '';
-    document.body.style.overflow = '';
-  }
   if (ptrState.pulling) {
     hidePtrIndicator();
     ptrState.pulling = false;
@@ -3228,9 +3217,6 @@ function cancelPtr() {
 }
 
 function onPtrEnd() {
-  document.body.style.touchAction = '';
-  document.body.style.overflow = '';
-
   if (ptrState.refreshing) {
     resetPtrState();
     return;
@@ -3261,7 +3247,9 @@ function resetPtrState() {
   ptrState.active = false;
 }
 
-/* Seguridad: liberar scroll si por algo quedó bloqueado al volver al foco */
+/* Seguridad extrema: si algún navegador dejó el body bloqueado por
+   versiones anteriores de este código o por bugs, lo limpiamos al volver
+   al foco. NUNCA aplicamos touchAction/overflow al body en esta versión. */
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     document.body.style.touchAction = '';
@@ -3269,6 +3257,12 @@ document.addEventListener('visibilitychange', () => {
     resetPtrState();
   }
 });
+
+// Y también al cargar — por si quedó pegado de la sesión anterior
+(function clearStuckBodyStyles() {
+  document.body.style.touchAction = '';
+  document.body.style.overflow = '';
+})();
 
 function showPtrIndicator(distance) {
   const ind = document.getElementById('ptr-indicator');
