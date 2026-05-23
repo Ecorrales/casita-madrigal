@@ -40,6 +40,7 @@
   --jov: #5b7a4e;             /* verde follaje */
   --mar: #c89b3c;             /* dorado mostaza */
   --lup: #7ba0b8;             /* azul polvo */
+  --mat: #d4a8b8;             /* rosa beb\u00e9 */
 
   --radius: 14px;
   --radius-sm: 8px;
@@ -70,6 +71,7 @@
   --jov: #8aa878;
   --mar: #d4b256;
   --lup: #9bb8cc;
+  --mat: #e0b8c8;
 
   --shadow: 0 1px 0 rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.6);
   --shadow-lift: 0 2px 0 rgba(0,0,0,0.4), 0 18px 40px -16px rgba(0,0,0,0.7);
@@ -565,6 +567,7 @@ body::before {
 .who-badge[data-p="jov"] { background: color-mix(in srgb, var(--jov) 18%, transparent); color: var(--jov); }
 .who-badge[data-p="mar"] { background: color-mix(in srgb, var(--mar) 18%, transparent); color: var(--mar); }
 .who-badge[data-p="lup"] { background: color-mix(in srgb, var(--lup) 18%, transparent); color: var(--lup); }
+.who-badge[data-p="mat"] { background: color-mix(in srgb, var(--mat) 22%, transparent); color: color-mix(in srgb, var(--mat) 70%, var(--ink)); }
 
 .who-avatar-dot {
   width: 14px;
@@ -576,6 +579,7 @@ body::before {
 .who-avatar-dot[data-p="jov"] { background: var(--jov); }
 .who-avatar-dot[data-p="mar"] { background: var(--mar); }
 .who-avatar-dot[data-p="lup"] { background: var(--lup); }
+.who-avatar-dot[data-p="mat"] { background: var(--mat); }
 
 .claim-btn {
   appearance: none;
@@ -714,6 +718,629 @@ body::before {
   line-height: 1.4;
 }
 
+/* === COCINA — Menú semanal y gramajes === */
+.cocina-subtabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.subtab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 12px 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.subtab:hover { color: var(--ink-soft); }
+
+.subtab.active {
+  color: var(--terra);
+  border-bottom-color: var(--terra);
+}
+
+.cocina-sub { display: none; }
+.cocina-sub.active { display: block; animation: fade 0.3s ease; }
+
+/* Toolbar del menú (selector de semana) */
+.menu-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.menu-week-label {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  min-width: 0;
+}
+
+/* Grid de días del menú */
+.menu-day {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.menu-day.is-today {
+  border-color: color-mix(in srgb, var(--terra) 50%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--terra) 8%, transparent);
+}
+
+.menu-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--bg-soft) 50%, var(--paper));
+  border-bottom: 1px solid var(--line);
+}
+
+.menu-day.is-today .menu-day-head {
+  background: color-mix(in srgb, var(--terra) 8%, var(--paper));
+}
+
+.menu-day-name {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.menu-day-date {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.menu-day.is-today .menu-day-date {
+  color: var(--terra);
+  font-weight: 700;
+}
+
+.menu-meals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+}
+
+.meal-cell {
+  background: var(--paper);
+  padding: 14px 14px 16px;
+  cursor: pointer;
+  position: relative;
+  min-height: 90px;
+  transition: background 0.2s;
+}
+
+.meal-cell:hover {
+  background: color-mix(in srgb, var(--terra) 5%, var(--paper));
+}
+
+.meal-cell-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meal-cell-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--meal-color, var(--gold));
+}
+
+.meal-cell[data-meal="breakfast"] { --meal-color: #d4b256; }
+.meal-cell[data-meal="lunch"]     { --meal-color: var(--terra); }
+.meal-cell[data-meal="dinner"]    { --meal-color: var(--sky); }
+
+.meal-cell-name {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.meal-cell-ingredients {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.meal-cell-empty {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.meal-cell-empty::before {
+  content: '+ ';
+  font-weight: 700;
+  font-style: normal;
+  opacity: 0.7;
+}
+
+/* En móvil, los meals se apilan verticalmente */
+@media (max-width: 640px) {
+  .menu-meals {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+  .meal-cell { min-height: auto; padding: 12px 14px; }
+}
+
+/* === TABLA DE GRAMAJES === */
+.grams-intro {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--gold) 8%, var(--paper));
+  border-left: 3px solid var(--gold);
+  padding: 12px 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.grams-intro strong {
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.grams-section-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin: 32px 0 14px;
+}
+.grams-section-title:first-child { margin-top: 0; }
+
+/* Tabla grande para escritorio, cards para móvil */
+.grams-table-wrap {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.grams-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+}
+
+.grams-table thead th {
+  background: color-mix(in srgb, var(--bg-soft) 60%, var(--paper));
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 14px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.grams-table thead th.crudo { color: var(--terra); }
+.grams-table thead th.cocido { color: var(--leaf); }
+
+.grams-table tbody td {
+  padding: 14px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+
+.grams-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.grams-table .person-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grams-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--p-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--paper);
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.grams-person-name {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.grams-person-tag {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.grams-value {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.grams-table td.cooked .grams-value {
+  color: var(--leaf);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+/* En móvil reemplazamos la tabla por cards */
+@media (max-width: 680px) {
+  .grams-table-wrap { background: transparent; border: none; border-radius: 0; }
+  .grams-table thead { display: none; }
+  .grams-table, .grams-table tbody, .grams-table tr, .grams-table td { display: block; }
+  .grams-table tr {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .grams-table tbody td {
+    border: none;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .grams-table tbody td.person-col { padding-bottom: 12px; border-bottom: 1px dashed var(--line); margin-bottom: 8px; }
+  .grams-table tbody td:not(.person-col)::before {
+    content: attr(data-label);
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .grams-table tbody td.crudo:not(.person-col)::before { color: var(--terra); }
+  .grams-table tbody td.cooked:not(.person-col)::before { color: var(--leaf); }
+}
+
+/* Cards de total para el súper */
+.grams-totals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.grams-total-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.grams-total-card[data-kind="std"]  { --accent: var(--terra); }
+.grams-total-card[data-kind="pork"] { --accent: var(--rose); }
+
+.grams-total-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.grams-total-value {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.grams-total-desc {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .grams-totals { grid-template-columns: 1fr; }
+}
+
+.grams-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.grams-tip {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.grams-tip-icon {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-style: italic;
+  color: var(--leaf);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.grams-tip-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.grams-tip-text strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* === TABLA DE CARBOHIDRATOS === */
+.carbs-intro {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--leaf) 8%, var(--paper));
+  border-left: 3px solid var(--leaf);
+  padding: 12px 16px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.carbs-intro strong {
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--leaf);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.carbs-table-wrap {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.carbs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+}
+
+.carbs-table thead th {
+  background: color-mix(in srgb, var(--bg-soft) 60%, var(--paper));
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: bottom;
+}
+
+.carbs-table thead th.person-header {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--p-header-color, var(--ink));
+}
+
+.carbs-table thead th.glycemic-header { color: var(--terra); text-align: center; }
+
+.carbs-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+
+.carbs-table tbody tr:last-child td { border-bottom: none; }
+
+.carbs-food {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.carbs-food small {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0;
+}
+
+.carbs-portion {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.carbs-glycemic {
+  text-align: center;
+}
+
+.glycemic-pill {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.glycemic-pill.bajo {
+  background: color-mix(in srgb, var(--leaf) 18%, transparent);
+  color: var(--leaf);
+}
+.glycemic-pill.bajo-mod {
+  background: color-mix(in srgb, var(--leaf) 10%, transparent);
+  color: color-mix(in srgb, var(--leaf) 60%, var(--gold));
+}
+.glycemic-pill.medio {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  color: var(--gold);
+}
+.glycemic-pill.alto-mod {
+  background: color-mix(in srgb, var(--terra) 15%, transparent);
+  color: var(--terra);
+}
+.glycemic-pill.alto {
+  background: var(--terra-deep);
+  color: var(--paper);
+}
+.glycemic-pill small {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  opacity: 0.85;
+  margin-top: 1px;
+}
+
+/* En móvil: cards verticales */
+@media (max-width: 720px) {
+  .carbs-table-wrap { background: transparent; border: none; }
+  .carbs-table thead { display: none; }
+  .carbs-table, .carbs-table tbody, .carbs-table tr, .carbs-table td { display: block; }
+  .carbs-table tr {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .carbs-table tbody td {
+    border: none;
+    padding: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+  }
+  .carbs-table tbody td.carbs-food-col {
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--line);
+    margin-bottom: 8px;
+    display: block;
+    text-align: left;
+  }
+  .carbs-table tbody td:not(.carbs-food-col)::before {
+    content: attr(data-label);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+  }
+  .carbs-portion { text-align: right; }
+}
+
 /* === FAMILIA — Tarjetas de logros === */
 .family-grid {
   display: grid;
@@ -742,6 +1369,32 @@ body::before {
 .family-card[data-p="jov"] { --p-color: var(--jov); }
 .family-card[data-p="mar"] { --p-color: var(--mar); }
 .family-card[data-p="lup"] { --p-color: var(--lup); }
+.family-card[data-p="mat"] { --p-color: var(--mat); }
+
+/* Tarjeta de miembro pasivo (bebé) */
+.family-card-passive {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--p-color) 6%, var(--paper)) 0%,
+    var(--paper) 100%);
+}
+.family-card-passive .family-don {
+  margin-bottom: 14px;
+}
+
+.passive-tag {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mat);
+  background: color-mix(in srgb, var(--mat) 18%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
 
 /* Tarjeta cuando es su cumpleaños */
 .family-card.is-birthday {
@@ -2187,6 +2840,7 @@ body::before {
       <button class="tab" data-tab="tablon" onclick="switchTab('tablon')">Tablón<span class="tab-count" id="count-tablon" style="display:none">0</span></button>
       <button class="tab" data-tab="esporadicas" onclick="switchTab('esporadicas')">Esporádicas<span class="tab-count" id="count-esp">0</span></button>
       <button class="tab" data-tab="detalles" onclick="switchTab('detalles')">Detalles que cuidan</button>
+      <button class="tab" data-tab="cocina" onclick="switchTab('cocina')">Cocina</button>
       <button class="tab" data-tab="familia" onclick="switchTab('familia')">Familia</button>
       <button class="tab" data-tab="historial" onclick="switchTab('historial')">Historial</button>
     </div>
@@ -2277,6 +2931,48 @@ body::before {
         </div>
       </div>
       <div class="details-list" id="details-list"></div>
+    </section>
+
+    <!-- COCINA -->
+    <section class="panel" data-panel="cocina">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">La <em>cocina</em></h1>
+          <p class="panel-sub">Menú de la semana y gramajes de la familia</p>
+        </div>
+      </div>
+
+      <!-- Sub-tabs Menu / Proteínas / Carbos -->
+      <div class="cocina-subtabs">
+        <button class="subtab active" data-sub="menu" onclick="switchCocinaSub('menu')">Menú semanal</button>
+        <button class="subtab" data-sub="gramajes" onclick="switchCocinaSub('gramajes')">Proteínas</button>
+        <button class="subtab" data-sub="carbs" onclick="switchCocinaSub('carbs')">Carbos</button>
+      </div>
+
+      <!-- Sub-panel: Menú -->
+      <div class="cocina-sub active" data-sub="menu">
+        <div class="menu-toolbar">
+          <button class="icon-btn" onclick="changeMenuWeek(-1)" title="Semana anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="menu-week-label" id="menu-week-label">Esta semana</div>
+          <button class="icon-btn" onclick="changeMenuWeek(1)" title="Semana siguiente">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="claim-btn ghost" onclick="resetMenuWeek()" style="margin-left:auto" title="Volver a esta semana">Hoy</button>
+        </div>
+        <div id="menu-grid"></div>
+      </div>
+
+      <!-- Sub-panel: Proteínas (antes Gramajes) -->
+      <div class="cocina-sub" data-sub="gramajes">
+        <div id="grams-content"></div>
+      </div>
+
+      <!-- Sub-panel: Carbos -->
+      <div class="cocina-sub" data-sub="carbs">
+        <div id="carbs-content"></div>
+      </div>
     </section>
 
     <!-- FAMILIA -->
@@ -2413,6 +3109,30 @@ body::before {
 </div>
 
 <!-- =================================================
+     MODAL — Editar plato del menú
+     ================================================= -->
+<div class="modal-backdrop" id="modal-meal">
+  <div class="modal modal-form">
+    <div class="modal-title" id="meal-modal-title">Editar plato</div>
+    <div class="modal-sub" id="meal-modal-sub"></div>
+
+    <label class="form-label">¿Qué se come?</label>
+    <input type="text" class="form-input" id="meal-name" placeholder="Ej: Pollo al limón con arroz" maxlength="80" />
+
+    <label class="form-label">Ingredientes principales <span class="form-hint">(opcional)</span></label>
+    <textarea class="form-input form-textarea" id="meal-ingredients" placeholder="Ej: Pechuga de pollo, limón, ajo, arroz, ejotes" maxlength="200"></textarea>
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="claim-btn ghost" style="color:var(--terra-deep)" onclick="deleteMeal()">Borrar plato</button>
+      <div style="display:flex;gap:8px">
+        <button class="claim-btn primary" onclick="saveMeal()">Guardar</button>
+        <button class="modal-cancel" onclick="closeMealForm()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
      MODAL — Elegir alcance al tomar tarea
      ================================================= -->
 <div class="modal-backdrop" id="modal-scope">
@@ -2463,7 +3183,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.7';
+const APP_VERSION = '2026.05.22.9';
 
 async function checkForUpdate() {
   try {
@@ -2562,8 +3282,16 @@ const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm' },
   jov: { name: 'Jovanny',   initial: 'J', color: 'jov' },
   mar: { name: 'Mariel',    initial: 'M', color: 'mar' },
-  lup: { name: 'Lupita',    initial: 'L', color: 'lup' }
+  lup: { name: 'Lupita',    initial: 'L', color: 'lup' },
+  mat: { name: 'Matías',    initial: 'm', color: 'mat', passive: true }
 };
+
+/* Solo los miembros activos (no Matías) para selectores, scores, etc. */
+function activePeople() {
+  const out = {};
+  Object.entries(PEOPLE).forEach(([k, p]) => { if (!p.passive) out[k] = p; });
+  return out;
+}
 
 const SEED_DAILY = [
   { id: 'd01', name: 'Hacer desayuno', meta: 'Empezar el día bien', section: 'morning' },
@@ -2636,7 +3364,11 @@ let state = {
     lup: 'La que brilla'
   },
   // CUMPLEAÑOS personalizables por cada miembro (formato YYYY-MM-DD)
-  birthdays: { emm: null, jov: null, mar: null, lup: null },
+  birthdays: { emm: null, jov: null, mar: null, lup: null, mat: null },
+  // MENÚ SEMANAL — { weekKey: { mon: {breakfast, lunch, dinner}, tue: ..., ... } }
+  menu: {},
+  // GRAMAJES DE PROTEÍNA — { personKey: { stdRaw, stdCooked, porkRaw, porkCooked } }
+  grams: null,
   // TABLÓN
   proposals: {},                 // { id: { kind, name, meta/desc, section?, proposedBy, proposedAt, votes: {emm:'yes'|'no', ...} } }
   notices: {}                    // { id: { text, createdBy, createdAt, takenBy?, takenAt?, done?, doneBy?, doneAt? } }
@@ -2667,6 +3399,20 @@ function ensureCatalogs() {
   Object.keys(PEOPLE).forEach(k => {
     if (!(k in state.birthdays)) state.birthdays[k] = null;
   });
+
+  // MENÚ SEMANAL
+  if (!state.menu) state.menu = {};
+
+  // GRAMAJES (semilla desde la guía oficial)
+  if (!state.grams) {
+    state.grams = {
+      emm: { stdRaw: 200, stdCooked: '140-150', porkRaw: 220, porkCooked: '145-150' },
+      jov: { stdRaw: 180, stdCooked: '125-135', porkRaw: 200, porkCooked: '130-135' },
+      mar: { stdRaw: 120, stdCooked: '85-90',   porkRaw: 140, porkCooked: '90-95'  },
+      lup: { stdRaw: 120, stdCooked: '85-90',   porkRaw: 140, porkCooked: '90-95'  },
+      mat: { stdRaw: 60,  stdCooked: '40-45',   porkRaw: 70,  porkCooked: '45-50'  }
+    };
+  }
 }
 
 let useFirebase = false;
@@ -2954,6 +3700,8 @@ function save() {
       scores: state.scores,
       subtitles: state.subtitles,
       birthdays: state.birthdays,
+      menu: state.menu,
+      grams: state.grams,
       proposals: state.proposals,
       notices: state.notices
     }).catch(e => console.warn('Firebase save error', e));
@@ -3065,6 +3813,8 @@ async function initFirebase() {
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
+        if (data.menu) state.menu = data.menu;
+        if (data.grams) state.grams = data.grams;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
@@ -3082,6 +3832,8 @@ async function initFirebase() {
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
+        if (data.menu) state.menu = data.menu;
+        if (data.grams) state.grams = data.grams;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
@@ -3364,6 +4116,8 @@ async function performRefresh() {
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
+        if (data.menu) state.menu = data.menu;
+        if (data.grams) state.grams = data.grams;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
@@ -3465,6 +4219,7 @@ function renderAll() {
   renderSporadic();
   renderDetails();
   renderTablon();
+  renderCocina();
   renderFamily();
   renderHistory();
   renderNotifs();
@@ -3827,6 +4582,50 @@ function renderFamily() {
   const el = document.getElementById('family-grid');
   el.innerHTML = '';
   Object.entries(PEOPLE).forEach(([key, p]) => {
+    // Caso especial: miembros pasivos (Matías) — tarjeta simplificada
+    if (p.passive) {
+      const bday = state.birthdays?.[key];
+      const age = calcAge(bday);
+      const daysToBday = daysUntilBirthday(bday);
+      const isBdayToday = daysToBday === 0;
+
+      let bdayInfo = '';
+      if (bday) {
+        if (isBdayToday) {
+          bdayInfo = `<span class="bday-today">✿ ¡Hoy cumple ${ageNextBirthday(bday)}!</span>`;
+        } else if (daysToBday !== null && daysToBday <= 7) {
+          bdayInfo = `<span class="bday-soon">En ${daysToBday} día${daysToBday === 1 ? '' : 's'} cumple ${ageNextBirthday(bday)}</span>`;
+        } else {
+          bdayInfo = `${age >= 1 ? age + ' año' + (age === 1 ? '' : 's') : 'Bebé'} · ${formatBirthday(bday)}`;
+        }
+      } else if (state.me) {
+        bdayInfo = `<button class="bday-add-btn" onclick="editPassiveBirthday('${key}')">+ Agregar su cumpleaños</button>`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'family-card family-card-passive' + (isBdayToday ? ' is-birthday' : '');
+      card.dataset.p = key;
+      card.innerHTML = `
+        <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
+        <div class="family-name">${p.name} <span class="passive-tag">bebé</span></div>
+        <div class="family-don">
+          <span class="don-text" style="font-style:italic;color:var(--muted)">El más pequeño de la casa</span>
+        </div>
+        ${bday ? `
+          <div class="family-bday">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="bday-icon"><path d="M20 21v-8H4v8M1 21h22M6 13V8a4 4 0 0 1 4-4M14 13V8a4 4 0 0 1 4-4M10 4a2 2 0 1 0 0-4M18 4a2 2 0 1 0 0-4"/></svg>
+            <span>${bdayInfo}</span>
+            <button class="don-edit" onclick="editPassiveBirthday('${key}')" title="Cambiar su cumpleaños">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        ` : (state.me ? `<div class="family-bday family-bday-add">${bdayInfo}</div>` : '')}
+      `;
+      el.appendChild(card);
+      return;
+    }
+
+    // Caso normal: miembros activos
     const today = Object.values(state.daily).filter(v => v.by === key && v.done).length
                 + Object.values(state.details).filter(v => v.by === key && v.done).length;
     const total = state.scores[key] || 0;
@@ -3941,6 +4740,33 @@ function editMyBirthday() {
   toast('✿ Cumpleaños guardado');
 }
 
+/* Editar cumpleaños de un miembro pasivo (cualquier adulto puede) */
+function editPassiveBirthday(key) {
+  const p = PEOPLE[key];
+  if (!p) return;
+  const current = state.birthdays?.[key] || '';
+  const newVal = prompt(`Fecha de nacimiento de ${p.name} (formato AAAA-MM-DD):`, current);
+  if (newVal === null) return;
+  const trimmed = newVal.trim();
+  if (trimmed === '') {
+    if (!state.birthdays) state.birthdays = {};
+    state.birthdays[key] = null;
+    save();
+    renderAll();
+    toast('Cumpleaños eliminado');
+    return;
+  }
+  if (!parseBirthday(trimmed)) {
+    toast('Formato inválido — usa AAAA-MM-DD');
+    return;
+  }
+  if (!state.birthdays) state.birthdays = {};
+  state.birthdays[key] = trimmed;
+  save();
+  renderAll();
+  toast(`✿ Cumpleaños de ${p.name} guardado`);
+}
+
 function renderHistory() {
   const el = document.getElementById('history-list');
   el.innerHTML = '';
@@ -3960,6 +4786,442 @@ function renderHistory() {
     `;
     el.appendChild(row);
   });
+}
+
+/* =====================================================================
+   COCINA — Menú semanal y gramajes
+   ===================================================================== */
+
+let cocinaSub = 'menu';       // 'menu' o 'gramajes'
+let menuWeekOffset = 0;        // 0 = esta semana, -1 = anterior, 1 = siguiente
+let editingMeal = null;        // { weekKey, day, meal }
+
+const DAYS = [
+  { key: 'mon', name: 'Lunes',     short: 'L' },
+  { key: 'tue', name: 'Martes',    short: 'M' },
+  { key: 'wed', name: 'Miércoles', short: 'X' },
+  { key: 'thu', name: 'Jueves',    short: 'J' },
+  { key: 'fri', name: 'Viernes',   short: 'V' },
+  { key: 'sat', name: 'Sábado',    short: 'S' },
+  { key: 'sun', name: 'Domingo',   short: 'D' }
+];
+
+const MEALS = [
+  { key: 'breakfast', name: 'Desayuno' },
+  { key: 'lunch',     name: 'Comida' },
+  { key: 'dinner',    name: 'Cena' }
+];
+
+function switchCocinaSub(sub) {
+  cocinaSub = sub;
+  document.querySelectorAll('.cocina-subtabs .subtab').forEach(b => {
+    b.classList.toggle('active', b.dataset.sub === sub);
+  });
+  document.querySelectorAll('.cocina-sub').forEach(p => {
+    p.classList.toggle('active', p.dataset.sub === sub);
+  });
+}
+
+function renderCocina() {
+  renderMenu();
+  renderGrams();
+  renderCarbs();
+}
+
+/* === MENÚ SEMANAL === */
+
+/* Devuelve fechas de los 7 días de una semana específica con offset */
+function getWeekDates(offset = 0) {
+  const now = new Date();
+  // Lunes de esta semana
+  const day = now.getDay() || 7;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1 + (offset * 7));
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    dates.push(d);
+  }
+  return dates;
+}
+
+/* Convierte una fecha a weekKey */
+function dateToWeekKey(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  const year = date.getUTCFullYear();
+  const week = Math.ceil((((date - new Date(Date.UTC(year, 0, 1))) / 86400000) + 1) / 7);
+  return `${year}-W${String(week).padStart(2, '0')}`;
+}
+
+function changeMenuWeek(delta) {
+  menuWeekOffset += delta;
+  renderMenu();
+}
+
+function resetMenuWeek() {
+  menuWeekOffset = 0;
+  renderMenu();
+}
+
+function renderMenu() {
+  const grid = document.getElementById('menu-grid');
+  const label = document.getElementById('menu-week-label');
+  if (!grid || !label) return;
+
+  const dates = getWeekDates(menuWeekOffset);
+  const wKey = dateToWeekKey(dates[0]);
+  const todayStr = todayKey();
+
+  // Label de la semana
+  const firstD = dates[0];
+  const lastD = dates[6];
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let weekLabel;
+  if (menuWeekOffset === 0) {
+    weekLabel = `Esta semana · ${firstD.getDate()} ${meses[firstD.getMonth()]} – ${lastD.getDate()} ${meses[lastD.getMonth()]}`;
+  } else if (menuWeekOffset === 1) {
+    weekLabel = `Próxima semana · ${firstD.getDate()} ${meses[firstD.getMonth()]} – ${lastD.getDate()} ${meses[lastD.getMonth()]}`;
+  } else if (menuWeekOffset === -1) {
+    weekLabel = `Semana pasada · ${firstD.getDate()} ${meses[firstD.getMonth()]} – ${lastD.getDate()} ${meses[lastD.getMonth()]}`;
+  } else {
+    weekLabel = `${firstD.getDate()} ${meses[firstD.getMonth()]} – ${lastD.getDate()} ${meses[lastD.getMonth()]}`;
+  }
+  label.textContent = weekLabel;
+
+  // Asegurar que existe el objeto de la semana
+  if (!state.menu[wKey]) state.menu[wKey] = {};
+  const weekMenu = state.menu[wKey];
+
+  let html = '';
+  DAYS.forEach((day, i) => {
+    const date = dates[i];
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const dayData = weekMenu[day.key] || {};
+
+    let mealsHtml = '';
+    MEALS.forEach(meal => {
+      const m = dayData[meal.key];
+      const hasContent = m && m.name;
+      mealsHtml += `
+        <div class="meal-cell" data-meal="${meal.key}" onclick="openMealEditor('${wKey}','${day.key}','${meal.key}')">
+          <div class="meal-cell-label">${meal.name}</div>
+          ${hasContent ? `
+            <div class="meal-cell-name">${escapeHtml(m.name)}</div>
+            ${m.ingredients ? `<div class="meal-cell-ingredients">${escapeHtml(m.ingredients)}</div>` : ''}
+          ` : `
+            <div class="meal-cell-empty">agregar plato</div>
+          `}
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="menu-day ${isToday ? 'is-today' : ''}">
+        <div class="menu-day-head">
+          <span class="menu-day-name">${day.name}</span>
+          <span class="menu-day-date">${date.getDate()} ${meses[date.getMonth()]}</span>
+        </div>
+        <div class="menu-meals">${mealsHtml}</div>
+      </div>
+    `;
+  });
+  grid.innerHTML = html;
+}
+
+function openMealEditor(weekKey, day, meal) {
+  editingMeal = { weekKey, day, meal };
+  const m = state.menu[weekKey]?.[day]?.[meal] || {};
+  const dayName = DAYS.find(d => d.key === day)?.name || day;
+  const mealName = MEALS.find(mm => mm.key === meal)?.name || meal;
+  document.getElementById('meal-modal-title').textContent = `${mealName} del ${dayName}`;
+  document.getElementById('meal-modal-sub').textContent = m.name ? 'Edita el plato' : 'Agrega un plato nuevo';
+  document.getElementById('meal-name').value = m.name || '';
+  document.getElementById('meal-ingredients').value = m.ingredients || '';
+  document.getElementById('modal-meal').classList.add('open');
+  setTimeout(() => document.getElementById('meal-name').focus(), 100);
+}
+
+function closeMealForm() {
+  document.getElementById('modal-meal').classList.remove('open');
+  editingMeal = null;
+}
+
+function saveMeal() {
+  if (!editingMeal) return;
+  const { weekKey: wKey, day, meal } = editingMeal;
+  const name = document.getElementById('meal-name').value.trim();
+  const ingredients = document.getElementById('meal-ingredients').value.trim();
+  if (!name) { toast('Ponle un nombre al plato'); return; }
+
+  if (!state.menu[wKey]) state.menu[wKey] = {};
+  if (!state.menu[wKey][day]) state.menu[wKey][day] = {};
+  state.menu[wKey][day][meal] = { name, ingredients, updatedBy: state.me, updatedAt: Date.now() };
+
+  closeMealForm();
+  save();
+  renderAll();
+  toast('✦ Plato guardado');
+}
+
+function deleteMeal() {
+  if (!editingMeal) return;
+  const { weekKey: wKey, day, meal } = editingMeal;
+  if (state.menu[wKey]?.[day]?.[meal]) {
+    delete state.menu[wKey][day][meal];
+    // Limpiar día y semana si quedaron vacíos
+    if (Object.keys(state.menu[wKey][day]).length === 0) delete state.menu[wKey][day];
+    if (Object.keys(state.menu[wKey]).length === 0) delete state.menu[wKey];
+  }
+  closeMealForm();
+  save();
+  renderAll();
+  toast('Plato eliminado');
+}
+
+/* === GRAMAJES === */
+
+function renderGrams() {
+  const el = document.getElementById('grams-content');
+  if (!el) return;
+  const g = state.grams || {};
+
+  // Orden visual: Emmanuel, Jovanny, Mariel, Lupita, Matías
+  const order = ['emm', 'jov', 'mar', 'lup', 'mat'];
+
+  // Tabla principal
+  let tableRows = '';
+  order.forEach(key => {
+    const p = PEOPLE[key];
+    if (!p) return;
+    const row = g[key] || {};
+    const tag = key === 'mat' ? 'Bebé' : key === 'lup' ? 'Niña' : null;
+    tableRows += `
+      <tr>
+        <td class="person-col" data-label="Miembro">
+          <div class="person-cell">
+            <span class="grams-avatar" style="background: var(--${key})">${p.initial}</span>
+            <div>
+              <div class="grams-person-name">${p.name}</div>
+              ${tag ? `<span class="grams-person-tag">${tag}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td class="crudo" data-label="Crudo estándar"><span class="grams-value">${row.stdRaw || '—'}<small> g</small></span></td>
+        <td class="cooked" data-label="Cocido estándar"><span class="grams-value">~ ${row.stdCooked || '—'}<small> g</small></span></td>
+        <td class="crudo" data-label="Crudo cerdito"><span class="grams-value">${row.porkRaw || '—'}<small> g</small></span></td>
+        <td class="cooked" data-label="Cocido cerdito"><span class="grams-value">~ ${row.porkCooked || '—'}<small> g</small></span></td>
+      </tr>
+    `;
+  });
+
+  // Totales calculados
+  let totalStd = 0, totalPork = 0;
+  order.forEach(key => {
+    const row = g[key] || {};
+    totalStd += (row.stdRaw || 0);
+    totalPork += (row.porkRaw || 0);
+  });
+
+  el.innerHTML = `
+    <div class="grams-intro">
+      <strong>Nota de control</strong>
+      El peso en <strong style="display:inline;color:var(--terra)">crudo</strong> es para medir antes de cocinar. El peso <strong style="display:inline;color:var(--leaf)">cocinado</strong> es la referencia visual aproximada que debe quedar servida en el plato tras la reducción natural.
+    </div>
+
+    <div class="grams-section-title">Tabla maestra de equivalencias · por comida</div>
+    <div class="grams-table-wrap">
+      <table class="grams-table">
+        <thead>
+          <tr>
+            <th>Miembro</th>
+            <th class="crudo">Carnes estándar (crudo)</th>
+            <th class="cocido">Estándar (cocido)</th>
+            <th class="crudo">Cerdito (crudo)</th>
+            <th class="cocido">Cerdito (cocido)</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+
+    <div class="grams-section-title">Logística del súper · ${order.length} integrantes</div>
+    <div class="grams-totals">
+      <div class="grams-total-card" data-kind="std">
+        <div class="grams-total-label">Menú estándar</div>
+        <div class="grams-total-value">${totalStd} g</div>
+        <div class="grams-total-desc">Pollo, res, camarón, tilapia · total en crudo en la carnicería</div>
+      </div>
+      <div class="grams-total-card" data-kind="pork">
+        <div class="grams-total-label">Menú de cerdito</div>
+        <div class="grams-total-value">${totalPork} g</div>
+        <div class="grams-total-desc">Lomo, solomillo, pulpa · incluye el ajuste familiar</div>
+      </div>
+    </div>
+
+    <div class="grams-section-title">Tips de cocina y preparación</div>
+    <div class="grams-tips">
+      <div class="grams-tip">
+        <span class="grams-tip-icon">✿</span>
+        <div class="grams-tip-text"><strong>Humedad y sabor:</strong> usar la Air Fryer con un toque de atomizador (aceite en aerosol) ayuda a retener los jugos naturales y mantiene el peso cocinado exacto sin añadir grasas pesadas.</div>
+      </div>
+      <div class="grams-tip">
+        <span class="grams-tip-icon">✦</span>
+        <div class="grams-tip-text"><strong>Porción de Matías:</strong> servir sus 40–45 g cocinados siempre deshebrados, picaditos muy suaves o en preparaciones molidas para facilitar por completo su masticación.</div>
+      </div>
+    </div>
+  `;
+}
+
+/* === DATOS DE CARBOHIDRATOS (de la guía oficial) === */
+const CARBS_DATA = [
+  {
+    food: 'Arroz Integral / Quinoa',
+    note: 'cocido',
+    portions: { emm: '½ – ⅔ tz', jov: '½ – ⅔ tz', mar: '⅓ tz', lup: '⅓ tz', mat: '3–4 cdas' },
+    glycemic: 'bajo'
+  },
+  {
+    food: 'Frijoles / Lentejas',
+    note: 'cocinados',
+    portions: { emm: '½ – ⅔ tz', jov: '½ – ⅔ tz', mar: '⅓ tz', lup: '⅓ tz', mat: '3–4 cdas' },
+    glycemic: 'bajo'
+  },
+  {
+    food: 'Avena',
+    note: 'cuchara / licuado',
+    portions: { emm: '⅔ tz · 50 g', jov: '½ tz · 45 g', mar: '½ tz · 30 g', lup: '½ tz · 30 g', mat: '4 cdas · 15 g' },
+    glycemic: 'bajo'
+  },
+  {
+    food: 'Tortilla amarilla / blanca',
+    portions: { emm: '2–3 pzas', jov: '2 pzas', mar: '1 pieza', lup: '1 pieza', mat: '½–1 pza' },
+    glycemic: 'bajo-mod'
+  },
+  {
+    food: 'Pan integral / masa madre',
+    portions: { emm: '2 reb', jov: '1.5 reb', mar: '1 rebanada', lup: '1 rebanada', mat: '½ reb' },
+    glycemic: 'bajo'
+  },
+  {
+    food: 'Pan pita integral / muffin inglés',
+    portions: { emm: '1 pieza', jov: '1 pieza', mar: '½ pieza', lup: '½ pieza', mat: '⅓ pza' },
+    glycemic: 'medio'
+  },
+  {
+    food: 'Panadería integral / rice cakes',
+    portions: { emm: '1 pza / 3', jov: '1 pza / 2–3', mar: '½ pza / 2 pzas', lup: '½ pza / 2 pzas', mat: '¼ / 1 pza' },
+    glycemic: 'medio'
+  },
+  {
+    food: 'Puré camote / bastones air fryer',
+    portions: { emm: '¾ tz · 1 tz', jov: '¾ tz · 1 tz', mar: '½ tz', lup: '½ tz', mat: '2 cdas · 5 bast' },
+    glycemic: 'bajo-mod',
+    glycemicNote: 'saciante'
+  },
+  {
+    food: 'Puré papa / papas air fryer',
+    portions: { emm: '½ tz', jov: '½ tz', mar: '⅓ tz', lup: '⅓ tz', mat: '2 cdas · 4 bast' },
+    glycemic: 'alto-mod'
+  },
+  {
+    food: 'Arroz blanco / tortilla harina',
+    portions: { emm: '½ tz · 1 pza', jov: '½ tz · 1 pza', mar: '¼ tz · ½ pza', lup: '¼ tz · ½ pza', mat: '2 cdas · ¼' },
+    glycemic: 'alto',
+    glycemicNote: 'evitar de noche'
+  },
+  {
+    food: 'Bagel / biscuit / galleta María',
+    portions: { emm: '¼ · ¼ · 4', jov: '¼ · ¼ · 3', mar: '⅛ · ⅛ · 2 pzas', lup: '⅛ · ⅛ · 2 pzas', mat: 'Bocados · 1' },
+    glycemic: 'alto',
+    glycemicNote: 'postre'
+  }
+];
+
+const GLYCEMIC_LABELS = {
+  'bajo':     { label: 'Bajo' },
+  'bajo-mod': { label: 'Bajo-Mod' },
+  'medio':    { label: 'Medio' },
+  'alto-mod': { label: 'Alto-Mod' },
+  'alto':     { label: 'Alto' }
+};
+
+function renderCarbs() {
+  const el = document.getElementById('carbs-content');
+  if (!el) return;
+
+  // Cabeceras con el color de cada persona
+  const order = ['emm', 'jov', 'mar', 'lup', 'mat'];
+  let headerCells = order.map(k => {
+    const p = PEOPLE[k];
+    if (!p) return '';
+    return `<th class="person-header" style="--p-header-color: var(--${k})">${p.name}${p.passive ? ' <span style="font-size:9px;font-style:normal;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;display:block;margin-top:2px">bebé</span>' : ''}</th>`;
+  }).join('');
+
+  // Filas de alimentos
+  let rows = '';
+  CARBS_DATA.forEach(item => {
+    const portionCells = order.map(k => {
+      return `<td class="carbs-portion" data-label="${PEOPLE[k].name}">${escapeHtml(item.portions[k] || '—')}</td>`;
+    }).join('');
+
+    const glycemicClass = item.glycemic;
+    const glycemicData = GLYCEMIC_LABELS[item.glycemic] || { label: item.glycemic };
+    let glycemicHtml = `<span class="glycemic-pill ${glycemicClass}">${glycemicData.label}`;
+    if (item.glycemicNote) glycemicHtml += `<small>${item.glycemicNote}</small>`;
+    glycemicHtml += `</span>`;
+
+    rows += `
+      <tr>
+        <td class="carbs-food-col" data-label="Alimento">
+          <div class="carbs-food">
+            ${escapeHtml(item.food)}
+            ${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}
+          </div>
+        </td>
+        ${portionCells}
+        <td class="carbs-glycemic" data-label="Impacto glucémico">${glycemicHtml}</td>
+      </tr>
+    `;
+  });
+
+  el.innerHTML = `
+    <div class="carbs-intro">
+      <strong>Edición déficit · control de glucosa</strong>
+      Porciones adaptadas para la pérdida sostenible de grasa y estabilidad de la insulina. Los carbohidratos están organizados por <strong style="display:inline;color:var(--leaf)">impacto glucémico</strong>: prioriza los de impacto bajo durante el día.
+    </div>
+
+    <div class="grams-section-title">Bloques de porciones por comida</div>
+    <div class="carbs-table-wrap">
+      <table class="carbs-table">
+        <thead>
+          <tr>
+            <th>Alimento</th>
+            ${headerCells}
+            <th class="glycemic-header">Impacto glucémico</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="grams-section-title">Estrategias metabólicas obligatorias</div>
+    <div class="grams-tips">
+      <div class="grams-tip">
+        <span class="grams-tip-icon">✦</span>
+        <div class="grams-tip-text">
+          <strong>Método anti-picos de glucosa:</strong> come siempre en estricto orden: 1° vegetales (fibra) → 2° proteína (pollo, res, pescado) → 3° el carbohidrato. Consumir el plato en este orden reduce el impacto de la insulina de manera espectacular.
+        </div>
+      </div>
+      <div class="grams-tip">
+        <span class="grams-tip-icon">✿</span>
+        <div class="grams-tip-text">
+          <strong>El truco del almidón resistente:</strong> enfría tu arroz, papas, camote o leguminosas en el refrigerador toda la noche anterior. Al recalentarlos al día siguiente, cambian su estructura, se absorben la mitad de calorías y se mitiga el impacto glucémico.
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function renderNotifs() {
@@ -4253,8 +5515,8 @@ function vote(proposalId, value) {
   if (!p.votes) p.votes = {};
   p.votes[state.me] = value;
 
-  // Verificar si ya votaron todos
-  const everyone = Object.keys(PEOPLE);
+  // Verificar si ya votaron todos (excluyendo miembros pasivos)
+  const everyone = Object.keys(activePeople());
   const allVoted = everyone.every(k => p.votes[k]);
   const allYes = everyone.every(k => p.votes[k] === 'yes');
   const anyNo = everyone.some(k => p.votes[k] === 'no');
@@ -4494,8 +5756,8 @@ function renderProposals() {
     const myVote = votes[state.me];
     const isMine = p.proposedBy === state.me;
 
-    // Resumen de votos
-    const everyone = Object.keys(PEOPLE);
+    // Resumen de votos (sin miembros pasivos)
+    const everyone = Object.keys(activePeople());
     const voted = everyone.filter(k => votes[k]);
     const yesCount = everyone.filter(k => votes[k] === 'yes').length;
     const pending = everyone.filter(k => !votes[k]);
