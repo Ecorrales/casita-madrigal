@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#f4e4d4" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Casita Corrales · Planificador familiar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -931,6 +934,11 @@ body::before {
 @keyframes pulse-dot {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 60%, transparent); }
   50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold) 0%, transparent); }
+}
+
+@keyframes update-slide-up {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .live-text {
@@ -2295,6 +2303,84 @@ body::before {
 </div>
 
 <script>
+/* ===== CONTROL DE VERSIÓN PARA PWA =====
+   Sube APP_VERSION cada vez que actualices el código. Cada minuto la
+   app revisa si hay una versión nueva en el servidor y muestra un aviso
+   al usuario para recargar. Esto es necesario porque las PWAs instaladas
+   en iOS/Android cachean agresivamente el HTML. */
+
+const APP_VERSION = '2026.05.22.2';
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch('./index.html?_=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (!res.ok) return;
+    const text = await res.text();
+    const match = text.match(/const APP_VERSION = '([^']+)'/);
+    if (!match) return;
+    const remoteVersion = match[1];
+    if (remoteVersion !== APP_VERSION) {
+      showUpdateBanner(remoteVersion);
+    }
+  } catch(e) {
+    // Sin conexión, ignorar silenciosamente
+  }
+}
+
+function showUpdateBanner(newVersion) {
+  if (document.getElementById('update-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.innerHTML = `
+    <span>✦ Hay una nueva versión de la Casita</span>
+    <button onclick="reloadForUpdate()">Actualizar</button>
+  `;
+  banner.style.cssText = `
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: var(--terra); color: var(--paper); padding: 10px 16px;
+    border-radius: 999px; box-shadow: var(--shadow-lift); z-index: 200;
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Fraunces', serif; font-style: italic; font-size: 14px;
+    max-width: calc(100% - 32px); animation: update-slide-up 0.4s ease;
+  `;
+  banner.querySelector('button').style.cssText = `
+    appearance: none; background: var(--paper); color: var(--terra);
+    border: none; border-radius: 999px; padding: 6px 14px;
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; cursor: pointer; text-transform: uppercase;
+    white-space: nowrap;
+  `;
+  document.body.appendChild(banner);
+}
+
+async function reloadForUpdate() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch(e) {}
+  const url = new URL(location.href);
+  url.searchParams.set('_v', Date.now());
+  location.replace(url.toString());
+}
+
+// Primera revisión 5s después de cargar
+setTimeout(checkForUpdate, 5000);
+// Revisar cada minuto mientras la app esté abierta
+setInterval(checkForUpdate, 60 * 1000);
+// Y cuando la app vuelve a primer plano (clave para PWA)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForUpdate();
+});
+
 /* ===================================================================
    CASITA CORRALES — Planificador familiar
    Funciona sin Firebase (modo local). Si se configura, sincroniza en
@@ -2794,79 +2880,113 @@ function init() {
 
 /* ===================================================================
    PULL TO REFRESH — desliza hacia abajo para actualizar
+   Implementación conservadora: solo intercepta el scroll cuando estamos
+   100% seguros de que el usuario quiere refrescar, no antes.
    =================================================================== */
 
 const PTR_THRESHOLD = 70;       // distancia para activar el refresh
 const PTR_MAX = 140;            // distancia máxima visible (resistance)
+const PTR_LOCK_DISTANCE = 15;   // distancia mínima vertical antes de bloquear el scroll
 
 let ptrState = {
   startY: 0,
+  startX: 0,
   currentY: 0,
-  pulling: false,
+  pulling: false,       // estamos mostrando el indicador
+  locked: false,        // hemos confirmado que es PTR, ya bloqueamos scroll
+  cancelled: false,     // el touch ya no califica para PTR
   refreshing: false
 };
 
 function initPullToRefresh() {
-  // Usar passive: false en touchmove para poder hacer preventDefault
-  // cuando estemos pulling (para que el scroll no interfiera)
+  // touchstart y touchend pueden ser passive (no bloquean nada)
   document.addEventListener('touchstart', onPtrStart, { passive: true });
+  // touchmove necesita passive: false porque podríamos llamar preventDefault
+  // PERO solo lo hacemos cuando ya estamos seguros de que es PTR
   document.addEventListener('touchmove', onPtrMove, { passive: false });
   document.addEventListener('touchend', onPtrEnd, { passive: true });
   document.addEventListener('touchcancel', onPtrEnd, { passive: true });
 }
 
 function onPtrStart(e) {
+  // Reset siempre
+  ptrState.startY = 0;
+  ptrState.startX = 0;
+  ptrState.pulling = false;
+  ptrState.locked = false;
+  ptrState.cancelled = false;
+
   // Solo si estamos en el tope de la página, no refrescando, y la app visible
   if (window.scrollY > 0) return;
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
-  // No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
+
   const target = e.target;
   if (target.closest('.modal-backdrop.open')) return;
   if (target.closest('.notif-panel.open')) return;
-  if (target.closest('.tabs')) return; // las tabs tienen su propio scroll horizontal
-  // No iniciar si el toque empezó en un input/textarea/button
+  if (target.closest('.tabs')) return;
   if (target.matches('input, textarea, select, button')) return;
 
   ptrState.startY = e.touches[0].clientY;
+  ptrState.startX = e.touches[0].clientX;
   ptrState.currentY = ptrState.startY;
-  ptrState.pulling = false;
 }
 
 function onPtrMove(e) {
   if (ptrState.refreshing) return;
+  if (ptrState.cancelled) return;
   if (!ptrState.startY) return;
+
+  // Si el usuario ya scrolleó, abortar
   if (window.scrollY > 0) {
-    // Si el usuario ya scrolleó hacia abajo, cancelar
-    ptrState.startY = 0;
+    cancelPtr();
     return;
   }
 
   ptrState.currentY = e.touches[0].clientY;
-  const delta = ptrState.currentY - ptrState.startY;
+  const deltaY = ptrState.currentY - ptrState.startY;
+  const deltaX = e.touches[0].clientX - ptrState.startX;
 
-  if (delta <= 0) {
-    // Movió hacia arriba — no es pull-down
-    if (ptrState.pulling) {
-      hidePtrIndicator();
-      ptrState.pulling = false;
-    }
+  // Si el movimiento es predominantemente horizontal, abortar (es un swipe lateral)
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+    cancelPtr();
     return;
   }
 
-  if (!ptrState.pulling) {
-    ptrState.pulling = true;
+  // Si el movimiento neto es hacia arriba, abortar y dejar que scroll funcione
+  if (deltaY < 0) {
+    cancelPtr();
+    return;
   }
 
-  // Aplicar resistencia: la distancia mostrada es menor que la real
-  const resisted = Math.min(PTR_MAX, delta * 0.55);
+  // Solo hasta aquí no hemos hecho preventDefault. El scroll nativo funciona normal.
+  // Solo cuando el usuario claramente está jalando hacia abajo Y más allá del umbral,
+  // ahí sí bloqueamos el scroll.
+  if (deltaY < PTR_LOCK_DISTANCE) {
+    // Aún no estamos seguros, NO interceptes el scroll todavía
+    return;
+  }
 
-  // Prevenir el bounce del navegador / scroll superior
-  if (delta > 5) {
+  // Pasó el umbral — ahora sí confirmamos que es PTR
+  ptrState.locked = true;
+  ptrState.pulling = true;
+
+  // Aplicar resistencia
+  const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
+
+  // Ahora sí prevenimos el bounce y mostramos el indicador
+  if (e.cancelable) {
     e.preventDefault();
   }
-
   showPtrIndicator(resisted);
+}
+
+function cancelPtr() {
+  ptrState.cancelled = true;
+  if (ptrState.pulling) {
+    hidePtrIndicator();
+    ptrState.pulling = false;
+  }
 }
 
 function onPtrEnd() {
@@ -2874,12 +2994,14 @@ function onPtrEnd() {
     ptrState.startY = 0;
     return;
   }
-  if (!ptrState.pulling) {
+  if (!ptrState.locked || !ptrState.pulling) {
+    // Nunca llegamos a confirmar PTR — el scroll normal pasó tranquilo
     ptrState.startY = 0;
+    ptrState.pulling = false;
     return;
   }
-  const delta = ptrState.currentY - ptrState.startY;
-  const resisted = Math.min(PTR_MAX, delta * 0.55);
+  const deltaY = ptrState.currentY - ptrState.startY;
+  const resisted = Math.min(PTR_MAX, (deltaY - PTR_LOCK_DISTANCE) * 0.55);
 
   if (resisted >= PTR_THRESHOLD) {
     triggerRefresh();
@@ -2888,6 +3010,7 @@ function onPtrEnd() {
   }
   ptrState.startY = 0;
   ptrState.pulling = false;
+  ptrState.locked = false;
 }
 
 function showPtrIndicator(distance) {
