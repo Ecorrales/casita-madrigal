@@ -379,6 +379,12 @@ body::before {
   color: var(--paper);
 }
 
+.tab-count.alert {
+  background: var(--terra-deep);
+  color: var(--paper);
+  animation: due-pulse 2s ease-in-out infinite;
+}
+
 /* Main */
 .main {
   max-width: 1280px;
@@ -1125,6 +1131,92 @@ body::before {
 .notice-card.taken { border-left-color: var(--gold); background: color-mix(in srgb, var(--gold) 5%, var(--paper)); }
 .notice-card.done { border-left-color: var(--leaf); background: color-mix(in srgb, var(--leaf-soft) 18%, var(--paper)); opacity: 0.75; }
 
+/* Urgencia por fecha límite (sobrescribe el rose por defecto) */
+.notice-card.upcoming { border-left-color: var(--sky); }
+.notice-card.soon {
+  border-left-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 6%, var(--paper));
+}
+.notice-card.today {
+  border-left-color: var(--terra);
+  background: color-mix(in srgb, var(--terra) 7%, var(--paper));
+}
+.notice-card.overdue {
+  border-left-color: var(--terra-deep);
+  border-left-width: 5px;
+  background: color-mix(in srgb, var(--terra-deep) 10%, var(--paper));
+}
+.notice-card.overdue::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0,
+    transparent 12px,
+    color-mix(in srgb, var(--terra-deep) 6%, transparent) 12px,
+    color-mix(in srgb, var(--terra-deep) 6%, transparent) 14px
+  );
+  pointer-events: none;
+}
+/* Si está tomada Y tiene urgencia, prevalece el dorado de la toma */
+.notice-card.taken.today,
+.notice-card.taken.soon,
+.notice-card.taken.overdue {
+  border-left-color: var(--gold);
+}
+
+/* Badge de fecha de vencimiento */
+.due-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+.due-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.due-badge.upcoming {
+  background: color-mix(in srgb, var(--sky) 16%, transparent);
+  color: var(--sky);
+}
+.due-badge.soon {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  color: var(--gold);
+}
+.due-badge.today {
+  background: color-mix(in srgb, var(--terra) 14%, transparent);
+  color: var(--terra);
+}
+.due-badge.overdue {
+  background: var(--terra-deep);
+  color: var(--paper);
+  animation: due-pulse 2s ease-in-out infinite;
+}
+.due-badge.done {
+  background: color-mix(in srgb, var(--leaf) 18%, transparent);
+  color: var(--leaf);
+}
+
+@keyframes due-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
 .notice-head {
   display: flex;
   align-items: center;
@@ -1298,6 +1390,83 @@ body::before {
 
 /* FORMULARIOS */
 .modal-form { max-width: 460px; }
+
+/* Selector de alcance al tomar tarea */
+.scope-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.scope-card {
+  appearance: none;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.scope-card:hover {
+  border-color: var(--terra);
+  background: color-mix(in srgb, var(--terra) 6%, var(--paper));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.scope-card-icon {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  font-style: italic;
+  color: var(--terra);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.scope-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.scope-card-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 460px) {
+  .scope-options { grid-template-columns: 1fr; }
+}
+
+/* Tag de scope dentro de tarjetas */
+.scope-tag {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 999px;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+.scope-tag.day  { background: color-mix(in srgb, var(--gold) 14%, transparent); color: var(--gold); }
+.scope-tag.week { background: color-mix(in srgb, var(--terra) 14%, transparent); color: var(--terra); }
 
 .form-label {
   display: block;
@@ -2030,8 +2199,25 @@ body::before {
     <div class="modal-title">Nuevo aviso para la casa</div>
     <div class="modal-sub">Algo que toda la familia debe saber o atender.</div>
 
+    <label class="form-label">¿Tiene fecha límite?</label>
+    <div class="form-pills" id="notice-type-pills">
+      <button type="button" class="form-pill active" data-val="info">Solo informativo</button>
+      <button type="button" class="form-pill" data-val="date">Con fecha</button>
+      <button type="button" class="form-pill" data-val="datetime">Fecha y hora</button>
+    </div>
+
     <label class="form-label">El aviso</label>
     <textarea class="form-input form-textarea" id="notice-text" placeholder="Ej: Llegó el recibo del agua y vence el viernes" maxlength="200"></textarea>
+
+    <div id="notice-date-row" style="display:none">
+      <label class="form-label">¿Cuándo vence?</label>
+      <input type="date" class="form-input" id="notice-date" />
+    </div>
+
+    <div id="notice-datetime-row" style="display:none">
+      <label class="form-label">¿Cuándo es?</label>
+      <input type="datetime-local" class="form-input" id="notice-datetime" />
+    </div>
 
     <div class="modal-actions">
       <button class="claim-btn primary" onclick="submitNotice()">Publicar aviso</button>
@@ -2060,6 +2246,33 @@ body::before {
         <button class="claim-btn primary" onclick="saveEditTask()">Guardar</button>
         <button class="modal-cancel" onclick="closeEditForm()">Cancelar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
+     MODAL — Elegir alcance al tomar tarea
+     ================================================= -->
+<div class="modal-backdrop" id="modal-scope">
+  <div class="modal modal-form">
+    <div class="modal-title">¿Por cuánto tiempo la tomas?</div>
+    <div class="modal-sub" id="scope-task-name"></div>
+
+    <div class="scope-options">
+      <button class="scope-card" onclick="confirmClaimScope('day')">
+        <div class="scope-card-icon">☼</div>
+        <div class="scope-card-title">Solo hoy</div>
+        <div class="scope-card-desc">Me encargo hoy. Mañana vuelve a estar libre para quien quiera.</div>
+      </button>
+      <button class="scope-card" onclick="confirmClaimScope('week')">
+        <div class="scope-card-icon">✦</div>
+        <div class="scope-card-title">Toda la semana</div>
+        <div class="scope-card-desc">Soy responsable hasta el domingo. Cada día se reinicia el check.</div>
+      </button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeScopeModal()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2103,7 +2316,7 @@ const FIREBASE_CONFIG =  {
   messagingSenderId: "681740870700",
   appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
-
+  
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm' },
@@ -2235,6 +2448,65 @@ function timeAgo(ts) {
   if (h < 24) return `hace ${h}h`;
   const d = Math.floor(h / 24);
   return `hace ${d}d`;
+}
+
+/* Formato relativo "en X" o "vence en X" para fechas futuras */
+function timeUntil(ts) {
+  const diff = ts - Date.now();
+  if (diff < 0) return null; // ya pasó
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'ahora mismo';
+  if (m < 60) return `en ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `en ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'mañana';
+  if (d < 7) return `en ${d} días`;
+  if (d < 30) return `en ${Math.floor(d / 7)} sem`;
+  return `en ${Math.floor(d / 30)} meses`;
+}
+
+/* "venció hace X" para fechas pasadas */
+function timeSince(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 60) return `venció hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `venció hace ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'venció ayer';
+  if (d < 7) return `venció hace ${d} días`;
+  return `venció hace ${Math.floor(d / 7)} sem`;
+}
+
+/* Formato absoluto: "Vie 24 May" o "Vie 24 May · 7:00 PM" */
+function formatDue(ts, kind) {
+  const d = new Date(ts);
+  const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const base = `${dias[d.getDay()]} ${d.getDate()} ${meses[d.getMonth()]}`;
+  if (kind === 'datetime') {
+    let h = d.getHours();
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${base} · ${h}:${min} ${ampm}`;
+  }
+  return base;
+}
+
+/* Devuelve el nivel de urgencia de una fecha límite:
+   - 'overdue': ya venció
+   - 'today': vence hoy o en menos de 4h
+   - 'soon': vence en menos de 24h
+   - 'upcoming': vence después de 24h
+*/
+function dueLevel(ts) {
+  const diff = ts - Date.now();
+  if (diff < 0) return 'overdue';
+  if (diff < 4 * 60 * 60 * 1000) return 'today';
+  if (diff < 24 * 60 * 60 * 1000) return 'soon';
+  return 'upcoming';
 }
 
 function toast(msg) {
@@ -2376,14 +2648,61 @@ function load() {
 
   ensureCatalogs();
 
-  // Reset diario automático: si la fecha guardada ≠ hoy, resetea diarias
+  // Reset diario inteligente: respeta el scope de cada tarea
   if (state.date !== todayKey()) {
-    // Antes del reset, mover lo de ayer al historial si quieres conservar
-    state.daily = {};
-    state.details = {}; // los detalles también son del día
+    dailyRollover();
     state.date = todayKey();
     save();
   }
+}
+
+/* ===================================================================
+   ROLLOVER DIARIO — qué pasa al cambiar de día
+   - Tareas con scope 'day': se liberan completamente (vuelven a estar libres)
+   - Tareas con scope 'week': si la semana sigue activa, conservan el dueño
+     pero se borra el "done" para que se vuelva a hacer hoy
+   - Sin scope (legado): se liberan
+   - Detalles: siempre se liberan (son del día)
+   =================================================================== */
+function dailyRollover() {
+  const currentWeek = weekKey();
+
+  // Rollover de tareas DIARIAS y ESPORÁDICAS
+  ['daily', 'sporadic'].forEach(storeName => {
+    const store = state[storeName];
+    if (!store) return;
+    Object.keys(store).forEach(id => {
+      const entry = store[id];
+      if (!entry) return;
+      // scope 'week' + misma semana → conservar dueño, resetear check
+      if (entry.scope === 'week' && entry.weekKey === currentWeek && entry.takenBy) {
+        store[id] = {
+          scope: 'week',
+          weekKey: entry.weekKey,
+          takenBy: entry.takenBy,
+          takenAt: entry.takenAt
+        };
+      } else {
+        // scope 'day' o semana vieja o sin scope → liberar
+        delete store[id];
+      }
+    });
+  });
+
+  // Detalles: siempre se liberan
+  state.details = {};
+}
+
+/* Devuelve key de la semana actual: "YYYY-Www" (lunes como inicio) */
+function weekKey(d) {
+  d = d || new Date();
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  // Ajustar al lunes
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  const year = date.getUTCFullYear();
+  const week = Math.ceil((((date - new Date(Date.UTC(year, 0, 1))) / 86400000) + 1) / 7);
+  return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
 /* ===== FIREBASE (opcional) ===== */
@@ -2407,8 +2726,20 @@ async function initFirebase() {
       if (!data) return;
       // Reset diario si cambió la fecha en remoto
       if (data.date && data.date !== todayKey()) {
-        state.daily = {};
-        state.details = {};
+        // Aplicar rollover sobre los datos remotos (preservar tareas semanales)
+        if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
+        if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
+        if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
+        state.daily = data.daily || {};
+        state.sporadic = data.sporadic || {};
+        state.details = data.details || {};
+        state.history = data.history || [];
+        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        if (data.subtitles) state.subtitles = data.subtitles;
+        state.proposals = data.proposals || {};
+        state.notices = data.notices || {};
+        ensureCatalogs();
+        dailyRollover();
         state.date = todayKey();
         save();
       } else {
@@ -2489,7 +2820,7 @@ function onPtrStart(e) {
   if (window.scrollY > 0) return;
   if (ptrState.refreshing) return;
   if (document.getElementById('app').classList.contains('hidden')) return;
-// No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
+  // No iniciar si el toque empezó dentro de un modal o el panel de notificaciones
   const target = e.target;
   if (target.closest('.modal-backdrop.open')) return;
   if (target.closest('.notif-panel.open')) return;
@@ -2649,23 +2980,22 @@ async function performRefresh() {
       const snap = await db.ref('casita').once('value');
       const data = snap.val();
       if (data) {
+        if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
+        if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
+        if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
+        state.daily = data.daily || {};
+        state.sporadic = data.sporadic || {};
+        state.details = data.details || {};
+        state.history = data.history || [];
+        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        if (data.subtitles) state.subtitles = data.subtitles;
+        state.proposals = data.proposals || {};
+        state.notices = data.notices || {};
+        ensureCatalogs();
+        // Aplicar rollover si cambió el día
         if (data.date && data.date !== todayKey()) {
-          state.daily = {};
-          state.details = {};
+          dailyRollover();
           state.date = todayKey();
-        } else {
-          if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
-          if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
-          if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
-          state.daily = data.daily || {};
-          state.sporadic = data.sporadic || {};
-          state.details = data.details || {};
-          state.history = data.history || [];
-          state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
-          if (data.subtitles) state.subtitles = data.subtitles;
-          state.proposals = data.proposals || {};
-          state.notices = data.notices || {};
-          ensureCatalogs();
         }
         save();
       }
@@ -2851,6 +3181,9 @@ function renderNow() {
     const p = PEOPLE[who];
     items.forEach(({ task, entry, kind }) => {
       const isMe = who === state.me;
+      const scopeBadge = entry.scope === 'week'
+        ? '<span class="scope-tag week">✦ Toda la semana</span>'
+        : '<span class="scope-tag day">☼ Solo hoy</span>';
       html += `
         <div class="now-card" style="--p-color: var(--${who})">
           <div class="now-card-head">
@@ -2861,7 +3194,7 @@ function renderNow() {
             </div>
           </div>
           <div class="now-card-task">${task.name}</div>
-          <div class="now-card-time">Tomada ${timeAgo(entry.takenAt)}</div>
+          <div class="now-card-time">Tomada ${timeAgo(entry.takenAt)} · ${scopeBadge}</div>
           <div class="now-card-actions">
             ${isMe
               ? `<button class="claim-btn primary" onclick="markDoneFromNow('${kind}','${task.id}', event)">¡Hecho!</button>
@@ -2954,7 +3287,7 @@ function buildTaskRow(t, store, kind) {
     };
   } else {
     check.title = 'Tomar esta tarea';
-    check.onclick = (e) => { e.stopPropagation(); claimTask(t, store, kind, state.me); };
+    check.onclick = (e) => { e.stopPropagation(); askClaimScope(t, store, kind, state.me); };
   }
 
   // ---- Texto central ----
@@ -2974,10 +3307,12 @@ function buildTaskRow(t, store, kind) {
 
   if (status === 'done') {
     const p = PEOPLE[entry.by];
-    meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}`;
+    const scopeNote = entry.scope === 'week' ? ' · responsable de la semana' : '';
+    meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}${scopeNote}`;
   } else if (status === 'taken') {
     const p = PEOPLE[entry.takenBy];
-    meta.innerHTML = `<strong style="color:var(--gold)">${p.name}</strong> la tomó · ${timeAgo(entry.takenAt)}`;
+    const scopeLabel = entry.scope === 'week' ? 'esta semana' : 'hoy';
+    meta.innerHTML = `<strong style="color:var(--gold)">${p.name}</strong> la toma · <em>${scopeLabel}</em>`;
   } else {
     meta.textContent = t.meta || '';
   }
@@ -3033,7 +3368,7 @@ function buildTaskRow(t, store, kind) {
     const btn = document.createElement('button');
     btn.className = 'claim-btn';
     btn.textContent = 'Yo lo hago';
-    btn.onclick = (e) => { e.stopPropagation(); claimTask(t, store, kind, state.me); };
+    btn.onclick = (e) => { e.stopPropagation(); askClaimScope(t, store, kind, state.me); };
     claim.appendChild(btn);
   }
 
@@ -3197,14 +3532,18 @@ function updateCounts() {
 
   // Contador del tablón: propuestas donde yo aún no he votado + avisos activos
   const pendingProposals = Object.values(state.proposals || {}).filter(p => !p.votes?.[state.me]).length;
-  const activeNotices = Object.values(state.notices || {}).filter(n => !n.done).length;
-  const tablonCount = pendingProposals + activeNotices;
+  const activeNotices = Object.values(state.notices || {}).filter(n => !n.done);
+  const overdueCount = activeNotices.filter(n => n.dueAt && n.dueAt < Date.now()).length;
+  const tablonCount = pendingProposals + activeNotices.length;
   const tablonEl = document.getElementById('count-tablon');
   if (tablonCount > 0) {
     tablonEl.style.display = '';
     tablonEl.textContent = tablonCount;
+    // Resaltar en rojo si hay vencidos
+    tablonEl.classList.toggle('alert', overdueCount > 0);
   } else {
     tablonEl.style.display = 'none';
+    tablonEl.classList.remove('alert');
   }
 }
 
@@ -3218,11 +3557,33 @@ function uid(prefix) {
 
 /* --- AVISOS --- */
 
+let noticeType = 'info'; // 'info', 'date', 'datetime'
+
 function openNoticeForm() {
   document.getElementById('notice-text').value = '';
+  document.getElementById('notice-date').value = '';
+  document.getElementById('notice-datetime').value = '';
+  noticeType = 'info';
+  updateNoticeFormType();
   document.getElementById('modal-notice').classList.add('open');
   setTimeout(() => document.getElementById('notice-text').focus(), 100);
 }
+
+function updateNoticeFormType() {
+  document.querySelectorAll('#notice-type-pills .form-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === noticeType);
+  });
+  document.getElementById('notice-date-row').style.display = noticeType === 'date' ? '' : 'none';
+  document.getElementById('notice-datetime-row').style.display = noticeType === 'datetime' ? '' : 'none';
+}
+
+// Delegación de clicks para pills del tipo de aviso
+document.addEventListener('click', (e) => {
+  if (e.target.matches('#notice-type-pills .form-pill')) {
+    noticeType = e.target.dataset.val;
+    updateNoticeFormType();
+  }
+});
 
 function closeNoticeForm() {
   document.getElementById('modal-notice').classList.remove('open');
@@ -3231,15 +3592,35 @@ function closeNoticeForm() {
 function submitNotice() {
   const text = document.getElementById('notice-text').value.trim();
   if (!text) { toast('Escribe el aviso'); return; }
+
+  // Resolver la fecha límite según el tipo
+  let dueAt = null;
+  let dueKind = null; // 'date' o 'datetime' (afecta el formato)
+  if (noticeType === 'date') {
+    const v = document.getElementById('notice-date').value;
+    if (!v) { toast('Elige una fecha'); return; }
+    // Crear Date en zona local al final del día (23:59:59) para no vencer al mediodía
+    const [y, m, d] = v.split('-').map(Number);
+    dueAt = new Date(y, m - 1, d, 23, 59, 59).getTime();
+    dueKind = 'date';
+  } else if (noticeType === 'datetime') {
+    const v = document.getElementById('notice-datetime').value;
+    if (!v) { toast('Elige fecha y hora'); return; }
+    dueAt = new Date(v).getTime();
+    dueKind = 'datetime';
+  }
+
   const id = uid('n');
   state.notices[id] = {
     text,
     createdBy: state.me,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    dueAt,        // null si no tiene fecha
+    dueKind       // 'date', 'datetime', o null
   };
   state.history.push({ ts: Date.now(), by: state.me, taskName: text.slice(0, 40), action: 'publicó un aviso' });
   closeNoticeForm();
-  toast('✦ Aviso publicado');
+  toast(dueAt ? '✦ Aviso con fecha publicado' : '✦ Aviso publicado');
   save();
   renderAll();
 }
@@ -3494,9 +3875,39 @@ function renderNotices() {
   const el = document.getElementById('notices-list');
   if (!el) return;
   const all = Object.entries(state.notices || {}).map(([id, n]) => ({ id, ...n }));
-  // Activos primero (no done), luego hechos abajo
-  const active = all.filter(n => !n.done).sort((a, b) => b.createdAt - a.createdAt);
-  const done = all.filter(n => n.done).sort((a, b) => b.doneAt - a.doneAt).slice(0, 5);
+
+  // Limpiar avisos hechos hace más de 7 días
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  all.forEach(n => {
+    if (n.done && n.doneAt && n.doneAt < sevenDaysAgo) {
+      delete state.notices[n.id];
+    }
+  });
+
+  const active = all.filter(n => !n.done);
+  const done = all.filter(n => n.done && n.doneAt >= sevenDaysAgo);
+
+  // Ordenar activos: vencidos primero, luego por fecha próxima, luego sin fecha por creación
+  active.sort((a, b) => {
+    const aDue = a.dueAt;
+    const bDue = b.dueAt;
+    const aOver = aDue && aDue < Date.now();
+    const bOver = bDue && bDue < Date.now();
+    // Vencidos primero
+    if (aOver && !bOver) return -1;
+    if (!aOver && bOver) return 1;
+    if (aOver && bOver) return aDue - bDue; // el más antiguo vencido primero (más urgente de resolver)
+    // Con fecha vs sin fecha
+    if (aDue && !bDue) return -1;
+    if (!aDue && bDue) return 1;
+    // Ambos con fecha futura: el más próximo primero
+    if (aDue && bDue) return aDue - bDue;
+    // Ambos sin fecha: más reciente primero
+    return b.createdAt - a.createdAt;
+  });
+
+  // Hechos: por fecha de completado, más reciente primero
+  done.sort((a, b) => b.doneAt - a.doneAt);
 
   if (!active.length && !done.length) {
     el.innerHTML = `<div class="empty-soft">No hay avisos en este momento.<br>Publica uno con el botón de arriba.</div>`;
@@ -3504,16 +3915,48 @@ function renderNotices() {
   }
 
   let html = '';
+
   [...active, ...done].forEach(n => {
     const author = PEOPLE[n.createdBy];
-    let statusClass = '';
-    if (n.done) statusClass = 'done';
-    else if (n.takenBy) statusClass = 'taken';
-
     const isMine = n.createdBy === state.me;
-    const canTake = !n.takenBy && !n.done;
     const isHandler = n.takenBy === state.me;
+    const hasDue = !!n.dueAt;
+    const level = hasDue ? dueLevel(n.dueAt) : null;
 
+    // Clase del card
+    let cardClasses = ['notice-card'];
+    if (n.done) cardClasses.push('done');
+    else if (n.takenBy) cardClasses.push('taken');
+    if (level === 'overdue' && !n.done) cardClasses.push('overdue');
+    else if (level === 'today' && !n.done) cardClasses.push('today');
+    else if (level === 'soon' && !n.done) cardClasses.push('soon');
+
+    // Badge de fecha
+    let dueBadge = '';
+    if (hasDue) {
+      const abs = formatDue(n.dueAt, n.dueKind);
+      let rel, badgeClass;
+      if (n.done) {
+        // Hecho: solo mostrar la fecha original
+        rel = abs;
+        badgeClass = 'done';
+      } else if (level === 'overdue') {
+        rel = timeSince(n.dueAt);
+        badgeClass = 'overdue';
+      } else if (level === 'today') {
+        rel = timeUntil(n.dueAt);
+        badgeClass = 'today';
+      } else if (level === 'soon') {
+        rel = timeUntil(n.dueAt);
+        badgeClass = 'soon';
+      } else {
+        rel = timeUntil(n.dueAt);
+        badgeClass = 'upcoming';
+      }
+      dueBadge = `<span class="due-badge ${badgeClass}" title="${abs}">${rel} · ${abs}</span>`;
+    }
+
+    // Acciones
     let actions = '';
     if (n.done) {
       const finisher = PEOPLE[n.doneBy];
@@ -3536,7 +3979,8 @@ function renderNotices() {
     }
 
     html += `
-      <div class="notice-card ${statusClass}">
+      <div class="${cardClasses.join(' ')}">
+        ${dueBadge}
         <div class="notice-head">
           <span class="notice-author">Por <strong>${author.name}</strong> · ${timeAgo(n.createdAt)}</span>
           ${(isMine || n.done) ? `<button class="notice-delete" onclick="deleteNotice('${n.id}')" title="Eliminar">×</button>` : ''}
@@ -3696,17 +4140,47 @@ function confirmDeleteTask() {
 
 /* ===== ACCIONES — Flujo de 3 estados: libre → tomada → hecha ===== */
 
+/* Modal de selección de scope al tomar tarea */
+let pendingClaim = null; // { t, store, kind, who }
+
+function askClaimScope(t, store, kind, who) {
+  // Si ya hay un scope obvio (ej: tarea esporádica que es semanal), podríamos saltarnos
+  // Por ahora siempre preguntamos.
+  pendingClaim = { t, store, kind, who };
+  document.getElementById('scope-task-name').textContent = t.name;
+  document.getElementById('modal-scope').classList.add('open');
+}
+
+function confirmClaimScope(scope) {
+  if (!pendingClaim) return;
+  const { t, store, kind, who } = pendingClaim;
+  closeScopeModal();
+  claimTask(t, store, kind, who, scope);
+}
+
+function closeScopeModal() {
+  document.getElementById('modal-scope').classList.remove('open');
+  pendingClaim = null;
+}
+
 // 1. TOMAR una tarea libre
-function claimTask(t, store, kind, who) {
+function claimTask(t, store, kind, who, scope) {
   // Si alguien más ya la tomó, no permitir robarla a menos que sea yo confirmando
   if (store[t.id]?.takenBy && store[t.id].takenBy !== who) {
     toast(`${PEOPLE[store[t.id].takenBy].name} ya tomó esta tarea`);
     return;
   }
-  store[t.id] = { takenBy: who, takenAt: Date.now() };
-  state.history.push({ ts: Date.now(), by: who, taskName: t.name, action: 'tomó' });
+  scope = scope || 'day'; // por defecto, solo hoy
+  store[t.id] = {
+    takenBy: who,
+    takenAt: Date.now(),
+    scope: scope,
+    weekKey: scope === 'week' ? weekKey() : null
+  };
+  const scopeLabel = scope === 'week' ? 'toda la semana' : 'hoy';
+  state.history.push({ ts: Date.now(), by: who, taskName: t.name, action: `tomó por ${scopeLabel}` });
   playClaimSound();
-  toast(`✦ ${PEOPLE[who].name} tomó "${t.name}"`);
+  toast(`✦ ${PEOPLE[who].name} tomó "${t.name}" por ${scopeLabel}`);
   save();
   renderAll();
 }
@@ -3732,7 +4206,9 @@ function markDone(t, store, kind, evt) {
     by: finisher,
     at: Date.now(),
     takenBy: entry.takenBy,
-    takenAt: entry.takenAt
+    takenAt: entry.takenAt,
+    scope: entry.scope || null,
+    weekKey: entry.weekKey || null
   };
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
   state.history.push({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
@@ -3798,8 +4274,7 @@ document.addEventListener('click', (e) => {
 // Detectar cambio de día mientras la app está abierta
 setInterval(() => {
   if (state.date !== todayKey()) {
-    state.daily = {};
-    state.details = {};
+    dailyRollover();
     state.date = todayKey();
     save();
     renderAll();
