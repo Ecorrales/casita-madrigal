@@ -3659,7 +3659,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.23';
+const APP_VERSION = '2026.05.22.25';
 
 async function checkForUpdate() {
   try {
@@ -3752,7 +3752,7 @@ const FIREBASE_CONFIG =  {
   messagingSenderId: "681740870700",
   appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
-  
+
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm', parent: true },
@@ -4357,6 +4357,31 @@ function normalizeHistory(raw) {
   return arr.slice(-200);
 }
 
+/* Hidrata scores o lifetimeScores tomando el MÁXIMO entre lo local y lo remoto.
+   Esto evita la race condition donde el listener llega con valores remotos
+   pre-incremento y pisa un incremento local recién hecho que aún no llegó al
+   servidor. Las bajas (canjeos, desmarcar) sí se aplican porque vienen como
+   updates explícitos que ya están reflejados localmente — el `Math.max` mantiene
+   ambos lados sincronizados al valor más actual. */
+function mergeScoresMax(remote) {
+  const out = {};
+  Object.keys(activePeople()).forEach(k => {
+    const local = state.scores?.[k] || 0;
+    const r = remote?.[k] || 0;
+    out[k] = Math.max(local, r);
+  });
+  return out;
+}
+function mergeLifetimeMax(remote) {
+  const out = {};
+  Object.keys(activePeople()).forEach(k => {
+    const local = state.lifetimeScores?.[k] || 0;
+    const r = remote?.[k] || 0;
+    out[k] = Math.max(local, r);
+  });
+  return out;
+}
+
 /* Helper para añadir una entrada al history.
    El history vive como array pero lo persistimos atómicamente: usamos push de Firebase
    que genera keys ordenadas por tiempo, evitando colisiones entre dispositivos. */
@@ -4575,13 +4600,13 @@ async function initFirebase() {
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
         state.history = normalizeHistory(data.history);
-        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
-        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
+        state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -4618,13 +4643,13 @@ async function initFirebase() {
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
         state.history = normalizeHistory(data.history);
-        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
-        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
+        state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -4926,13 +4951,13 @@ async function performRefresh() {
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
         state.history = normalizeHistory(data.history);
-        state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
+        state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
-        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
+        state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -5489,10 +5514,13 @@ function renderFamily() {
 
     // Caso normal: miembros activos
     // "Hoy" cuenta TODO lo completado hoy: tareas, esporádicas, detalles y avisos
+    // Filtramos por timestamp `at` o `doneAt` para no contar completaciones de días anteriores
+    // (las esporádicas semanales pueden sobrevivir al rollover y seguir como `done`)
     const todayStartTs = new Date().setHours(0, 0, 0, 0);
-    const today = Object.values(state.daily).filter(v => v.by === key && v.done).length
-                + Object.values(state.sporadic).filter(v => v.by === key && v.done).length
-                + Object.values(state.details).filter(v => v.by === key && v.done).length
+    const completedToday = v => v.by === key && v.done && (v.at || 0) >= todayStartTs;
+    const today = Object.values(state.daily).filter(completedToday).length
+                + Object.values(state.sporadic).filter(completedToday).length
+                + Object.values(state.details).filter(completedToday).length
                 + Object.values(state.notices).filter(n => n.done && n.doneBy === key && (n.doneAt || 0) >= todayStartTs).length;
     const points = state.scores[key] || 0;              // saldo para canjear
     const total = state.lifetimeScores[key] || 0;       // acumulado histórico
