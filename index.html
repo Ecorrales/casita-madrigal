@@ -2046,6 +2046,14 @@ body::before {
   border-top: 1px dashed var(--line);
 }
 
+.family-stats.family-stats-three {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.family-stats.family-stats-three .family-stat-num {
+  font-size: 26px;
+}
+
 .family-stat-num {
   font-family: 'Fraunces', serif;
   font-size: 32px;
@@ -3651,7 +3659,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.21';
+const APP_VERSION = '2026.05.22.22';
 
 async function checkForUpdate() {
   try {
@@ -3828,7 +3836,8 @@ let state = {
   sporadic: {},                  // { taskId: { ... } }
   details: {},                   // { detailId: { done, by, at } }
   history: [],                   // [{ ts, by, taskName, action }]
-  scores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // total tareas históricas
+  scores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // puntos disponibles para canjear (saldo)
+  lifetimeScores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // total histórico acumulado (nunca baja)
   // SUBTÍTULOS personalizables por cada miembro
   subtitles: {
     emm: 'El que organiza',
@@ -3896,6 +3905,24 @@ function ensureCatalogs() {
   if (!state.rewards) state.rewards = {};
   if (!state.coupons) state.coupons = {};
   if (!state.rewardsMonth) state.rewardsMonth = monthKey();
+
+  // PUNTAJE HISTÓRICO (total acumulado, nunca baja). Migración: si no existe,
+  // lo inicializamos con el saldo actual + lo gastado en cupones ya canjeados
+  // (para que el "Total" refleje correctamente la actividad histórica).
+  if (!state.lifetimeScores) {
+    state.lifetimeScores = {};
+    Object.keys(activePeople()).forEach(k => {
+      const balance = state.scores?.[k] || 0;
+      const spent = Object.values(state.coupons || {})
+        .filter(c => c.claimedBy === k)
+        .reduce((sum, c) => sum + (c.cost || 0), 0);
+      state.lifetimeScores[k] = balance + spent;
+    });
+  }
+  // Garantizar entradas para cada persona activa
+  Object.keys(activePeople()).forEach(k => {
+    if (typeof state.lifetimeScores[k] !== 'number') state.lifetimeScores[k] = 0;
+  });
 }
 
 /* Formato "YYYY-MM" del mes actual (o el de una fecha dada) */
@@ -4537,6 +4564,7 @@ async function initFirebase() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -4575,6 +4603,7 @@ async function initFirebase() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -4877,6 +4906,7 @@ async function performRefresh() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        if (data.lifetimeScores) state.lifetimeScores = data.lifetimeScores;
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -5432,9 +5462,14 @@ function renderFamily() {
     }
 
     // Caso normal: miembros activos
+    // "Hoy" cuenta TODO lo completado hoy: tareas, esporádicas, detalles y avisos
+    const todayStartTs = new Date().setHours(0, 0, 0, 0);
     const today = Object.values(state.daily).filter(v => v.by === key && v.done).length
-                + Object.values(state.details).filter(v => v.by === key && v.done).length;
-    const total = state.scores[key] || 0;
+                + Object.values(state.sporadic).filter(v => v.by === key && v.done).length
+                + Object.values(state.details).filter(v => v.by === key && v.done).length
+                + Object.values(state.notices).filter(n => n.done && n.doneBy === key && (n.doneAt || 0) >= todayStartTs).length;
+    const points = state.scores[key] || 0;              // saldo para canjear
+    const total = state.lifetimeScores[key] || 0;       // acumulado histórico
 
     const badges = [];
     if (today >= 5) badges.push({ icon: '✦', label: 'Día estrella' });
@@ -5519,10 +5554,14 @@ function renderFamily() {
             </button>` : ''}
           </div>
           ${bdayBlock}
-          <div class="family-stats">
+          <div class="family-stats family-stats-three">
             <div>
               <div class="family-stat-num">${today}</div>
               <div class="family-stat-label">Hoy</div>
+            </div>
+            <div>
+              <div class="family-stat-num" style="color:var(--gold)">${points}</div>
+              <div class="family-stat-label">Puntos</div>
             </div>
             <div>
               <div class="family-stat-num">${total}</div>
@@ -6490,6 +6529,7 @@ function doneNotice(id, evt) {
   n.doneBy = finisher;
   n.doneAt = Date.now();
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
+  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + 1;
   pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
   playDoneSound();
   if (evt) {
@@ -6501,7 +6541,8 @@ function doneNotice(id, evt) {
     [`notices/${id}/done`]: true,
     [`notices/${id}/doneBy`]: finisher,
     [`notices/${id}/doneAt`]: n.doneAt,
-    [`scores/${finisher}`]: state.scores[finisher]
+    [`scores/${finisher}`]: state.scores[finisher],
+    [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
   });
   renderAll();
 }
@@ -7129,6 +7170,7 @@ function markDone(t, store, kind, evt) {
   };
   store[t.id] = newEntry;
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
+  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + 1;
   pushHistory({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
   playDoneSound();
   if (evt) {
@@ -7140,7 +7182,8 @@ function markDone(t, store, kind, evt) {
   const storeName = kind === 'daily' ? 'daily' : 'sporadic';
   dbBatch({
     [`${storeName}/${t.id}`]: newEntry,
-    [`scores/${finisher}`]: state.scores[finisher]
+    [`scores/${finisher}`]: state.scores[finisher],
+    [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
   });
   renderAll();
 }
@@ -7171,6 +7214,7 @@ function toggleDetail(d, evt) {
     const entry = { done: true, by: state.me, at: Date.now() };
     state.details[d.id] = entry;
     state.scores[state.me] = (state.scores[state.me] || 0) + 1;
+    state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + 1;
     pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
     playDoneSound();
     if (evt) {
@@ -7180,7 +7224,8 @@ function toggleDetail(d, evt) {
     toast(`✿ ${d.title} ✓`);
     dbBatch({
       [`details/${d.id}`]: entry,
-      [`scores/${state.me}`]: state.scores[state.me]
+      [`scores/${state.me}`]: state.scores[state.me],
+      [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
     });
   }
   renderAll();
