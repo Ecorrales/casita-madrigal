@@ -3183,7 +3183,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.12';
+const APP_VERSION = '2026.05.22.13';
 
 async function checkForUpdate() {
   try {
@@ -3419,6 +3419,41 @@ let useFirebase = false;
 let db = null;
 let firebaseHydrated = false;     // true después de la primera respuesta del listener
 let pendingMutations = [];         // mutaciones encoladas esperando hidratación
+
+/* Sistema de protección contra race conditions del listener.
+   Cuando hacemos una mutación crítica (ej: añadir item al catálogo), marcamos
+   ese path como "protegido". Si el listener llega con un valor diferente al que
+   acabamos de escribir, no aplicamos la hidratación para ese path —
+   asumimos que es un snapshot pre-mutación.
+   Cuando el listener llega con el valor que esperábamos (o uno más nuevo),
+   liberamos la protección. */
+let protectedPaths = {};  // { path: { expectedJson, lockedUntil } }
+
+function protectFromListener(path, expectedValue) {
+  protectedPaths[path] = {
+    expectedJson: JSON.stringify(expectedValue),
+    lockedUntil: Date.now() + 10000  // máximo 10 segundos de protección
+  };
+}
+
+/* Verifica si una hidratación de path debe rechazarse.
+   Retorna true si debemos IGNORAR el dato remoto, false si podemos aplicarlo. */
+function isProtected(path, remoteValue) {
+  const protection = protectedPaths[path];
+  if (!protection) return false;
+  // Si ya pasó el timeout, liberar protección
+  if (Date.now() > protection.lockedUntil) {
+    delete protectedPaths[path];
+    return false;
+  }
+  // Si el dato remoto coincide con lo que esperamos, liberar protección
+  if (JSON.stringify(remoteValue) === protection.expectedJson) {
+    delete protectedPaths[path];
+    return false;
+  }
+  // El dato remoto es diferente — es un snapshot viejo. Rechazar hidratación.
+  return true;
+}
 
 /* ===== UTILIDADES ===== */
 function todayKey() {
@@ -3928,9 +3963,9 @@ async function initFirebase() {
         });
         flushPendingMutations();
       } else {
-        if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
-        if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
-        if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
+        if (data.catalogDaily && !isProtected('catalogDaily', data.catalogDaily)) state.catalogDaily = data.catalogDaily;
+        if (data.catalogSporadic && !isProtected('catalogSporadic', data.catalogSporadic)) state.catalogSporadic = data.catalogSporadic;
+        if (data.catalogDetails && !isProtected('catalogDetails', data.catalogDetails)) state.catalogDetails = data.catalogDetails;
         state.daily = data.daily || {};
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
@@ -5670,6 +5705,9 @@ function approveProposal(id) {
   const p = state.proposals[id];
   if (!p) return;
 
+  // Construimos el nuevo item, pero NO lo añadimos al state local todavía:
+  // esperamos a que Firebase confirme la escritura, y el listener actualizará el state.
+  // Esto evita que el listener llegue con datos viejos y borre nuestro cambio local.
   let newItem, catalogPath;
   if (p.kind === 'daily') {
     const newId = uid('d');
@@ -5678,7 +5716,6 @@ function approveProposal(id) {
       section: p.section || 'morning',
       addedBy: p.proposedBy, addedAt: Date.now()
     };
-    state.catalogDaily.push(newItem);
     catalogPath = 'catalogDaily';
   } else if (p.kind === 'sporadic') {
     const newId = uid('s');
@@ -5686,7 +5723,6 @@ function approveProposal(id) {
       id: newId, name: p.name, meta: p.meta || '',
       addedBy: p.proposedBy, addedAt: Date.now()
     };
-    state.catalogSporadic.push(newItem);
     catalogPath = 'catalogSporadic';
   } else if (p.kind === 'detail') {
     const newId = uid('x');
@@ -5694,12 +5730,16 @@ function approveProposal(id) {
       id: newId, title: p.name, desc: p.meta || '',
       addedBy: p.proposedBy, addedAt: Date.now()
     };
-    state.catalogDetails.push(newItem);
     catalogPath = 'catalogDetails';
   }
-  ensureCatalogs();
 
+  // Construir el array nuevo del catálogo (con el item añadido)
+  const newCatalog = [...state[catalogPath], newItem];
+
+  // Aplicar localmente PRIMERO para feedback inmediato del usuario
+  state[catalogPath] = newCatalog;
   delete state.proposals[id];
+  ensureCatalogs();
   pushHistory({ ts: Date.now(), by: state.me, taskName: p.name, action: '¡aprobó por unanimidad!' });
   playDoneSound();
   toast(`✦ ¡"${p.name}" se agregó al flujo!`);
@@ -5708,13 +5748,16 @@ function approveProposal(id) {
     confettiBurst(window.innerWidth/2 - 60, window.innerHeight/2);
     confettiBurst(window.innerWidth/2 + 60, window.innerHeight/2);
   }, 100);
-  // Batch: añadir item al catálogo + eliminar propuesta
-  // El catálogo es un array — usamos el state.catalog actual (ya con el item nuevo)
+  renderAll();
+
+  // Persistir: usar el catálogo nuevo CON el item, y borrar la propuesta.
+  // Marcamos esta escritura como "protegida" — el listener no debe sobrescribir
+  // catalogPath hasta que confirme que nuestros datos llegaron.
+  protectFromListener(catalogPath, newCatalog);
   dbBatch({
-    [`${catalogPath}`]: state[catalogPath],
+    [`${catalogPath}`]: newCatalog,
     [`proposals/${id}`]: null
   });
-  renderAll();
 }
 
 function rejectProposal(id) {
