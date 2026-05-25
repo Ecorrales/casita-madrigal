@@ -3659,7 +3659,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.22';
+const APP_VERSION = '2026.05.22.23';
 
 async function checkForUpdate() {
   try {
@@ -3906,19 +3906,36 @@ function ensureCatalogs() {
   if (!state.coupons) state.coupons = {};
   if (!state.rewardsMonth) state.rewardsMonth = monthKey();
 
-  // PUNTAJE HISTÓRICO (total acumulado, nunca baja). Migración: si no existe,
-  // lo inicializamos con el saldo actual + lo gastado en cupones ya canjeados
-  // (para que el "Total" refleje correctamente la actividad histórica).
-  if (!state.lifetimeScores) {
-    state.lifetimeScores = {};
+  // PUNTAJE HISTÓRICO (total acumulado, nunca baja). Migración: si no existe
+  // o está vacío (todos en 0) pero hay puntos/cupones, lo calculamos desde el
+  // saldo actual + lo gastado en cupones ya canjeados.
+  if (!state.lifetimeScores) state.lifetimeScores = {};
+
+  // Detectar si necesitamos migrar: alguien tiene scores>0 o cupones canjeados
+  // pero su lifetimeScores está en 0 (no se migró aún)
+  const needsMigration = Object.keys(activePeople()).some(k => {
+    const lifetime = state.lifetimeScores[k] || 0;
+    const balance = state.scores?.[k] || 0;
+    const spent = Object.values(state.coupons || {})
+      .filter(c => c.claimedBy === k)
+      .reduce((sum, c) => sum + (c.cost || 0), 0);
+    return lifetime === 0 && (balance + spent) > 0;
+  });
+
+  if (needsMigration) {
     Object.keys(activePeople()).forEach(k => {
       const balance = state.scores?.[k] || 0;
       const spent = Object.values(state.coupons || {})
         .filter(c => c.claimedBy === k)
         .reduce((sum, c) => sum + (c.cost || 0), 0);
-      state.lifetimeScores[k] = balance + spent;
+      const minLifetime = balance + spent;
+      // Tomar el mayor entre lo calculado y lo que ya tenía
+      state.lifetimeScores[k] = Math.max(state.lifetimeScores[k] || 0, minLifetime);
     });
+    // Marcar que necesitamos subir esto a Firebase la próxima vez que se pueda
+    state._needsLifetimeSync = true;
   }
+
   // Garantizar entradas para cada persona activa
   Object.keys(activePeople()).forEach(k => {
     if (typeof state.lifetimeScores[k] !== 'number') state.lifetimeScores[k] = 0;
@@ -4587,6 +4604,10 @@ async function initFirebase() {
           updates.coupons = state.coupons;
           updates.rewardsMonth = state.rewardsMonth;
         }
+        if (state._needsLifetimeSync) {
+          state._needsLifetimeSync = false;
+          updates.lifetimeScores = state.lifetimeScores;
+        }
         dbBatch(updates);
         flushPendingMutations();
       } else {
@@ -4609,6 +4630,11 @@ async function initFirebase() {
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
+        // Si la migración de lifetimeScores corrió, persistirla a Firebase
+        if (state._needsLifetimeSync) {
+          state._needsLifetimeSync = false;
+          dbSet('lifetimeScores', state.lifetimeScores);
+        }
         // Verificar si cambió el mes para reabastecer recompensas
         if (monthlyRewardsRefill()) {
           dbBatch({
