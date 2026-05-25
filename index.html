@@ -638,6 +638,71 @@ body::before {
 .who-avatar-dot[data-p="lup"] { background: var(--lup); }
 .who-avatar-dot[data-p="mat"] { background: var(--mat); }
 
+/* Chip de modo del aviso (solo aparece si es 'all') */
+.notice-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--terra) 14%, transparent);
+  color: var(--terra-deep);
+  border: 1px solid color-mix(in srgb, var(--terra) 28%, transparent);
+}
+
+/* Fila de participantes anotados en un aviso */
+.notice-participants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+.participant-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px dashed var(--line);
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+.participant-chip.finished {
+  border-style: solid;
+  background: color-mix(in srgb, var(--leaf) 12%, var(--paper));
+  border-color: color-mix(in srgb, var(--leaf) 35%, var(--line));
+  color: var(--leaf);
+}
+.participant-chip[data-p="emm"]:not(.finished) { color: var(--emm); border-color: color-mix(in srgb, var(--emm) 30%, var(--line)); }
+.participant-chip[data-p="jov"]:not(.finished) { color: var(--jov); border-color: color-mix(in srgb, var(--jov) 30%, var(--line)); }
+.participant-chip[data-p="mar"]:not(.finished) { color: var(--mar); border-color: color-mix(in srgb, var(--mar) 30%, var(--line)); }
+.participant-chip[data-p="lup"]:not(.finished) { color: var(--lup); border-color: color-mix(in srgb, var(--lup) 30%, var(--line)); }
+
+/* Mensaje de espera cuando ya marqué pero modo 'all' aún no termina */
+.notice-waiting {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+/* Badge de "lo atendieron" en plural */
+.who-badge.multi {
+  background: color-mix(in srgb, var(--leaf) 14%, transparent);
+  color: var(--leaf);
+}
+
 .claim-btn {
   appearance: none;
   background: transparent;
@@ -3518,6 +3583,12 @@ body::before {
       <input type="datetime-local" class="form-input" id="notice-datetime" />
     </div>
 
+    <label class="form-label">¿Cómo se completa?</label>
+    <div class="form-pills" id="notice-mode-pills">
+      <button type="button" class="form-pill active" data-val="any">Basta con uno</button>
+      <button type="button" class="form-pill" data-val="all">Todos pueden participar</button>
+    </div>
+
     <div class="modal-actions">
       <button class="claim-btn primary" onclick="submitNotice()">Publicar aviso</button>
       <button class="modal-cancel" onclick="closeNoticeForm()">Cancelar</button>
@@ -3659,7 +3730,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.25';
+const APP_VERSION = '2026.05.22.27';
 
 async function checkForUpdate() {
   try {
@@ -3752,7 +3823,7 @@ const FIREBASE_CONFIG =  {
   messagingSenderId: "681740870700",
   appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
-
+  
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm', parent: true },
@@ -5521,7 +5592,19 @@ function renderFamily() {
     const today = Object.values(state.daily).filter(completedToday).length
                 + Object.values(state.sporadic).filter(completedToday).length
                 + Object.values(state.details).filter(completedToday).length
-                + Object.values(state.notices).filter(n => n.done && n.doneBy === key && (n.doneAt || 0) >= todayStartTs).length;
+                + Object.values(state.notices).filter(n => {
+                    // Soporta tanto el modelo nuevo (doneBy obj con timestamps por persona)
+                    // como el viejo (doneBy string). Cuenta si esta persona marcó hecho hoy.
+                    if (!n.doneBy) return false;
+                    if (typeof n.doneBy === 'object') {
+                      const entry = n.doneBy[key];
+                      if (!entry) return false;
+                      const at = entry.at || n.doneAt || 0;
+                      return at >= todayStartTs;
+                    }
+                    // Modelo viejo
+                    return n.done && n.doneBy === key && (n.doneAt || 0) >= todayStartTs;
+                  }).length;
     const points = state.scores[key] || 0;              // saldo para canjear
     const total = state.lifetimeScores[key] || 0;       // acumulado histórico
 
@@ -6475,13 +6558,18 @@ function uid(prefix) {
 /* --- AVISOS --- */
 
 let noticeType = 'info'; // 'info', 'date', 'datetime'
+let noticeMode = 'any';  // 'any' (basta con uno) o 'all' (todos pueden participar)
 
 function openNoticeForm() {
   document.getElementById('notice-text').value = '';
   document.getElementById('notice-date').value = '';
   document.getElementById('notice-datetime').value = '';
   noticeType = 'info';
+  noticeMode = 'any';
   updateNoticeFormType();
+  document.querySelectorAll('#notice-mode-pills .form-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.val === noticeMode);
+  });
   document.getElementById('modal-notice').classList.add('open');
   setTimeout(() => document.getElementById('notice-text').focus(), 100);
 }
@@ -6494,11 +6582,17 @@ function updateNoticeFormType() {
   document.getElementById('notice-datetime-row').style.display = noticeType === 'datetime' ? '' : 'none';
 }
 
-// Delegación de clicks para pills del tipo de aviso
+// Delegación de clicks para pills del tipo de aviso y modo
 document.addEventListener('click', (e) => {
   if (e.target.matches('#notice-type-pills .form-pill')) {
     noticeType = e.target.dataset.val;
     updateNoticeFormType();
+  }
+  if (e.target.matches('#notice-mode-pills .form-pill')) {
+    noticeMode = e.target.dataset.val;
+    document.querySelectorAll('#notice-mode-pills .form-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.val === noticeMode);
+    });
   }
 });
 
@@ -6531,7 +6625,8 @@ function submitNotice() {
     createdBy: state.me,
     createdAt: Date.now(),
     dueAt,
-    dueKind
+    dueKind,
+    completionMode: noticeMode  // 'any' o 'all'
   };
   state.notices[id] = notice;
   pushHistory({ ts: Date.now(), by: state.me, taskName: text.slice(0, 40), action: 'publicó un aviso' });
@@ -6541,63 +6636,127 @@ function submitNotice() {
   renderAll();
 }
 
+/* Helper: obtiene el modo de completación de un aviso, con retrocompatibilidad
+   para avisos viejos que no tienen este campo (se tratan como 'any'). */
+function noticeMode_of(n) {
+  return n.completionMode || 'any';
+}
+
+/* Helper: lista de personas anotadas. Soporta el nuevo modelo (takers obj) y
+   el viejo (takenBy string). */
+function noticeTakers(n) {
+  if (n.takers && typeof n.takers === 'object') return Object.keys(n.takers);
+  if (n.takenBy) return [n.takenBy];
+  return [];
+}
+
+/* Helper: lista de personas que ya marcaron como hecho. Soporta nuevo (doneBy obj)
+   y viejo (doneBy string + done boolean). */
+function noticeFinishers(n) {
+  if (n.doneBy && typeof n.doneBy === 'object') return Object.keys(n.doneBy);
+  if (n.done && typeof n.doneBy === 'string') return [n.doneBy];
+  return [];
+}
+
 function takeNotice(id) {
   const n = state.notices[id];
   if (!n) return;
-  if (n.takenBy && n.takenBy !== state.me) {
+  // Retrocompatibilidad: si hay un takenBy viejo y no soy yo, no puedo tomar
+  // (en modo 'any' viejo, solo una persona)
+  if (n.takenBy && n.takenBy !== state.me && !n.takers) {
     toast(`${PEOPLE[n.takenBy].name} ya tomó este aviso`);
     return;
   }
-  n.takenBy = state.me;
-  n.takenAt = Date.now();
+  // Nuevo modelo: añadir como taker
+  if (!n.takers || typeof n.takers !== 'object') n.takers = {};
+  if (n.takers[state.me]) return; // ya estoy anotado
+  n.takers[state.me] = { takenAt: Date.now() };
   pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'tomó el aviso' });
   playClaimSound();
   toast(`✦ Tomaste el aviso`);
-  // Granular: solo actualizamos takenBy y takenAt de ese aviso
-  dbBatch({
-    [`notices/${id}/takenBy`]: state.me,
-    [`notices/${id}/takenAt`]: n.takenAt
-  });
+  dbSet(`notices/${id}/takers/${state.me}`, n.takers[state.me]);
   renderAll();
 }
 
 function releaseNotice(id) {
   const n = state.notices[id];
   if (!n) return;
-  delete n.takenBy;
-  delete n.takenAt;
+  // Eliminar del nuevo modelo
+  if (n.takers && n.takers[state.me]) {
+    delete n.takers[state.me];
+    dbRemove(`notices/${id}/takers/${state.me}`);
+  }
+  // Retrocompatibilidad: si el aviso viejo tenía takenBy = state.me
+  if (n.takenBy === state.me) {
+    delete n.takenBy;
+    delete n.takenAt;
+    dbBatch({
+      [`notices/${id}/takenBy`]: null,
+      [`notices/${id}/takenAt`]: null
+    });
+  }
   pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'soltó el aviso' });
   toast('Aviso liberado');
-  dbBatch({
-    [`notices/${id}/takenBy`]: null,
-    [`notices/${id}/takenAt`]: null
-  });
   renderAll();
 }
 
 function doneNotice(id, evt) {
   const n = state.notices[id];
   if (!n) return;
-  const finisher = n.takenBy || state.me;
-  n.done = true;
-  n.doneBy = finisher;
-  n.doneAt = Date.now();
+  const mode = noticeMode_of(n);
+  const finisher = state.me;
+
+  // Inicializar estructuras nuevas si no existen
+  if (!n.doneBy || typeof n.doneBy !== 'object') n.doneBy = {};
+  if (n.doneBy[finisher]) return; // ya lo marqué hecho
+
+  // Marcar para esta persona
+  n.doneBy[finisher] = { at: Date.now() };
+
+  // Puntos para quien marca
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
   state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + 1;
-  pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
+  pushHistory({ ts: Date.now(), by: finisher, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
-  toast(`✦ ¡Aviso atendido!`);
-  dbBatch({
-    [`notices/${id}/done`]: true,
-    [`notices/${id}/doneBy`]: finisher,
-    [`notices/${id}/doneAt`]: n.doneAt,
+
+  const updates = {
+    [`notices/${id}/doneBy/${finisher}`]: n.doneBy[finisher],
     [`scores/${finisher}`]: state.scores[finisher],
     [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
-  });
+  };
+
+  // Decidir si el aviso queda totalmente completado
+  let fullyDone = false;
+  if (mode === 'any') {
+    // Basta con uno: ya está listo
+    fullyDone = true;
+  } else {
+    // 'all': todos los takers deben haberlo hecho. Si no hay takers, basta
+    // con que TODOS los miembros activos lo hayan hecho.
+    const takers = noticeTakers(n);
+    const expectedSet = takers.length ? takers : Object.keys(activePeople());
+    const finishersSet = Object.keys(n.doneBy);
+    fullyDone = expectedSet.every(k => finishersSet.includes(k));
+  }
+
+  if (fullyDone) {
+    n.done = true;
+    n.doneAt = Date.now();
+    updates[`notices/${id}/done`] = true;
+    updates[`notices/${id}/doneAt`] = n.doneAt;
+    toast(`✦ ¡Aviso completado!`);
+  } else {
+    const remaining = mode === 'all'
+      ? (noticeTakers(n).length || Object.keys(activePeople()).length) - Object.keys(n.doneBy).length
+      : 0;
+    toast(`✦ Atendido por ti${remaining > 0 ? ` · falta${remaining === 1 ? '' : 'n'} ${remaining}` : ''}`);
+  }
+
+  dbBatch(updates);
   renderAll();
 }
 
@@ -6916,14 +7075,18 @@ function renderNotices() {
   [...active, ...done].forEach(n => {
     const author = PEOPLE[n.createdBy];
     const isMine = n.createdBy === state.me;
-    const isHandler = n.takenBy === state.me;
     const hasDue = !!n.dueAt;
     const level = hasDue ? dueLevel(n.dueAt) : null;
+    const mode = noticeMode_of(n);
+    const takers = noticeTakers(n);
+    const finishers = noticeFinishers(n);
+    const iAmTaker = takers.includes(state.me);
+    const iAmFinisher = finishers.includes(state.me);
 
     // Clase del card
     let cardClasses = ['notice-card'];
     if (n.done) cardClasses.push('done');
-    else if (n.takenBy) cardClasses.push('taken');
+    else if (takers.length > 0) cardClasses.push('taken');
     if (level === 'overdue' && !n.done) cardClasses.push('overdue');
     else if (level === 'today' && !n.done) cardClasses.push('today');
     else if (level === 'soon' && !n.done) cardClasses.push('soon');
@@ -6934,7 +7097,6 @@ function renderNotices() {
       const abs = formatDue(n.dueAt, n.dueKind);
       let rel, badgeClass;
       if (n.done) {
-        // Hecho: solo mostrar la fecha original
         rel = abs;
         badgeClass = 'done';
       } else if (level === 'overdue') {
@@ -6953,36 +7115,71 @@ function renderNotices() {
       dueBadge = `<span class="due-badge ${badgeClass}" title="${abs}">${rel} · ${abs}</span>`;
     }
 
+    // Chip de modo (solo si es 'all', porque 'any' es lo neutro/default)
+    let modeChip = '';
+    if (mode === 'all' && !n.done) {
+      modeChip = `<span class="notice-mode-chip" title="Todos pueden participar">⌥ todos</span>`;
+    }
+
+    // Chips de personas que ya marcaron o están anotadas
+    const allParticipants = Array.from(new Set([...takers, ...finishers]));
+    let participantsRow = '';
+    if (allParticipants.length > 0 && !n.done) {
+      const chips = allParticipants.map(k => {
+        const p = PEOPLE[k];
+        if (!p) return '';
+        const finished = finishers.includes(k);
+        return `<span class="participant-chip ${finished ? 'finished' : ''}" data-p="${k}" title="${p.name}${finished ? ' — ya lo hizo' : ' — anotad@'}">
+          <span class="who-avatar-dot" data-p="${k}"></span>${p.name}${finished ? ' ✓' : ''}
+        </span>`;
+      }).join('');
+      participantsRow = `<div class="notice-participants">${chips}</div>`;
+    }
+
     // Acciones
     let actions = '';
     if (n.done) {
-      const finisher = PEOPLE[n.doneBy];
-      actions = `<span class="who-badge" data-p="${n.doneBy}"><span class="who-avatar-dot" data-p="${n.doneBy}"></span>${finisher.name} lo atendió · ${timeAgo(n.doneAt)}</span>`;
-    } else if (n.takenBy) {
-      const handler = PEOPLE[n.takenBy];
-      if (isHandler) {
-        actions = `
-          <button class="claim-btn primary" onclick="doneNotice('${n.id}', event)">¡Hecho!</button>
-          <button class="claim-btn ghost" onclick="releaseNotice('${n.id}')">soltar</button>
-        `;
-      } else {
-        actions = `
-          <span class="who-badge" data-p="${n.takenBy}"><span class="who-avatar-dot" data-p="${n.takenBy}"></span>${handler.name} lo está atendiendo</span>
-          <button class="claim-btn ghost" onclick="doneNotice('${n.id}', event)">marcar hecho</button>
-        `;
+      // Mostrar lista de quien lo completó
+      if (finishers.length === 1) {
+        const k = finishers[0];
+        const p = PEOPLE[k];
+        if (p) {
+          actions = `<span class="who-badge" data-p="${k}"><span class="who-avatar-dot" data-p="${k}"></span>${p.name} lo atendió${n.doneAt ? ' · ' + timeAgo(n.doneAt) : ''}</span>`;
+        }
+      } else if (finishers.length > 1) {
+        const names = finishers.map(k => PEOPLE[k]?.name).filter(Boolean);
+        actions = `<span class="who-badge multi">${names.join(', ')} lo atendieron${n.doneAt ? ' · ' + timeAgo(n.doneAt) : ''}</span>`;
       }
     } else {
-      actions = `<button class="claim-btn" onclick="takeNotice('${n.id}')">Yo lo hago</button>`;
+      // No completado todavía
+      const parts = [];
+      if (!iAmTaker && !iAmFinisher) {
+        parts.push(`<button class="claim-btn" onclick="takeNotice('${n.id}')">Yo lo hago</button>`);
+      } else if (iAmTaker && !iAmFinisher) {
+        parts.push(`<button class="claim-btn primary" onclick="doneNotice('${n.id}', event)">¡Hecho!</button>`);
+        parts.push(`<button class="claim-btn ghost" onclick="releaseNotice('${n.id}')">soltar</button>`);
+      } else if (iAmFinisher) {
+        // Yo ya lo marqué; si modo 'all' falta gente, mostrar mensaje
+        if (mode === 'all') {
+          parts.push(`<span class="notice-waiting">Esperando a los demás…</span>`);
+        }
+      }
+      // Si NO soy taker ni finisher pero quiero marcar directamente sin "tomar"
+      if (!iAmFinisher && !iAmTaker) {
+        parts.push(`<button class="claim-btn ghost" onclick="doneNotice('${n.id}', event)">marcar hecho</button>`);
+      }
+      actions = parts.join('');
     }
 
     html += `
       <div class="${cardClasses.join(' ')}">
         ${dueBadge}
         <div class="notice-head">
-          <span class="notice-author">Por <strong>${author.name}</strong> · ${timeAgo(n.createdAt)}</span>
+          <span class="notice-author">Por <strong>${author.name}</strong> · ${timeAgo(n.createdAt)}${modeChip ? ' · ' + modeChip : ''}</span>
           ${(isMine || n.done) ? `<button class="notice-delete" onclick="deleteNotice('${n.id}')" title="Eliminar">×</button>` : ''}
         </div>
         <div class="notice-text">${escapeHtml(n.text)}</div>
+        ${participantsRow}
         <div class="notice-actions">${actions}</div>
       </div>
     `;
