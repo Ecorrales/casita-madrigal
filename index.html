@@ -1398,6 +1398,337 @@ body::before {
   .carbs-portion { text-align: right; }
 }
 
+/* === TIENDA DE PUNTOS === */
+.store-mybalance {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--gold) 14%, var(--paper)),
+    color-mix(in srgb, var(--terra) 8%, var(--paper)));
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, var(--line));
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+}
+.store-mybalance-icon {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 36px;
+  color: var(--gold);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.store-mybalance-text {
+  flex: 1;
+}
+.store-mybalance-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.store-mybalance-value {
+  font-family: 'Fraunces', serif;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.store-mybalance-value strong {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.reward-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.reward-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+
+.reward-card.sold-out {
+  opacity: 0.55;
+  background: color-mix(in srgb, var(--bg-soft) 60%, var(--paper));
+}
+.reward-card.sold-out::after {
+  content: 'Agotado este mes';
+  position: absolute;
+  top: 12px; right: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--line-soft);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.reward-name {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 4px;
+  padding-right: 30px;
+}
+.reward-desc {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+.reward-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.reward-cost {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--gold);
+}
+.reward-cost small {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.reward-stock {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leaf);
+}
+.reward-stock.low { color: var(--terra); }
+
+.reward-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.reward-claim-btn {
+  appearance: none;
+  border: none;
+  background: var(--terra);
+  color: var(--paper);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: 1;
+  transition: filter 0.2s;
+}
+.reward-claim-btn:hover { filter: brightness(1.05); }
+.reward-claim-btn:disabled {
+  background: var(--line-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.reward-edit-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.reward-edit-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+.rewards-empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+/* === Tarjeta de familia GIRATORIA === */
+.family-card {
+  perspective: 1000px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+.family-card::before { display: none !important; }
+
+.family-card-inner {
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.family-card.flipped .family-card-inner {
+  transform: rotateY(180deg);
+}
+
+.family-card-face {
+  width: 100%;
+  height: 100%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.family-card-face.front {
+  position: relative;
+}
+.family-card-face.back {
+  position: absolute;
+  top: 0; left: 0;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+}
+.family-card-face::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--p-color);
+}
+
+.family-flip-btn {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  appearance: none;
+  background: color-mix(in srgb, var(--p-color) 14%, transparent);
+  color: var(--p-color);
+  border: 1px solid color-mix(in srgb, var(--p-color) 28%, transparent);
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  z-index: 2;
+  transition: filter 0.2s;
+}
+.family-flip-btn:hover { filter: brightness(1.08); }
+
+.coupons-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  margin-bottom: 36px;
+  overflow-y: auto;
+  max-height: 180px;
+}
+
+.coupon-item {
+  background: color-mix(in srgb, var(--p-color) 8%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--p-color) 25%, var(--line));
+  border-left: 3px solid var(--p-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.coupon-item.consumed {
+  opacity: 0.4;
+  border-style: dashed;
+}
+.coupon-item-name {
+  flex: 1;
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.coupon-item.consumed .coupon-item-name {
+  text-decoration: line-through;
+}
+.coupon-consume-btn {
+  appearance: none;
+  border: none;
+  background: var(--leaf);
+  color: var(--paper);
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.coupon-empty {
+  text-align: center;
+  padding: 20px 12px;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.back-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.back-name {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
 /* === FAMILIA — Tarjetas de logros === */
 .family-grid {
   display: grid;
@@ -2898,6 +3229,7 @@ body::before {
       <button class="tab" data-tab="esporadicas" onclick="switchTab('esporadicas')">Esporádicas<span class="tab-count" id="count-esp">0</span></button>
       <button class="tab" data-tab="detalles" onclick="switchTab('detalles')">Detalles que cuidan</button>
       <button class="tab" data-tab="cocina" onclick="switchTab('cocina')">Cocina</button>
+      <button class="tab" data-tab="tienda" onclick="switchTab('tienda')">Tienda</button>
       <button class="tab" data-tab="familia" onclick="switchTab('familia')">Familia</button>
       <button class="tab" data-tab="historial" onclick="switchTab('historial')">Historial</button>
     </div>
@@ -3032,6 +3364,19 @@ body::before {
       </div>
     </section>
 
+    <!-- TIENDA DE PUNTOS -->
+    <section class="panel" data-panel="tienda">
+      <div class="panel-head">
+        <div>
+          <h1 class="panel-title">La <em>tienda</em></h1>
+          <p class="panel-sub">Canjea tus puntos por recompensas</p>
+        </div>
+        <button class="add-btn parent-only" id="add-reward-btn" onclick="openRewardForm()" style="display:none">+ Nueva recompensa</button>
+      </div>
+      <div class="store-mybalance" id="store-mybalance"></div>
+      <div class="rewards-grid" id="rewards-grid"></div>
+    </section>
+
     <!-- FAMILIA -->
     <section class="panel" data-panel="familia">
       <div class="panel-head">
@@ -3101,6 +3446,9 @@ body::before {
 
     <div class="modal-actions">
       <button class="claim-btn primary" onclick="submitProposal()">Enviar a votación</button>
+      <button class="claim-btn ghost parent-only" onclick="submitDirect()" style="display:none" title="Como papá/mamá, puedes agregarla sin votación">
+        Agregar directo
+      </button>
       <button class="modal-cancel" onclick="closeProposalForm()">Cancelar</button>
     </div>
   </div>
@@ -3156,8 +3504,8 @@ body::before {
     <input type="text" class="form-input" id="edit-meta" maxlength="80" />
 
     <div class="modal-actions" style="justify-content:space-between">
-      <button class="claim-btn ghost" style="color:var(--terra-deep)" onclick="confirmDeleteTask()">Eliminar</button>
-      <div style="display:flex;gap:8px">
+      <button class="claim-btn ghost parent-only" style="color:var(--terra-deep);display:none" onclick="confirmDeleteTask()">Eliminar</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
         <button class="claim-btn primary" onclick="saveEditTask()">Guardar</button>
         <button class="modal-cancel" onclick="closeEditForm()">Cancelar</button>
       </div>
@@ -3184,6 +3532,41 @@ body::before {
       <div style="display:flex;gap:8px">
         <button class="claim-btn primary" onclick="saveMeal()">Guardar</button>
         <button class="modal-cancel" onclick="closeMealForm()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
+     MODAL — Crear / editar recompensa (solo papás)
+     ================================================= -->
+<div class="modal-backdrop" id="modal-reward">
+  <div class="modal modal-form">
+    <div class="modal-title" id="reward-modal-title">Nueva recompensa</div>
+    <div class="modal-sub">Define qué pueden canjear los miembros de la casa</div>
+
+    <label class="form-label">Nombre de la recompensa</label>
+    <input type="text" class="form-input" id="reward-name" placeholder="Ej: No lavar la losa" maxlength="50" />
+
+    <label class="form-label">Descripción <span class="form-hint">(opcional)</span></label>
+    <input type="text" class="form-input" id="reward-desc" placeholder="Ej: Skippea una vez (mañana, tarde o noche)" maxlength="100" />
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label class="form-label">Costo en puntos</label>
+        <input type="number" class="form-input" id="reward-cost" min="1" max="999" placeholder="5" />
+      </div>
+      <div>
+        <label class="form-label">Cupones al mes</label>
+        <input type="number" class="form-input" id="reward-stock" min="1" max="99" placeholder="4" />
+      </div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="claim-btn ghost" style="color:var(--terra-deep);display:none" id="reward-delete-btn" onclick="deleteReward()">Eliminar</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="claim-btn primary" onclick="saveReward()">Guardar</button>
+        <button class="modal-cancel" onclick="closeRewardForm()">Cancelar</button>
       </div>
     </div>
   </div>
@@ -3240,7 +3623,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.15';
+const APP_VERSION = '2026.05.22.18';
 
 async function checkForUpdate() {
   try {
@@ -3336,9 +3719,9 @@ const FIREBASE_CONFIG =  {
   
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
-  emm: { name: 'Emmanuel',  initial: 'E', color: 'emm' },
+  emm: { name: 'Emmanuel',  initial: 'E', color: 'emm', parent: true },
   jov: { name: 'Jovanny',   initial: 'J', color: 'jov' },
-  mar: { name: 'Mariel',    initial: 'M', color: 'mar' },
+  mar: { name: 'Mariel',    initial: 'M', color: 'mar', parent: true },
   lup: { name: 'Lupita',    initial: 'L', color: 'lup' },
   mat: { name: 'Matías',    initial: 'm', color: 'mat', passive: true }
 };
@@ -3348,6 +3731,11 @@ function activePeople() {
   const out = {};
   Object.entries(PEOPLE).forEach(([k, p]) => { if (!p.passive) out[k] = p; });
   return out;
+}
+
+/* Verifica si el usuario actual es papá (puede agregar/eliminar sin votación) */
+function isParent() {
+  return PEOPLE[state.me]?.parent === true;
 }
 
 const SEED_DAILY = [
@@ -3426,6 +3814,12 @@ let state = {
   menu: {},
   // GRAMAJES DE PROTEÍNA — { personKey: { stdRaw, stdCooked, porkRaw, porkCooked } }
   grams: null,
+  // TIENDA DE RECOMPENSAS — { id: { name, desc, cost, monthlyStock, remaining, createdBy, createdAt } }
+  rewards: {},
+  // CUPONES ACTIVOS — { id: { rewardId, ownerKey, cost, name, claimedAt, claimedBy, status: 'active'|'consumed', consumedAt?, consumedBy? } }
+  coupons: {},
+  // Mes vigente del stock, formato "YYYY-MM" — usado para reabastecimiento automático
+  rewardsMonth: null,
   // TABLÓN
   proposals: {},                 // { id: { kind, name, meta/desc, section?, proposedBy, proposedAt, votes: {emm:'yes'|'no', ...} } }
   notices: {}                    // { id: { text, createdBy, createdAt, takenBy?, takenAt?, done?, doneBy?, doneAt? } }
@@ -3470,6 +3864,42 @@ function ensureCatalogs() {
       mat: { stdRaw: 60,  stdCooked: '40-45',   porkRaw: 70,  porkCooked: '45-50'  }
     };
   }
+  // TIENDA
+  if (!state.rewards) state.rewards = {};
+  if (!state.coupons) state.coupons = {};
+  if (!state.rewardsMonth) state.rewardsMonth = monthKey();
+}
+
+/* Formato "YYYY-MM" del mes actual (o el de una fecha dada) */
+function monthKey(d) {
+  d = d || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/* Reabastece automáticamente el stock mensual de recompensas si cambió el mes.
+   Restaura `remaining` al valor de `monthlyStock` y limpia cupones consumidos viejos. */
+function monthlyRewardsRefill() {
+  const currentMonth = monthKey();
+  if (state.rewardsMonth === currentMonth) return false;
+
+  // Reabastecer stock de cada recompensa
+  Object.keys(state.rewards || {}).forEach(rid => {
+    const r = state.rewards[rid];
+    if (!r) return;
+    r.remaining = r.monthlyStock;
+  });
+
+  // Limpiar cupones consumidos del mes anterior (los activos se conservan
+  // porque podrían no haberse usado todavía)
+  Object.keys(state.coupons || {}).forEach(cid => {
+    const c = state.coupons[cid];
+    if (c && c.status === 'consumed') {
+      delete state.coupons[cid];
+    }
+  });
+
+  state.rewardsMonth = currentMonth;
+  return true;
 }
 
 let useFirebase = false;
@@ -3896,10 +4326,17 @@ function load() {
 /* Aplica rollover y guarda si la fecha cambió. Solo se usa en modo LOCAL
    (sin Firebase activo) — para modo Firebase, el listener maneja esto. */
 function applyLocalRollover() {
-  if (useFirebase) return; // En modo Firebase, el listener se encarga
+  if (useFirebase) return;
+  let changed = false;
   if (state.date !== todayKey()) {
     dailyRollover();
     state.date = todayKey();
+    changed = true;
+  }
+  if (monthlyRewardsRefill()) {
+    changed = true;
+  }
+  if (changed) {
     save();
     renderAll();
   }
@@ -4071,20 +4508,30 @@ async function initFirebase() {
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
+        state.rewards = data.rewards || {};
+        state.coupons = data.coupons || {};
+        if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
         dailyRollover();
+        const refilled = monthlyRewardsRefill();
         state.date = todayKey();
         firebaseHydrated = true;
         // Persistir el rollover granularmente: solo los nodos que cambiaron
         saveLocal();
-        dbBatch({
+        const updates = {
           date: state.date,
           daily: state.daily,
           sporadic: state.sporadic,
           details: state.details
-        });
+        };
+        if (refilled) {
+          updates.rewards = state.rewards;
+          updates.coupons = state.coupons;
+          updates.rewardsMonth = state.rewardsMonth;
+        }
+        dbBatch(updates);
         flushPendingMutations();
       } else {
         if (data.catalogDaily && !isProtected('catalogDaily', data.catalogDaily)) state.catalogDaily = data.catalogDaily;
@@ -4099,9 +4546,20 @@ async function initFirebase() {
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
+        state.rewards = data.rewards || {};
+        state.coupons = data.coupons || {};
+        if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
+        // Verificar si cambió el mes para reabastecer recompensas
+        if (monthlyRewardsRefill()) {
+          dbBatch({
+            rewards: state.rewards,
+            coupons: state.coupons,
+            rewardsMonth: state.rewardsMonth
+          });
+        }
         firebaseHydrated = true;
         // Si había un save pendiente, ejecutarlo ahora con los datos correctos ya cargados
         flushPendingMutations();
@@ -4390,6 +4848,9 @@ async function performRefresh() {
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
+        state.rewards = data.rewards || {};
+        state.coupons = data.coupons || {};
+        if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
@@ -4500,6 +4961,7 @@ function renderAll() {
   renderDetails();
   renderTablon();
   renderCocina();
+  renderStore();
   renderFamily();
   renderHistory();
   renderNotifs();
@@ -4894,7 +5356,7 @@ function renderFamily() {
   const el = document.getElementById('family-grid');
   el.innerHTML = '';
   Object.entries(PEOPLE).forEach(([key, p]) => {
-    // Caso especial: miembros pasivos (Matías) — tarjeta simplificada
+    // Caso especial: miembros pasivos (Matías) — tarjeta simplificada (sin flip)
     if (p.passive) {
       const bday = state.birthdays?.[key];
       const age = calcAge(bday);
@@ -4918,20 +5380,24 @@ function renderFamily() {
       card.className = 'family-card family-card-passive' + (isBdayToday ? ' is-birthday' : '');
       card.dataset.p = key;
       card.innerHTML = `
-        <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
-        <div class="family-name">${p.name} <span class="passive-tag">bebé</span></div>
-        <div class="family-don">
-          <span class="don-text" style="font-style:italic;color:var(--muted)">El más pequeño de la casa</span>
-        </div>
-        ${bday ? `
-          <div class="family-bday">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="bday-icon"><path d="M20 21v-8H4v8M1 21h22M6 13V8a4 4 0 0 1 4-4M14 13V8a4 4 0 0 1 4-4M10 4a2 2 0 1 0 0-4M18 4a2 2 0 1 0 0-4"/></svg>
-            <span>${bdayInfo}</span>
-            <button class="don-edit" onclick="editPassiveBirthday('${key}')" title="Cambiar su cumpleaños">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
+        <div class="family-card-inner">
+          <div class="family-card-face front">
+            <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
+            <div class="family-name">${p.name} <span class="passive-tag">bebé</span></div>
+            <div class="family-don">
+              <span class="don-text" style="font-style:italic;color:var(--muted)">El más pequeño de la casa</span>
+            </div>
+            ${bday ? `
+              <div class="family-bday">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="bday-icon"><path d="M20 21v-8H4v8M1 21h22M6 13V8a4 4 0 0 1 4-4M14 13V8a4 4 0 0 1 4-4M10 4a2 2 0 1 0 0-4M18 4a2 2 0 1 0 0-4"/></svg>
+                <span>${bdayInfo}</span>
+                <button class="don-edit" onclick="editPassiveBirthday('${key}')" title="Cambiar su cumpleaños">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              </div>
+            ` : (state.me ? `<div class="family-bday family-bday-add">${bdayInfo}</div>` : '')}
           </div>
-        ` : (state.me ? `<div class="family-bday family-bday-add">${bdayInfo}</div>` : '')}
+        </div>
       `;
       el.appendChild(card);
       return;
@@ -4983,30 +5449,72 @@ function renderFamily() {
       `;
     }
 
+    // Cupones de esta persona
+    const myCoupons = Object.entries(state.coupons || {})
+      .filter(([_, c]) => c.ownerKey === key)
+      .map(([id, c]) => ({ id, ...c }))
+      .sort((a, b) => {
+        // activos primero, luego por fecha más reciente
+        if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+        return (b.claimedAt || 0) - (a.claimedAt || 0);
+      });
+
+    const activeCount = myCoupons.filter(c => c.status === 'active').length;
+
+    let couponsHtml;
+    if (!myCoupons.length) {
+      couponsHtml = `<div class="coupon-empty">Aún no hay cupones canjeados</div>`;
+    } else {
+      couponsHtml = myCoupons.map(c => {
+        const showConsumeBtn = isParent() && c.status === 'active';
+        return `
+          <div class="coupon-item ${c.status === 'consumed' ? 'consumed' : ''}">
+            <span class="coupon-item-name">${escapeHtml(c.name)}</span>
+            ${showConsumeBtn ? `<button class="coupon-consume-btn" onclick="event.stopPropagation();consumeCoupon('${c.id}')">Cobrar</button>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
     const card = document.createElement('div');
     card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '');
     card.dataset.p = key;
     card.innerHTML = `
-      <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
-      <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}</div>
-      <div class="family-don" id="don-${key}">
-        <span class="don-text">${escapeHtml(subtitle)}</span>
-        ${isMe ? `<button class="don-edit" onclick="editMySubtitle()" title="Cambiar mi subtítulo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>` : ''}
-      </div>
-      ${bdayBlock}
-      <div class="family-stats">
-        <div>
-          <div class="family-stat-num">${today}</div>
-          <div class="family-stat-label">Hoy</div>
+      <div class="family-card-inner">
+        <div class="family-card-face front">
+          <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
+          <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}</div>
+          <div class="family-don" id="don-${key}">
+            <span class="don-text">${escapeHtml(subtitle)}</span>
+            ${isMe ? `<button class="don-edit" onclick="editMySubtitle()" title="Cambiar mi subtítulo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>` : ''}
+          </div>
+          ${bdayBlock}
+          <div class="family-stats">
+            <div>
+              <div class="family-stat-num">${today}</div>
+              <div class="family-stat-label">Hoy</div>
+            </div>
+            <div>
+              <div class="family-stat-num">${total}</div>
+              <div class="family-stat-label">Total</div>
+            </div>
+          </div>
+          ${badges.length ? `<div class="family-badges">${badges.map(b => `<span class="badge-pill">${b.icon} ${b.label}</span>`).join('')}</div>` : ''}
+          <button class="family-flip-btn" onclick="event.stopPropagation();flipFamilyCard('${key}')" title="Ver cupones">
+            ${activeCount > 0 ? `✦ ${activeCount} cupón${activeCount === 1 ? '' : 'es'}` : 'Cupones'}
+          </button>
         </div>
-        <div>
-          <div class="family-stat-num">${total}</div>
-          <div class="family-stat-label">Total</div>
+        <div class="family-card-face back">
+          <div class="back-title">Cupones de</div>
+          <div class="back-name">${p.name}</div>
+          <div class="coupons-list">${couponsHtml}</div>
+          <button class="family-flip-btn" onclick="event.stopPropagation();flipFamilyCard('${key}')" title="Volver">
+            ← Volver
+          </button>
         </div>
       </div>
-      ${badges.length ? `<div class="family-badges">${badges.map(b => `<span class="badge-pill">${b.icon} ${b.label}</span>`).join('')}</div>` : ''}
     `;
     el.appendChild(card);
   });
@@ -5077,18 +5585,37 @@ function editPassiveBirthday(key) {
   toast(`✿ Cumpleaños de ${p.name} guardado`);
 }
 
+/* Acciones que valen la pena mostrar en el historial — las demás (tomar, soltar,
+   desmarcar) son ruido que satura la lista. */
+const HISTORY_SIGNIFICANT_ACTIONS = [
+  'completó',
+  'completó el aviso',
+  'atendió',
+  '¡aprobó por unanimidad!',
+  'agregó directo',
+  'publicó un aviso',
+  'propuso',
+  'canjeó'
+];
+
+function isSignificantHistoryEntry(h) {
+  return HISTORY_SIGNIFICANT_ACTIONS.includes(h.action);
+}
+
 function renderHistory() {
   const el = document.getElementById('history-list');
   el.innerHTML = '';
-  if (!state.history.length) {
-    el.innerHTML = '<div class="empty">Aún no hay actividad registrada.<br>Marca una tarea y aparecerá aquí.</div>';
+  const significant = state.history.filter(isSignificantHistoryEntry);
+  if (!significant.length) {
+    el.innerHTML = '<div class="empty">Aún no hay logros registrados.<br>Completa una tarea y aparecerá aquí.</div>';
     return;
   }
-  const recent = [...state.history].reverse().slice(0, 50);
+  const recent = [...significant].reverse().slice(0, 50);
   recent.forEach(h => {
     const row = document.createElement('div');
     row.className = 'history-row';
     const p = PEOPLE[h.by];
+    if (!p) return;
     row.style.setProperty('--p-color', `var(--${h.by})`);
     row.innerHTML = `
       <span class="history-time">${timeAgo(h.ts)}</span>
@@ -5536,6 +6063,216 @@ function renderCarbs() {
   `;
 }
 
+/* =====================================================================
+   TIENDA DE PUNTOS — recompensas canjeables
+   ===================================================================== */
+
+let editingReward = null;  // id de recompensa que se está editando
+
+function renderStore() {
+  renderMyBalance();
+  renderRewards();
+}
+
+function renderMyBalance() {
+  const el = document.getElementById('store-mybalance');
+  if (!el) return;
+  const points = state.scores[state.me] || 0;
+  const myCoupons = Object.values(state.coupons || {}).filter(c => c.ownerKey === state.me && c.status === 'active').length;
+  el.innerHTML = `
+    <div class="store-mybalance-icon">✦</div>
+    <div class="store-mybalance-text">
+      <div class="store-mybalance-label">${PEOPLE[state.me].name} tiene</div>
+      <div class="store-mybalance-value"><strong>${points}</strong> punto${points === 1 ? '' : 's'} disponibles${myCoupons > 0 ? ` · <span style="color:var(--leaf);font-size:14px">${myCoupons} cupón${myCoupons === 1 ? '' : 'es'} activo${myCoupons === 1 ? '' : 's'}</span>` : ''}</div>
+    </div>
+  `;
+  // Mostrar botón "Nueva recompensa" solo a papás
+  const addBtn = document.getElementById('add-reward-btn');
+  if (addBtn) addBtn.style.display = isParent() ? '' : 'none';
+}
+
+function renderRewards() {
+  const el = document.getElementById('rewards-grid');
+  if (!el) return;
+  const rewards = Object.entries(state.rewards || {})
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => a.cost - b.cost);
+
+  if (!rewards.length) {
+    el.innerHTML = `<div class="rewards-empty">${isParent() ? 'Aún no hay recompensas. Crea la primera con el botón de arriba.' : 'Aún no hay recompensas disponibles. Pídele a papá o mamá que cree algunas.'}</div>`;
+    return;
+  }
+
+  const myPoints = state.scores[state.me] || 0;
+  el.innerHTML = rewards.map(r => {
+    const soldOut = (r.remaining || 0) <= 0;
+    const canAfford = myPoints >= r.cost;
+    const disabled = soldOut || !canAfford;
+    const stockClass = (r.remaining || 0) <= 1 ? 'low' : '';
+    return `
+      <div class="reward-card ${soldOut ? 'sold-out' : ''}">
+        <div class="reward-name">${escapeHtml(r.name)}</div>
+        ${r.desc ? `<div class="reward-desc">${escapeHtml(r.desc)}</div>` : ''}
+        <div class="reward-footer">
+          <span class="reward-cost">${r.cost}<small>pts</small></span>
+          <span class="reward-stock ${stockClass}">${r.remaining || 0} / ${r.monthlyStock} este mes</span>
+        </div>
+        <div class="reward-actions">
+          <button class="reward-claim-btn" onclick="claimReward('${r.id}')" ${disabled ? 'disabled' : ''}>
+            ${soldOut ? 'Agotada' : (!canAfford ? `Faltan ${r.cost - myPoints} pts` : 'Canjear')}
+          </button>
+          ${isParent() ? `<button class="reward-edit-btn" onclick="openRewardForm('${r.id}')">Editar</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openRewardForm(id) {
+  if (!isParent()) { toast('Solo los papás pueden gestionar recompensas'); return; }
+  editingReward = id || null;
+  const title = document.getElementById('reward-modal-title');
+  const deleteBtn = document.getElementById('reward-delete-btn');
+  if (id && state.rewards[id]) {
+    const r = state.rewards[id];
+    title.textContent = 'Editar recompensa';
+    document.getElementById('reward-name').value = r.name || '';
+    document.getElementById('reward-desc').value = r.desc || '';
+    document.getElementById('reward-cost').value = r.cost || '';
+    document.getElementById('reward-stock').value = r.monthlyStock || '';
+    deleteBtn.style.display = '';
+  } else {
+    title.textContent = 'Nueva recompensa';
+    document.getElementById('reward-name').value = '';
+    document.getElementById('reward-desc').value = '';
+    document.getElementById('reward-cost').value = '';
+    document.getElementById('reward-stock').value = '';
+    deleteBtn.style.display = 'none';
+  }
+  document.getElementById('modal-reward').classList.add('open');
+  setTimeout(() => document.getElementById('reward-name').focus(), 100);
+}
+
+function closeRewardForm() {
+  document.getElementById('modal-reward').classList.remove('open');
+  editingReward = null;
+}
+
+function saveReward() {
+  if (!isParent()) return;
+  const name = document.getElementById('reward-name').value.trim();
+  const desc = document.getElementById('reward-desc').value.trim();
+  const cost = parseInt(document.getElementById('reward-cost').value, 10);
+  const monthlyStock = parseInt(document.getElementById('reward-stock').value, 10);
+
+  if (!name) { toast('Ponle un nombre'); return; }
+  if (!cost || cost < 1) { toast('El costo debe ser al menos 1 punto'); return; }
+  if (!monthlyStock || monthlyStock < 1) { toast('Define al menos 1 cupón al mes'); return; }
+
+  const id = editingReward || uid('r');
+  const existing = state.rewards[id];
+  const reward = {
+    name,
+    desc,
+    cost,
+    monthlyStock,
+    // Si es nueva, remaining = monthlyStock. Si edita, mantener remaining actual
+    // pero ajustarlo si el nuevo stock es menor
+    remaining: existing
+      ? Math.min(existing.remaining ?? monthlyStock, monthlyStock)
+      : monthlyStock,
+    createdBy: existing?.createdBy || state.me,
+    createdAt: existing?.createdAt || Date.now(),
+    updatedBy: state.me,
+    updatedAt: Date.now()
+  };
+  state.rewards[id] = reward;
+  closeRewardForm();
+  toast(editingReward ? '✦ Recompensa actualizada' : '✦ Recompensa creada');
+  dbSet(`rewards/${id}`, reward);
+  renderAll();
+}
+
+function deleteReward() {
+  if (!isParent()) return;
+  if (!editingReward) return;
+  if (!confirm('¿Eliminar esta recompensa? Los cupones ya canjeados se mantendrán.')) return;
+  delete state.rewards[editingReward];
+  const id = editingReward;
+  closeRewardForm();
+  toast('Recompensa eliminada');
+  dbRemove(`rewards/${id}`);
+  renderAll();
+}
+
+/* Canjear una recompensa: descuenta puntos, decrementa stock, crea cupón */
+function claimReward(rewardId) {
+  const r = state.rewards[rewardId];
+  if (!r) return;
+  if ((r.remaining || 0) <= 0) { toast('Esta recompensa se acabó este mes'); return; }
+  const myPoints = state.scores[state.me] || 0;
+  if (myPoints < r.cost) { toast(`Te faltan ${r.cost - myPoints} puntos`); return; }
+
+  // Confirmar
+  if (!confirm(`¿Canjear "${r.name}" por ${r.cost} puntos?`)) return;
+
+  // Aplicar localmente
+  const couponId = uid('c');
+  const coupon = {
+    rewardId,
+    name: r.name,
+    cost: r.cost,
+    ownerKey: state.me,
+    claimedAt: Date.now(),
+    claimedBy: state.me,
+    status: 'active'
+  };
+  state.coupons[couponId] = coupon;
+  state.scores[state.me] = myPoints - r.cost;
+  r.remaining = (r.remaining || 0) - 1;
+  state.rewards[rewardId] = r;
+
+  pushHistory({ ts: Date.now(), by: state.me, taskName: r.name, action: 'canjeó' });
+  playDoneSound();
+  toast(`✦ ¡Canjeaste "${r.name}"!`);
+  setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 100);
+
+  // Persistir granular
+  dbBatch({
+    [`coupons/${couponId}`]: coupon,
+    [`rewards/${rewardId}/remaining`]: r.remaining,
+    [`scores/${state.me}`]: state.scores[state.me]
+  });
+  renderAll();
+}
+
+/* Marcar cupón como consumido (verbal, solo papás) */
+function consumeCoupon(couponId) {
+  if (!isParent()) { toast('Solo los papás pueden marcar cupones como usados'); return; }
+  const c = state.coupons[couponId];
+  if (!c) return;
+  if (c.status === 'consumed') return;
+  if (!confirm(`¿Marcar "${c.name}" como ya usado por ${PEOPLE[c.ownerKey].name}?`)) return;
+
+  c.status = 'consumed';
+  c.consumedAt = Date.now();
+  c.consumedBy = state.me;
+  state.coupons[couponId] = c;
+  toast(`✓ Cupón cobrado`);
+  dbBatch({
+    [`coupons/${couponId}/status`]: 'consumed',
+    [`coupons/${couponId}/consumedAt`]: c.consumedAt,
+    [`coupons/${couponId}/consumedBy`]: c.consumedBy
+  });
+  renderAll();
+}
+
+/* Voltear la tarjeta de familia */
+function flipFamilyCard(key) {
+  const card = document.querySelector(`.family-card[data-p="${key}"]`);
+  if (card) card.classList.toggle('flipped');
+}
+
 function renderNotifs() {
   const pendingDaily = DAILY_TASKS.filter(t => !state.daily[t.id]?.done);
   const free = pendingDaily.filter(t => !state.daily[t.id]?.takenBy);
@@ -5760,6 +6497,17 @@ function openProposalForm() {
   proposalKind = 'daily';
   proposalSection = 'morning';
   updateProposalForm();
+  // Mostrar botón "Agregar directo" solo a los papás
+  document.querySelectorAll('#modal-proposal .parent-only').forEach(el => {
+    el.style.display = isParent() ? '' : 'none';
+  });
+  // Cambiar el subtítulo y texto del botón principal si es papá
+  const sub = document.querySelector('#modal-proposal .modal-sub');
+  if (sub) {
+    sub.textContent = isParent()
+      ? 'Envíala a votación o agrégala directo (como papá/mamá).'
+      : 'Si todos votan que les late, se agrega al flujo de la casa.';
+  }
   document.getElementById('modal-proposal').classList.add('open');
   setTimeout(() => document.getElementById('proposal-name').focus(), 100);
 }
@@ -5829,6 +6577,55 @@ function submitProposal() {
   toast(`✦ Propuesta enviada a votación`);
   playClaimSound();
   dbSet(`proposals/${id}`, proposal);
+  renderAll();
+}
+
+/* Solo papás: agregar tarea directo al catálogo sin pasar por votación */
+function submitDirect() {
+  if (!isParent()) {
+    toast('Solo los papás pueden agregar sin votación');
+    return;
+  }
+  const name = document.getElementById('proposal-name').value.trim();
+  const meta = document.getElementById('proposal-meta').value.trim();
+  if (!name) { toast('Pon un nombre'); return; }
+
+  let newItem, catalogPath;
+  if (proposalKind === 'daily') {
+    const newId = uid('d');
+    newItem = {
+      id: newId, name, meta: meta || '',
+      section: proposalSection || 'morning',
+      addedBy: state.me, addedAt: Date.now()
+    };
+    catalogPath = 'catalogDaily';
+  } else if (proposalKind === 'sporadic') {
+    const newId = uid('s');
+    newItem = {
+      id: newId, name, meta: meta || '',
+      addedBy: state.me, addedAt: Date.now()
+    };
+    catalogPath = 'catalogSporadic';
+  } else {
+    const newId = uid('x');
+    newItem = {
+      id: newId, title: name, desc: meta || '',
+      addedBy: state.me, addedAt: Date.now()
+    };
+    catalogPath = 'catalogDetails';
+  }
+
+  const newCatalog = [...state[catalogPath], newItem];
+  state[catalogPath] = newCatalog;
+  ensureCatalogs();
+  pushHistory({ ts: Date.now(), by: state.me, taskName: name, action: 'agregó directo' });
+  closeProposalForm();
+  toast(`✦ "${name}" agregada al flujo`);
+  playDoneSound();
+
+  // Protegido contra race condition con el listener
+  protectFromListener(catalogPath, newCatalog);
+  dbSet(catalogPath, newCatalog);
   renderAll();
 }
 
@@ -6159,6 +6956,10 @@ function openEditTask(kind, id) {
   editTarget = { kind, id };
   document.getElementById('edit-name').value = kind === 'detail' ? item.title : item.name;
   document.getElementById('edit-meta').value = kind === 'detail' ? (item.desc || '') : (item.meta || '');
+  // Mostrar botón "Eliminar" solo a los papás
+  document.querySelectorAll('#modal-edit .parent-only').forEach(el => {
+    el.style.display = isParent() ? '' : 'none';
+  });
   document.getElementById('modal-edit').classList.add('open');
 }
 
@@ -6197,6 +6998,10 @@ function saveEditTask() {
 
 function confirmDeleteTask() {
   if (!editTarget) return;
+  if (!isParent()) {
+    toast('Solo los papás pueden eliminar tareas');
+    return;
+  }
   if (!confirm('¿Eliminar esta tarea del catálogo de la casa?')) return;
   const { kind, id } = editTarget;
   const listKey = kind === 'daily' ? 'catalogDaily'
