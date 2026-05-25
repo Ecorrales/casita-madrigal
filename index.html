@@ -3183,7 +3183,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.9';
+const APP_VERSION = '2026.05.22.12';
 
 async function checkForUpdate() {
   try {
@@ -3417,6 +3417,8 @@ function ensureCatalogs() {
 
 let useFirebase = false;
 let db = null;
+let firebaseHydrated = false;     // true después de la primera respuesta del listener
+let pendingMutations = [];         // mutaciones encoladas esperando hidratación
 
 /* ===== UTILIDADES ===== */
 function todayKey() {
@@ -3680,31 +3682,100 @@ function confettiBurst(x, y) {
 }
 
 /* ===== PERSISTENCIA ===== */
-function save() {
-  // Persistencia local (siempre)
+/* ===================================================================
+   PERSISTENCIA — Firebase es la fuente de verdad
+   - saveLocal(): cachea el state en localStorage para arranque rápido
+   - dbSet(path, value): escribe un nodo específico en Firebase
+   - dbRemove(path): elimina un nodo específico
+   - dbBatch(updates): aplica múltiples updates atómicamente
+   Todas estas funciones respetan el candado firebaseHydrated.
+   =================================================================== */
+
+function saveLocal() {
   try {
     localStorage.setItem('casita_state', JSON.stringify(state));
   } catch(e) { console.warn('localStorage error', e); }
+}
 
-  // Sincronización remota si Firebase está activo
-  if (useFirebase && db) {
-    db.ref('casita').set({
-      date: state.date,
-      catalogDaily: state.catalogDaily,
-      catalogSporadic: state.catalogSporadic,
-      catalogDetails: state.catalogDetails,
-      daily: state.daily,
-      sporadic: state.sporadic,
-      details: state.details,
-      history: state.history.slice(-200),
-      scores: state.scores,
-      subtitles: state.subtitles,
-      birthdays: state.birthdays,
-      menu: state.menu,
-      grams: state.grams,
-      proposals: state.proposals,
-      notices: state.notices
-    }).catch(e => console.warn('Firebase save error', e));
+/* save() ahora solo guarda local. Las mutaciones específicas usan dbSet/dbBatch.
+   Se mantiene la función por compatibilidad con código viejo que la llame. */
+function save() {
+  saveLocal();
+}
+
+function dbSet(path, value) {
+  saveLocal();
+  if (!useFirebase || !db) return;
+  if (!firebaseHydrated) {
+    // Encolar y aplicar después de hidratar
+    pendingMutations.push({ kind: 'set', path, value });
+    return;
+  }
+  db.ref('casita/' + path).set(value).catch(e => console.warn('dbSet error:', path, e));
+}
+
+function dbRemove(path) {
+  saveLocal();
+  if (!useFirebase || !db) return;
+  if (!firebaseHydrated) {
+    pendingMutations.push({ kind: 'remove', path });
+    return;
+  }
+  db.ref('casita/' + path).remove().catch(e => console.warn('dbRemove error:', path, e));
+}
+
+/* updates: { 'daily/d05': {...}, 'history/0': {...}, ... } */
+function dbBatch(updates) {
+  saveLocal();
+  if (!useFirebase || !db) return;
+  if (!firebaseHydrated) {
+    pendingMutations.push({ kind: 'batch', updates });
+    return;
+  }
+  // Prefijar todas las paths con 'casita/'
+  const prefixed = {};
+  Object.entries(updates).forEach(([k, v]) => { prefixed['casita/' + k] = v; });
+  db.ref().update(prefixed).catch(e => console.warn('dbBatch error:', e));
+}
+
+/* Aplica mutaciones que quedaron encoladas mientras esperábamos hidratación */
+function flushPendingMutations() {
+  if (!pendingMutations.length) return;
+  const queue = pendingMutations.slice();
+  pendingMutations = [];
+  queue.forEach(m => {
+    if (m.kind === 'set') dbSet(m.path, m.value);
+    else if (m.kind === 'remove') dbRemove(m.path);
+    else if (m.kind === 'batch') dbBatch(m.updates);
+    else if (m.kind === 'historyPush') {
+      if (useFirebase && db) db.ref('casita/history').push(m.entry).catch(e => console.warn('history push', e));
+    }
+  });
+}
+
+/* Normaliza el history: Firebase puede devolverlo como objeto (cuando se usa push)
+   o como array (legado). Esta función lo convierte siempre a array ordenado por ts. */
+function normalizeHistory(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  const arr = Object.values(raw);
+  arr.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  return arr.slice(-200);
+}
+
+/* Helper para añadir una entrada al history.
+   El history vive como array pero lo persistimos atómicamente: usamos push de Firebase
+   que genera keys ordenadas por tiempo, evitando colisiones entre dispositivos. */
+function pushHistory(entry) {
+  state.history.push(entry);
+  // Mantener máximo 200 entradas en memoria
+  if (state.history.length > 200) state.history = state.history.slice(-200);
+  saveLocal();
+  if (useFirebase && db && firebaseHydrated) {
+    // Usar push() de Firebase: genera una key única ordenada por tiempo
+    db.ref('casita/history').push(entry).catch(e => console.warn('history push error', e));
+  } else if (useFirebase && db && !firebaseHydrated) {
+    pendingMutations.push({ kind: 'historyPush', entry });
   }
 }
 
@@ -3724,11 +3795,21 @@ function load() {
 
   ensureCatalogs();
 
-  // Reset diario inteligente: respeta el scope de cada tarea
+  // NOTA: NO hacemos rollover ni save aquí porque podría sobrescribir
+  // los datos remotos de Firebase antes de que el listener los hidrate.
+  // El rollover se aplica en el listener de Firebase (si está activo) o
+  // en applyLocalRollover() abajo después de un timeout (si no hay Firebase).
+}
+
+/* Aplica rollover y guarda si la fecha cambió. Solo se usa en modo LOCAL
+   (sin Firebase activo) — para modo Firebase, el listener maneja esto. */
+function applyLocalRollover() {
+  if (useFirebase) return; // En modo Firebase, el listener se encarga
   if (state.date !== todayKey()) {
     dailyRollover();
     state.date = todayKey();
     save();
+    renderAll();
   }
 }
 
@@ -3796,10 +3877,26 @@ async function initFirebase() {
     document.getElementById('conn-status').classList.add('online');
     document.getElementById('conn-text').textContent = 'En vivo';
 
+    // Si en 8 segundos no llegan datos de Firebase, asumimos que estamos offline
+    // y desbloqueamos los saves locales. El listener seguirá escuchando y se
+    // hidratará cuando vuelva la conexión.
+    setTimeout(() => {
+      if (!firebaseHydrated) {
+        console.warn('Firebase tardó en responder — desbloqueando saves');
+        firebaseHydrated = true;
+        flushPendingMutations();
+      }
+    }, 8000);
+
     // Listener en tiempo real
     db.ref('casita').on('value', snap => {
       const data = snap.val();
-      if (!data) return;
+      if (!data) {
+        // Primera vez: nodo vacío en Firebase. Marcamos hidratado y permitimos save
+        firebaseHydrated = true;
+        flushPendingMutations();
+        return;
+      }
       // Reset diario si cambió la fecha en remoto
       if (data.date && data.date !== todayKey()) {
         // Aplicar rollover sobre los datos remotos (preservar tareas semanales)
@@ -3809,7 +3906,7 @@ async function initFirebase() {
         state.daily = data.daily || {};
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
-        state.history = data.history || [];
+        state.history = normalizeHistory(data.history);
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
@@ -3820,7 +3917,16 @@ async function initFirebase() {
         ensureCatalogs();
         dailyRollover();
         state.date = todayKey();
-        save();
+        firebaseHydrated = true;
+        // Persistir el rollover granularmente: solo los nodos que cambiaron
+        saveLocal();
+        dbBatch({
+          date: state.date,
+          daily: state.daily,
+          sporadic: state.sporadic,
+          details: state.details
+        });
+        flushPendingMutations();
       } else {
         if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
         if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
@@ -3828,7 +3934,7 @@ async function initFirebase() {
         state.daily = data.daily || {};
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
-        state.history = data.history || [];
+        state.history = normalizeHistory(data.history);
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
@@ -3837,6 +3943,9 @@ async function initFirebase() {
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
+        firebaseHydrated = true;
+        // Si había un save pendiente, ejecutarlo ahora con los datos correctos ya cargados
+        flushPendingMutations();
       }
       renderAll();
     });
@@ -3872,6 +3981,10 @@ function init() {
 
   initFirebase();
   initPullToRefresh();
+
+  // Si después de 4 segundos Firebase no se conectó, aplicar rollover local
+  // (suficiente tiempo para que el listener de Firebase haga su trabajo)
+  setTimeout(applyLocalRollover, 4000);
 }
 
 /* ===================================================================
@@ -4112,7 +4225,7 @@ async function performRefresh() {
         state.daily = data.daily || {};
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
-        state.history = data.history || [];
+        state.history = normalizeHistory(data.history);
         state.scores = data.scores || { emm: 0, jov: 0, mar: 0, lup: 0 };
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
@@ -4125,8 +4238,16 @@ async function performRefresh() {
         if (data.date && data.date !== todayKey()) {
           dailyRollover();
           state.date = todayKey();
+          saveLocal();
+          dbBatch({
+            date: state.date,
+            daily: state.daily,
+            sporadic: state.sporadic,
+            details: state.details
+          });
+        } else {
+          saveLocal();
         }
-        save();
       }
     } catch(e) {
       console.warn('Refresh error:', e);
@@ -4708,7 +4829,7 @@ function editMySubtitle() {
   const trimmed = newVal.trim().slice(0, 40);
   if (!state.subtitles) state.subtitles = {};
   state.subtitles[state.me] = trimmed;
-  save();
+  dbSet(`subtitles/${state.me}`, trimmed);
   renderAll();
   toast('✦ Subtítulo actualizado');
 }
@@ -4720,22 +4841,20 @@ function editMyBirthday() {
   if (newVal === null) return; // canceló
   const trimmed = newVal.trim();
   if (trimmed === '') {
-    // Quitar el cumple
     if (!state.birthdays) state.birthdays = {};
     state.birthdays[state.me] = null;
-    save();
+    dbSet(`birthdays/${state.me}`, null);
     renderAll();
     toast('Cumpleaños eliminado');
     return;
   }
-  // Validar
   if (!parseBirthday(trimmed)) {
     toast('Formato inválido — usa AAAA-MM-DD');
     return;
   }
   if (!state.birthdays) state.birthdays = {};
   state.birthdays[state.me] = trimmed;
-  save();
+  dbSet(`birthdays/${state.me}`, trimmed);
   renderAll();
   toast('✿ Cumpleaños guardado');
 }
@@ -4751,7 +4870,7 @@ function editPassiveBirthday(key) {
   if (trimmed === '') {
     if (!state.birthdays) state.birthdays = {};
     state.birthdays[key] = null;
-    save();
+    dbSet(`birthdays/${key}`, null);
     renderAll();
     toast('Cumpleaños eliminado');
     return;
@@ -4762,7 +4881,7 @@ function editPassiveBirthday(key) {
   }
   if (!state.birthdays) state.birthdays = {};
   state.birthdays[key] = trimmed;
-  save();
+  dbSet(`birthdays/${key}`, trimmed);
   renderAll();
   toast(`✿ Cumpleaños de ${p.name} guardado`);
 }
@@ -4955,12 +5074,14 @@ function saveMeal() {
   const ingredients = document.getElementById('meal-ingredients').value.trim();
   if (!name) { toast('Ponle un nombre al plato'); return; }
 
+  const mealData = { name, ingredients, updatedBy: state.me, updatedAt: Date.now() };
   if (!state.menu[wKey]) state.menu[wKey] = {};
   if (!state.menu[wKey][day]) state.menu[wKey][day] = {};
-  state.menu[wKey][day][meal] = { name, ingredients, updatedBy: state.me, updatedAt: Date.now() };
+  state.menu[wKey][day][meal] = mealData;
 
   closeMealForm();
-  save();
+  // Granular: solo escribimos esa celda específica del menú
+  dbSet(`menu/${wKey}/${day}/${meal}`, mealData);
   renderAll();
   toast('✦ Plato guardado');
 }
@@ -4970,12 +5091,12 @@ function deleteMeal() {
   const { weekKey: wKey, day, meal } = editingMeal;
   if (state.menu[wKey]?.[day]?.[meal]) {
     delete state.menu[wKey][day][meal];
-    // Limpiar día y semana si quedaron vacíos
     if (Object.keys(state.menu[wKey][day]).length === 0) delete state.menu[wKey][day];
     if (Object.keys(state.menu[wKey]).length === 0) delete state.menu[wKey];
   }
   closeMealForm();
-  save();
+  // Granular: eliminar solo esa celda. Los nodos vacíos en Firebase se autolimpian.
+  dbRemove(`menu/${wKey}/${day}/${meal}`);
   renderAll();
   toast('Plato eliminado');
 }
@@ -5336,13 +5457,11 @@ function submitNotice() {
   const text = document.getElementById('notice-text').value.trim();
   if (!text) { toast('Escribe el aviso'); return; }
 
-  // Resolver la fecha límite según el tipo
   let dueAt = null;
-  let dueKind = null; // 'date' o 'datetime' (afecta el formato)
+  let dueKind = null;
   if (noticeType === 'date') {
     const v = document.getElementById('notice-date').value;
     if (!v) { toast('Elige una fecha'); return; }
-    // Crear Date en zona local al final del día (23:59:59) para no vencer al mediodía
     const [y, m, d] = v.split('-').map(Number);
     dueAt = new Date(y, m - 1, d, 23, 59, 59).getTime();
     dueKind = 'date';
@@ -5354,17 +5473,18 @@ function submitNotice() {
   }
 
   const id = uid('n');
-  state.notices[id] = {
+  const notice = {
     text,
     createdBy: state.me,
     createdAt: Date.now(),
-    dueAt,        // null si no tiene fecha
-    dueKind       // 'date', 'datetime', o null
+    dueAt,
+    dueKind
   };
-  state.history.push({ ts: Date.now(), by: state.me, taskName: text.slice(0, 40), action: 'publicó un aviso' });
+  state.notices[id] = notice;
+  pushHistory({ ts: Date.now(), by: state.me, taskName: text.slice(0, 40), action: 'publicó un aviso' });
   closeNoticeForm();
   toast(dueAt ? '✦ Aviso con fecha publicado' : '✦ Aviso publicado');
-  save();
+  dbSet(`notices/${id}`, notice);
   renderAll();
 }
 
@@ -5377,10 +5497,14 @@ function takeNotice(id) {
   }
   n.takenBy = state.me;
   n.takenAt = Date.now();
-  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'tomó el aviso' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'tomó el aviso' });
   playClaimSound();
   toast(`✦ Tomaste el aviso`);
-  save();
+  // Granular: solo actualizamos takenBy y takenAt de ese aviso
+  dbBatch({
+    [`notices/${id}/takenBy`]: state.me,
+    [`notices/${id}/takenAt`]: n.takenAt
+  });
   renderAll();
 }
 
@@ -5389,9 +5513,12 @@ function releaseNotice(id) {
   if (!n) return;
   delete n.takenBy;
   delete n.takenAt;
-  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'soltó el aviso' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'soltó el aviso' });
   toast('Aviso liberado');
-  save();
+  dbBatch({
+    [`notices/${id}/takenBy`]: null,
+    [`notices/${id}/takenAt`]: null
+  });
   renderAll();
 }
 
@@ -5403,26 +5530,30 @@ function doneNotice(id, evt) {
   n.doneBy = finisher;
   n.doneAt = Date.now();
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
-  state.history.push({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
   toast(`✦ ¡Aviso atendido!`);
-  save();
+  dbBatch({
+    [`notices/${id}/done`]: true,
+    [`notices/${id}/doneBy`]: finisher,
+    [`notices/${id}/doneAt`]: n.doneAt,
+    [`scores/${finisher}`]: state.scores[finisher]
+  });
   renderAll();
 }
 
 function deleteNotice(id) {
   const n = state.notices[id];
   if (!n) return;
-  // Solo quien lo creó o cualquiera si ya está hecho
   if (n.createdBy !== state.me && !n.done) {
     if (!confirm('Este aviso lo creó ' + PEOPLE[n.createdBy].name + '. ¿Eliminarlo de todas formas?')) return;
   }
   delete state.notices[id];
-  save();
+  dbRemove(`notices/${id}`);
   renderAll();
   toast('Aviso eliminado');
 }
@@ -5492,20 +5623,21 @@ function submitProposal() {
   if (!name) { toast('Pon un nombre'); return; }
 
   const id = uid('p');
-  state.proposals[id] = {
+  const proposal = {
     kind: proposalKind,
     name,
     meta,
     section: proposalKind === 'daily' ? proposalSection : null,
     proposedBy: state.me,
     proposedAt: Date.now(),
-    votes: { [state.me]: 'yes' } // quien propone vota sí por defecto
+    votes: { [state.me]: 'yes' }
   };
-  state.history.push({ ts: Date.now(), by: state.me, taskName: name, action: 'propuso' });
+  state.proposals[id] = proposal;
+  pushHistory({ ts: Date.now(), by: state.me, taskName: name, action: 'propuso' });
   closeProposalForm();
   toast(`✦ Propuesta enviada a votación`);
   playClaimSound();
-  save();
+  dbSet(`proposals/${id}`, proposal);
   renderAll();
 }
 
@@ -5515,25 +5647,22 @@ function vote(proposalId, value) {
   if (!p.votes) p.votes = {};
   p.votes[state.me] = value;
 
-  // Verificar si ya votaron todos (excluyendo miembros pasivos)
   const everyone = Object.keys(activePeople());
   const allVoted = everyone.every(k => p.votes[k]);
   const allYes = everyone.every(k => p.votes[k] === 'yes');
   const anyNo = everyone.some(k => p.votes[k] === 'no');
 
   if (allYes) {
-    // ¡Aprobada! Agregar al catálogo
     approveProposal(proposalId);
     return;
   }
   if (allVoted && anyNo) {
-    // Rechazada
     rejectProposal(proposalId);
     return;
   }
-  // Voto registrado, esperar más
   toast(value === 'yes' ? '👍 Voto registrado' : '👎 Voto registrado');
-  save();
+  // Granular: solo guardamos mi voto
+  dbSet(`proposals/${proposalId}/votes/${state.me}`, value);
   renderAll();
 }
 
@@ -5541,59 +5670,60 @@ function approveProposal(id) {
   const p = state.proposals[id];
   if (!p) return;
 
-  // Generar nuevo id y agregar al catálogo correspondiente
+  let newItem, catalogPath;
   if (p.kind === 'daily') {
     const newId = uid('d');
-    state.catalogDaily.push({
-      id: newId,
-      name: p.name,
-      meta: p.meta || '',
+    newItem = {
+      id: newId, name: p.name, meta: p.meta || '',
       section: p.section || 'morning',
-      addedBy: p.proposedBy,
-      addedAt: Date.now()
-    });
+      addedBy: p.proposedBy, addedAt: Date.now()
+    };
+    state.catalogDaily.push(newItem);
+    catalogPath = 'catalogDaily';
   } else if (p.kind === 'sporadic') {
     const newId = uid('s');
-    state.catalogSporadic.push({
-      id: newId,
-      name: p.name,
-      meta: p.meta || '',
-      addedBy: p.proposedBy,
-      addedAt: Date.now()
-    });
+    newItem = {
+      id: newId, name: p.name, meta: p.meta || '',
+      addedBy: p.proposedBy, addedAt: Date.now()
+    };
+    state.catalogSporadic.push(newItem);
+    catalogPath = 'catalogSporadic';
   } else if (p.kind === 'detail') {
     const newId = uid('x');
-    state.catalogDetails.push({
-      id: newId,
-      title: p.name,
-      desc: p.meta || '',
-      addedBy: p.proposedBy,
-      addedAt: Date.now()
-    });
+    newItem = {
+      id: newId, title: p.name, desc: p.meta || '',
+      addedBy: p.proposedBy, addedAt: Date.now()
+    };
+    state.catalogDetails.push(newItem);
+    catalogPath = 'catalogDetails';
   }
   ensureCatalogs();
 
   delete state.proposals[id];
-  state.history.push({ ts: Date.now(), by: state.me, taskName: p.name, action: '¡aprobó por unanimidad!' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: p.name, action: '¡aprobó por unanimidad!' });
   playDoneSound();
   toast(`✦ ¡"${p.name}" se agregó al flujo!`);
-  // Confeti grande
   setTimeout(() => {
     confettiBurst(window.innerWidth/2, window.innerHeight/2);
     confettiBurst(window.innerWidth/2 - 60, window.innerHeight/2);
     confettiBurst(window.innerWidth/2 + 60, window.innerHeight/2);
   }, 100);
-  save();
+  // Batch: añadir item al catálogo + eliminar propuesta
+  // El catálogo es un array — usamos el state.catalog actual (ya con el item nuevo)
+  dbBatch({
+    [`${catalogPath}`]: state[catalogPath],
+    [`proposals/${id}`]: null
+  });
   renderAll();
 }
 
 function rejectProposal(id) {
   const p = state.proposals[id];
   if (!p) return;
-  state.history.push({ ts: Date.now(), by: state.me, taskName: p.name, action: 'fue rechazada' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: p.name, action: 'fue rechazada' });
   delete state.proposals[id];
   toast(`Propuesta rechazada`);
-  save();
+  dbRemove(`proposals/${id}`);
   renderAll();
 }
 
@@ -5603,7 +5733,7 @@ function cancelProposal(id) {
   if (p.proposedBy !== state.me) { toast('Solo quien la propuso puede cancelarla'); return; }
   delete state.proposals[id];
   toast('Propuesta cancelada');
-  save();
+  dbRemove(`proposals/${id}`);
   renderAll();
 }
 
@@ -5624,6 +5754,7 @@ function renderNotices() {
   all.forEach(n => {
     if (n.done && n.doneAt && n.doneAt < sevenDaysAgo) {
       delete state.notices[n.id];
+      dbRemove(`notices/${n.id}`);
     }
   });
 
@@ -5840,9 +5971,10 @@ function closeEditForm() {
 function saveEditTask() {
   if (!editTarget) return;
   const { kind, id } = editTarget;
-  const list = kind === 'daily' ? state.catalogDaily
-             : kind === 'sporadic' ? state.catalogSporadic
-             : state.catalogDetails;
+  const listKey = kind === 'daily' ? 'catalogDaily'
+                : kind === 'sporadic' ? 'catalogSporadic'
+                : 'catalogDetails';
+  const list = state[listKey];
   const item = list.find(t => t.id === id);
   if (!item) return;
   const name = document.getElementById('edit-name').value.trim();
@@ -5857,7 +5989,8 @@ function saveEditTask() {
   }
   ensureCatalogs();
   closeEditForm();
-  save();
+  // Granular: el catálogo es un array, subimos el array completo (es pequeño)
+  dbSet(listKey, state[listKey]);
   renderAll();
   toast('✦ Tarea actualizada');
 }
@@ -5871,12 +6004,15 @@ function confirmDeleteTask() {
                 : 'catalogDetails';
   state[listKey] = state[listKey].filter(t => t.id !== id);
   // Limpiar también el estado del día
-  if (kind === 'daily') delete state.daily[id];
-  else if (kind === 'sporadic') delete state.sporadic[id];
-  else delete state.details[id];
+  const stateKey = kind === 'daily' ? 'daily' : kind === 'sporadic' ? 'sporadic' : 'details';
+  delete state[stateKey][id];
   ensureCatalogs();
   closeEditForm();
-  save();
+  // Granular: catálogo actualizado + eliminar entrada activa
+  dbBatch({
+    [listKey]: state[listKey],
+    [`${stateKey}/${id}`]: null
+  });
   renderAll();
   toast('Tarea eliminada');
 }
@@ -5908,71 +6044,79 @@ function closeScopeModal() {
 
 // 1. TOMAR una tarea libre
 function claimTask(t, store, kind, who, scope) {
-  // Si alguien más ya la tomó, no permitir robarla a menos que sea yo confirmando
   if (store[t.id]?.takenBy && store[t.id].takenBy !== who) {
     toast(`${PEOPLE[store[t.id].takenBy].name} ya tomó esta tarea`);
     return;
   }
-  scope = scope || 'day'; // por defecto, solo hoy
-  store[t.id] = {
+  scope = scope || 'day';
+  const entry = {
     takenBy: who,
     takenAt: Date.now(),
     scope: scope,
     weekKey: scope === 'week' ? weekKey() : null
   };
+  store[t.id] = entry;
   const scopeLabel = scope === 'week' ? 'toda la semana' : 'hoy';
-  state.history.push({ ts: Date.now(), by: who, taskName: t.name, action: `tomó por ${scopeLabel}` });
+  pushHistory({ ts: Date.now(), by: who, taskName: t.name, action: `tomó por ${scopeLabel}` });
   playClaimSound();
   toast(`✦ ${PEOPLE[who].name} tomó "${t.name}" por ${scopeLabel}`);
-  save();
+  // Firebase: solo escribimos el nodo de esta tarea, no el árbol entero
+  const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  dbSet(`${storeName}/${t.id}`, entry);
   renderAll();
 }
 
-// 2. SOLTAR una tarea (cancelar la toma)
 function releaseTask(t, store, kind) {
   const prevBy = store[t.id]?.takenBy;
   if (!prevBy) return;
   delete store[t.id];
-  state.history.push({ ts: Date.now(), by: prevBy, taskName: t.name, action: 'soltó' });
+  pushHistory({ ts: Date.now(), by: prevBy, taskName: t.name, action: 'soltó' });
   toast(`Tarea liberada — alguien más puede tomarla`);
-  save();
+  const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  dbRemove(`${storeName}/${t.id}`);
   renderAll();
 }
 
-// 3. MARCAR COMO HECHA (desde estado tomada)
 function markDone(t, store, kind, evt) {
   const entry = store[t.id] || {};
-  // Quien la completa: si está tomada, mantener ese dueño; si no, el actual
   const finisher = entry.takenBy || state.me;
-  store[t.id] = {
+  const newEntry = {
     done: true,
     by: finisher,
     at: Date.now(),
-    takenBy: entry.takenBy,
-    takenAt: entry.takenAt,
+    takenBy: entry.takenBy || null,
+    takenAt: entry.takenAt || null,
     scope: entry.scope || null,
     weekKey: entry.weekKey || null
   };
+  store[t.id] = newEntry;
   state.scores[finisher] = (state.scores[finisher] || 0) + 1;
-  state.history.push({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
   toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
-  save();
+  // Firebase: escribimos la tarea y el score actualizado
+  const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  dbBatch({
+    [`${storeName}/${t.id}`]: newEntry,
+    [`scores/${finisher}`]: state.scores[finisher]
+  });
   renderAll();
 }
 
-// 4. DESMARCAR una tarea hecha (vuelve a libre)
 function unmarkDone(t, store, kind) {
   const prevBy = store[t.id]?.by;
   if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
   delete store[t.id];
-  state.history.push({ ts: Date.now(), by: state.me, taskName: t.name, action: 'desmarcó' });
+  pushHistory({ ts: Date.now(), by: state.me, taskName: t.name, action: 'desmarcó' });
   toast('Tarea desmarcada');
-  save();
+  const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  const updates = { [`${storeName}/${t.id}`]: null };
+  if (prevBy) updates[`scores/${prevBy}`] = state.scores[prevBy];
+  dbBatch(updates);
   renderAll();
 }
 
@@ -5981,19 +6125,26 @@ function toggleDetail(d, evt) {
     const prevBy = state.details[d.id].by;
     if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
     delete state.details[d.id];
-    state.history.push({ ts: Date.now(), by: state.me, taskName: d.title, action: 'desmarcó el detalle' });
+    pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'desmarcó el detalle' });
+    const updates = { [`details/${d.id}`]: null };
+    if (prevBy) updates[`scores/${prevBy}`] = state.scores[prevBy];
+    dbBatch(updates);
   } else {
-    state.details[d.id] = { done: true, by: state.me, at: Date.now() };
+    const entry = { done: true, by: state.me, at: Date.now() };
+    state.details[d.id] = entry;
     state.scores[state.me] = (state.scores[state.me] || 0) + 1;
-    state.history.push({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
+    pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
     playDoneSound();
     if (evt) {
       const rect = evt.currentTarget.getBoundingClientRect();
       confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
     }
     toast(`✿ ${d.title} ✓`);
+    dbBatch({
+      [`details/${d.id}`]: entry,
+      [`scores/${state.me}`]: state.scores[state.me]
+    });
   }
-  save();
   renderAll();
 }
 
@@ -6019,7 +6170,13 @@ setInterval(() => {
   if (state.date !== todayKey()) {
     dailyRollover();
     state.date = todayKey();
-    save();
+    saveLocal();
+    dbBatch({
+      date: state.date,
+      daily: state.daily,
+      sporadic: state.sporadic,
+      details: state.details
+    });
     renderAll();
     document.getElementById('brand-date').textContent = formatDate();
     toast('🌅 Nuevo día — tareas reiniciadas');
