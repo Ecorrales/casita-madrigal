@@ -544,6 +544,73 @@ body::before {
   padding-left: 14px;
 }
 
+/* === BOUNTY: tarea con multiplicador manual === */
+.task-row.has-bounty {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--gold) 12%, var(--paper)),
+    color-mix(in srgb, var(--gold) 6%, var(--paper)));
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent),
+    0 0 18px -2px color-mix(in srgb, var(--gold) 35%, transparent);
+  animation: bounty-pulse 3s ease-in-out infinite;
+}
+
+@keyframes bounty-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent),
+      0 0 18px -2px color-mix(in srgb, var(--gold) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--gold) 60%, transparent),
+      0 0 28px 2px color-mix(in srgb, var(--gold) 50%, transparent);
+  }
+}
+
+.bounty-chip {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, var(--terra)));
+  color: white;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 4px -1px color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+/* Pills del selector de bounty en modal edit */
+.bounty-pill {
+  appearance: none;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.bounty-pill:hover {
+  border-color: var(--gold);
+  color: var(--ink);
+}
+.bounty-pill.active {
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, var(--terra)));
+  color: white;
+  border-color: var(--gold);
+  box-shadow: 0 1px 4px -1px color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
 .task-row.taken .task-name { color: var(--ink); }
 
 .task-row.taken .check {
@@ -1594,6 +1661,83 @@ body::before {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .reward-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+
+/* Reward con promo activa */
+.reward-card.has-promo {
+  border-color: var(--terra);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--terra) 30%, transparent);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--terra) 6%, var(--paper)),
+    var(--paper));
+}
+.reward-fire-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  background: linear-gradient(135deg, var(--terra), color-mix(in srgb, var(--terra) 70%, var(--gold)));
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  z-index: 1;
+  box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--terra) 60%, transparent);
+}
+.reward-cost-old {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  margin-right: 6px;
+  font-weight: 400;
+}
+
+/* Banner grande de promo en la tienda */
+.promo-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--terra) 14%, var(--paper)),
+    color-mix(in srgb, var(--gold) 14%, var(--paper)));
+  border: 1px solid color-mix(in srgb, var(--terra) 35%, var(--line));
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  animation: promo-glow 3s ease-in-out infinite;
+}
+@keyframes promo-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--terra) 25%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--terra) 8%, transparent); }
+}
+.promo-flame {
+  font-size: 36px;
+  line-height: 1;
+  animation: flame-wobble 0.9s ease-in-out infinite alternate;
+}
+@keyframes flame-wobble {
+  0%   { transform: scale(1) rotate(-3deg); }
+  100% { transform: scale(1.08) rotate(3deg); }
+}
+.promo-title {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--terra-deep);
+  line-height: 1.2;
+}
+.promo-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
 
 .reward-card.sold-out {
   opacity: 0.55;
@@ -3561,9 +3705,17 @@ body::before {
           <h1 class="panel-title">La <em>tienda</em></h1>
           <p class="panel-sub">Canjea tus puntos por recompensas</p>
         </div>
-        <button class="add-btn parent-only" id="add-reward-btn" onclick="openRewardForm()" style="display:none">+ Nueva recompensa</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="add-btn secret-only" id="secret-menu-btn" onclick="openSecretMenu()" style="display:none" title="Menú secreto">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1l3 6 6 .9-4.5 4.3 1 6.3L12 16l-5.5 2.5 1-6.3L3 7.9 9 7z"/>
+            </svg>
+          </button>
+          <button class="add-btn parent-only" id="add-reward-btn" onclick="openRewardForm()" style="display:none">+ Nueva recompensa</button>
+        </div>
       </div>
       <div class="store-mybalance" id="store-mybalance"></div>
+      <div id="promo-banner-store"></div>
       <div class="rewards-grid" id="rewards-grid"></div>
     </section>
 
@@ -3699,6 +3851,24 @@ body::before {
     <label class="form-label">Detalle <span class="form-hint">(opcional)</span></label>
     <input type="text" class="form-input" id="edit-meta" maxlength="80" />
 
+    <!-- BOUNTY: solo Emmanuel ve esta sección -->
+    <div id="edit-bounty-section" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line)">
+      <label class="form-label">
+        <span style="background:linear-gradient(135deg,var(--gold),var(--terra));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700">✦ Bounty secreto</span>
+        <span class="form-hint" id="edit-bounty-current"></span>
+      </label>
+      <p class="form-hint" style="margin:6px 0 8px">Pon un multiplicador. La tarea brillará dorada y mostrará ×N. Se consume al completarla.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="bounty-pill" data-mult="0" onclick="setBounty(0)">Sin bounty</button>
+        <button type="button" class="bounty-pill" data-mult="3" onclick="setBounty(3)">×3</button>
+        <button type="button" class="bounty-pill" data-mult="5" onclick="setBounty(5)">×5</button>
+        <button type="button" class="bounty-pill" data-mult="10" onclick="setBounty(10)">×10</button>
+        <button type="button" class="bounty-pill" data-mult="20" onclick="setBounty(20)">×20</button>
+        <button type="button" class="bounty-pill" data-mult="30" onclick="setBounty(30)">×30</button>
+        <button type="button" class="bounty-pill" data-mult="50" onclick="setBounty(50)">×50</button>
+      </div>
+    </div>
+
     <div class="modal-actions" style="justify-content:space-between">
       <button class="claim-btn ghost parent-only" style="color:var(--terra-deep);display:none" onclick="confirmDeleteTask()">Eliminar</button>
       <div style="display:flex;gap:8px;margin-left:auto">
@@ -3769,6 +3939,58 @@ body::before {
 </div>
 
 <!-- =================================================
+     MODAL — Menú secreto (solo Emmanuel)
+     ================================================= -->
+<div class="modal-backdrop" id="modal-secret">
+  <div class="modal modal-form">
+    <div class="modal-title">
+      <span style="background:linear-gradient(135deg,var(--gold),var(--terra));-webkit-background-clip:text;background-clip:text;color:transparent">✦ Menú secreto</span>
+    </div>
+    <div class="modal-sub">Solo tú ves esto.</div>
+
+    <!-- SECCIÓN PROMO -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)">
+      <h3 style="font-family:'Fraunces',serif;font-size:18px;margin:0 0 4px;color:var(--ink)">Promo de tienda</h3>
+      <p class="form-hint" style="margin:0 0 12px">Aplica descuento global a todas las recompensas durante un periodo.</p>
+
+      <div id="promo-status-block"></div>
+
+      <div id="promo-create-block" style="display:none">
+        <label class="form-label">Nombre del evento</label>
+        <input type="text" class="form-input" id="promo-name" placeholder="Buen Fin · Black Friday · Cumpleañera" maxlength="40" />
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label">Descuento %</label>
+            <input type="number" class="form-input" id="promo-percent" min="5" max="90" placeholder="50" />
+          </div>
+          <div>
+            <label class="form-label">Dura (días)</label>
+            <input type="number" class="form-input" id="promo-days" min="1" max="14" placeholder="3" />
+          </div>
+        </div>
+        <button class="claim-btn primary" style="margin-top:10px" onclick="startPromo()">🔥 Activar promo</button>
+      </div>
+    </div>
+
+    <!-- SECCIÓN LOOT CRÍTICO -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)">
+      <h3 style="font-family:'Fraunces',serif;font-size:18px;margin:0 0 4px;color:var(--ink)">Loot crítico</h3>
+      <p class="form-hint" style="margin:0 0 12px">Cada noche al cambiar de día, una tarea random recibe un multiplicador oculto de ×2 a ×10. Nadie sabe cuál hasta que la complete.</p>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="critical-loot-toggle" onchange="toggleCriticalLoot()" style="width:18px;height:18px;cursor:pointer">
+        <span style="font-family:'Inter',sans-serif;font-size:13px;font-weight:500">Sistema de loot crítico activo</span>
+      </label>
+      <div id="critical-loot-status" style="margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);letter-spacing:0.06em"></div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:flex-end;margin-top:18px">
+      <button class="modal-cancel" onclick="closeSecretMenu()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================
      MODAL — Elegir alcance al tomar tarea
      ================================================= -->
 <div class="modal-backdrop" id="modal-scope">
@@ -3819,7 +4041,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.33';
+const APP_VERSION = '2026.05.22.34';
 
 async function checkForUpdate() {
   try {
@@ -3934,6 +4156,76 @@ function isParent() {
   return PEOPLE[state.me]?.parent === true;
 }
 
+/* Solo Emmanuel: acceso al menú secreto y mecánicas avanzadas (bounties,
+   loot crítico, promos de tienda). Mariel es papá pero NO ve estas cosas. */
+function isSecretAdmin() {
+  return state.me === 'emm';
+}
+
+/* Busca el multiplicador de bounty manual en una tarea del catálogo.
+   Retorna el número de multiplicador, o 0 si no tiene bounty. */
+function getBounty(kind, taskId) {
+  const list = kind === 'daily' ? state.catalogDaily
+             : kind === 'sporadic' ? state.catalogSporadic
+             : state.catalogDetails;
+  const item = list?.find(t => t.id === taskId);
+  return item?.bounty?.multiplier || 0;
+}
+
+/* Asigna un multiplicador random (2-10) a UNA tarea al azar del día,
+   pero solo a tareas que NO tengan bounty manual. Se llama desde el
+   rollover diario si state.config.criticalLootEnabled está activo. */
+function assignDailyCriticalLoot() {
+  if (!state.config?.criticalLootEnabled) return null;
+
+  // Candidatos: tareas de los 3 tipos que no tienen bounty manual
+  const candidates = [];
+  (state.catalogDaily || []).forEach(t => {
+    if (!t.bounty) candidates.push({ kind: 'daily', id: t.id });
+  });
+  (state.catalogSporadic || []).forEach(t => {
+    if (!t.bounty) candidates.push({ kind: 'sporadic', id: t.id });
+  });
+  (state.catalogDetails || []).forEach(t => {
+    if (!t.bounty) candidates.push({ kind: 'detail', id: t.id });
+  });
+  if (!candidates.length) return null;
+
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  const multiplier = 2 + Math.floor(Math.random() * 9); // 2-10
+  return { kind: chosen.kind, id: chosen.id, multiplier };
+}
+
+/* Devuelve el multiplicador combinado para una tarea del día.
+   Prioridad: bounty manual > loot crítico oculto > 1 (sin multiplicador).
+   También indica el tipo de bonus para el feedback visual. */
+function getTaskBonus(kind, taskId) {
+  const bounty = getBounty(kind, taskId);
+  if (bounty > 0) return { multiplier: bounty, type: 'bounty', visible: true };
+  const loot = state.criticalLoot;
+  if (loot && loot.kind === kind && loot.id === taskId) {
+    return { multiplier: loot.multiplier, type: 'loot', visible: false };
+  }
+  return { multiplier: 1, type: 'none', visible: false };
+}
+
+/* True si hay una promo de tienda activa AHORA */
+function isPromoActive() {
+  const p = state.promo;
+  if (!p) return false;
+  const now = Date.now();
+  return now >= (p.startsAt || 0) && now <= (p.endsAt || 0);
+}
+
+/* Devuelve el precio de una recompensa aplicando descuento si hay promo activa */
+function effectiveRewardCost(reward) {
+  if (!reward) return 0;
+  const base = reward.cost || 0;
+  if (!isPromoActive()) return base;
+  const off = state.promo.percentOff || 0;
+  return Math.max(1, Math.ceil(base * (100 - off) / 100));
+}
+
 const SEED_DAILY = [
   { id: 'd01', name: 'Hacer desayuno', meta: 'Empezar el día bien', section: 'morning' },
   { id: 'd02', name: 'Lavar losa del desayuno', meta: 'Después del desayuno', section: 'morning' },
@@ -4009,6 +4301,14 @@ let state = {
   scores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // puntos disponibles para canjear (saldo)
   lifetimeScores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // total histórico acumulado (nunca baja)
   tz: {},                          // { personKey: { zone, lastSeen } } - zona horaria detectada por persona
+  // PROMO ACTIVA (Buen Fin, Black Friday, etc) - gestionada solo por Emmanuel
+  promo: null,                     // { name, percentOff, startsAt, endsAt } | null
+  // CONFIG GLOBAL - solo Emmanuel la maneja desde menú secreto
+  config: {
+    criticalLootEnabled: false     // si está activo, cada día una tarea random recibe multiplicador oculto
+  },
+  // LOOT CRÍTICO ACTIVO HOY (asignado por el rollover si está habilitado)
+  criticalLoot: null,              // { kind, id, multiplier } | null
   // SUBTÍTULOS personalizables por cada miembro
   subtitles: {
     emm: 'El que organiza',
@@ -4778,6 +5078,17 @@ function dailyRollover() {
   });
   state.details = {};
 
+  // LOOT CRÍTICO: si está habilitado, asignar uno nuevo para el día
+  if (state.config?.criticalLootEnabled) {
+    const newLoot = assignDailyCriticalLoot();
+    state.criticalLoot = newLoot;
+    fbChanges['criticalLoot'] = newLoot;
+  } else if (state.criticalLoot) {
+    // Si se deshabilitó, limpiar
+    state.criticalLoot = null;
+    fbChanges['criticalLoot'] = null;
+  }
+
   // Devolvemos los cambios para que el caller los persista
   return fbChanges;
 }
@@ -4913,6 +5224,9 @@ async function initFirebase() {
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
         state.tz = data.tz || {};
+        state.promo = data.promo || null;
+        state.criticalLoot = data.criticalLoot || null;
+        if (data.config) state.config = { ...state.config, ...data.config };
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -4956,6 +5270,9 @@ async function initFirebase() {
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
         state.tz = data.tz || {};
+        state.promo = data.promo || null;
+        state.criticalLoot = data.criticalLoot || null;
+        if (data.config) state.config = { ...state.config, ...data.config };
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -5269,6 +5586,9 @@ async function performRefresh() {
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
         state.tz = data.tz || {};
+        state.promo = data.promo || null;
+        state.criticalLoot = data.criticalLoot || null;
+        if (data.config) state.config = { ...state.config, ...data.config };
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -5348,6 +5668,25 @@ function showApp() {
     console.error('renderAll falló:', e);
     toast('⚠ Algo falló al renderizar. Revisa la consola.');
   }
+  // Aviso de promo activa (una vez por sesión, no en cada renderAll)
+  showPromoToastIfActive();
+}
+
+/* Muestra un toast al usuario cuando hay una promo activa, una sola vez
+   por carga de app (se controla con un flag en sessionStorage). */
+function showPromoToastIfActive() {
+  if (!isPromoActive()) return;
+  const key = 'casita_promo_seen';
+  try {
+    const lastSeen = sessionStorage.getItem(key);
+    const promoSignature = `${state.promo.name}_${state.promo.startsAt}`;
+    if (lastSeen === promoSignature) return;
+    sessionStorage.setItem(key, promoSignature);
+  } catch(e) { /* sessionStorage puede fallar en modo privado */ }
+  // Mostrar un toast extendido y bonito
+  setTimeout(() => {
+    toast(`🔥 ¡${state.promo.name} activo! ${state.promo.percentOff}% off en la tienda`);
+  }, 600);
 }
 
 function refreshWelcomeSubtitles() {
@@ -5646,7 +5985,11 @@ function buildTaskRow(t, store, kind) {
   const row = document.createElement('div');
   const entry = store[t.id] || {};
   const status = entry.done ? 'done' : (entry.takenBy ? 'taken' : 'free');
-  row.className = 'task-row' + (status === 'done' ? ' done' : status === 'taken' ? ' taken' : '');
+  const bountyMultiplier = getBounty(kind, t.id);
+  const hasBounty = bountyMultiplier > 0 && status !== 'done';
+  row.className = 'task-row'
+    + (status === 'done' ? ' done' : status === 'taken' ? ' taken' : '')
+    + (hasBounty ? ' has-bounty' : '');
 
   // ---- Círculo de check (izquierda) ----
   const check = document.createElement('button');
@@ -5679,6 +6022,14 @@ function buildTaskRow(t, store, kind) {
   const name = document.createElement('div');
   name.className = 'task-name';
   name.textContent = t.name;
+  // Chip de BOUNTY (multiplicador manual visible para todos)
+  if (hasBounty) {
+    const bChip = document.createElement('span');
+    bChip.className = 'bounty-chip';
+    bChip.textContent = `×${bountyMultiplier}`;
+    bChip.title = `Bounty: completa esta tarea y gana ${bountyMultiplier} puntos`;
+    name.appendChild(bChip);
+  }
   // Chip de temporalidad (solo para esporádicas con frecuencia reconocible)
   if (kind === 'sporadic') {
     const freq = detectFrequency(t.meta);
@@ -6554,6 +6905,7 @@ let editingReward = null;  // id de recompensa que se está editando
 
 function renderStore() {
   renderMyBalance();
+  renderPromoBanner();
   renderRewards();
 }
 
@@ -6572,6 +6924,31 @@ function renderMyBalance() {
   // Mostrar botón "Nueva recompensa" solo a papás
   const addBtn = document.getElementById('add-reward-btn');
   if (addBtn) addBtn.style.display = isParent() ? '' : 'none';
+  // Mostrar botón "Menú secreto" solo a Emmanuel
+  const secretBtn = document.getElementById('secret-menu-btn');
+  if (secretBtn) secretBtn.style.display = isSecretAdmin() ? '' : 'none';
+}
+
+/* Renderiza banner de promo activa dentro de la pestaña Tienda */
+function renderPromoBanner() {
+  const el = document.getElementById('promo-banner-store');
+  if (!el) return;
+  if (!isPromoActive()) {
+    el.innerHTML = '';
+    return;
+  }
+  const p = state.promo;
+  const remainingMs = (p.endsAt || 0) - Date.now();
+  const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+  el.innerHTML = `
+    <div class="promo-banner">
+      <div class="promo-flame">🔥</div>
+      <div class="promo-info">
+        <div class="promo-title">${escapeHtml(p.name || 'Promo')}</div>
+        <div class="promo-sub">${p.percentOff}% off en todas las recompensas · Termina en ${remainingDays} día${remainingDays === 1 ? '' : 's'}</div>
+      </div>
+    </div>
+  `;
 }
 
 function renderRewards() {
@@ -6586,23 +6963,30 @@ function renderRewards() {
     return;
   }
 
+  const promoActive = isPromoActive();
   const myPoints = state.scores[state.me] || 0;
   el.innerHTML = rewards.map(r => {
+    const effective = effectiveRewardCost(r);
     const soldOut = (r.remaining || 0) <= 0;
-    const canAfford = myPoints >= r.cost;
+    const canAfford = myPoints >= effective;
     const disabled = soldOut || !canAfford;
     const stockClass = (r.remaining || 0) <= 1 ? 'low' : '';
+    const hasDiscount = promoActive && effective < r.cost;
     return `
-      <div class="reward-card ${soldOut ? 'sold-out' : ''}">
+      <div class="reward-card ${soldOut ? 'sold-out' : ''} ${hasDiscount ? 'has-promo' : ''}">
+        ${hasDiscount ? `<span class="reward-fire-badge">🔥 ${state.promo.percentOff}% OFF</span>` : ''}
         <div class="reward-name">${escapeHtml(r.name)}</div>
         ${r.desc ? `<div class="reward-desc">${escapeHtml(r.desc)}</div>` : ''}
         <div class="reward-footer">
-          <span class="reward-cost">${r.cost}<small>pts</small></span>
+          <span class="reward-cost">
+            ${hasDiscount ? `<span class="reward-cost-old">${r.cost}</span>` : ''}
+            ${effective}<small>pts</small>
+          </span>
           <span class="reward-stock ${stockClass}">${r.remaining || 0} / ${r.monthlyStock} este mes</span>
         </div>
         <div class="reward-actions">
           <button class="reward-claim-btn" onclick="claimReward('${r.id}')" ${disabled ? 'disabled' : ''}>
-            ${soldOut ? 'Agotada' : (!canAfford ? `Faltan ${r.cost - myPoints} pts` : 'Canjear')}
+            ${soldOut ? 'Agotada' : (!canAfford ? `Faltan ${effective - myPoints} pts` : 'Canjear')}
           </button>
           ${isParent() ? `<button class="reward-edit-btn" onclick="openRewardForm('${r.id}')">Editar</button>` : ''}
         </div>
@@ -6689,35 +7073,168 @@ function deleteReward() {
 }
 
 /* Canjear una recompensa: descuenta puntos, decrementa stock, crea cupón */
+/* =====================================================================
+   MENÚ SECRETO — Solo para Emmanuel
+   ===================================================================== */
+
+function openSecretMenu() {
+  if (!isSecretAdmin()) {
+    toast('No tienes acceso a esto');
+    return;
+  }
+  // Estado del checkbox loot
+  const lootToggle = document.getElementById('critical-loot-toggle');
+  if (lootToggle) lootToggle.checked = !!state.config?.criticalLootEnabled;
+  // Estado del loot del día
+  const lootStatus = document.getElementById('critical-loot-status');
+  if (lootStatus) {
+    if (state.criticalLoot) {
+      const kindLabel = state.criticalLoot.kind === 'daily' ? 'diaria'
+                      : state.criticalLoot.kind === 'sporadic' ? 'esporádica' : 'detalle';
+      lootStatus.textContent = `Hoy hay un loot ×${state.criticalLoot.multiplier} oculto en una tarea ${kindLabel}.`;
+    } else if (state.config?.criticalLootEnabled) {
+      lootStatus.textContent = 'Activo. Se asignará al rollover de mañana.';
+    } else {
+      lootStatus.textContent = 'Inactivo. Las tareas no tienen bonus oculto.';
+    }
+  }
+  renderPromoStatus();
+  document.getElementById('modal-secret').classList.add('open');
+}
+
+function closeSecretMenu() {
+  document.getElementById('modal-secret').classList.remove('open');
+}
+
+/* Activar o desactivar el sistema de loot crítico */
+function toggleCriticalLoot() {
+  if (!isSecretAdmin()) return;
+  const newValue = document.getElementById('critical-loot-toggle').checked;
+  if (!state.config) state.config = {};
+  state.config.criticalLootEnabled = newValue;
+  dbSet('config/criticalLootEnabled', newValue);
+  toast(newValue ? '✦ Loot crítico activado' : 'Loot crítico desactivado');
+  // Si lo desactivó, limpiar el loot actual
+  if (!newValue && state.criticalLoot) {
+    state.criticalLoot = null;
+    dbSet('criticalLoot', null);
+  }
+  // Actualizar texto de estado
+  const lootStatus = document.getElementById('critical-loot-status');
+  if (lootStatus) {
+    lootStatus.textContent = newValue
+      ? 'Activo. Se asignará al rollover de mañana.'
+      : 'Inactivo. Las tareas no tienen bonus oculto.';
+  }
+}
+
+/* Renderiza el bloque de estado de la promo dentro del modal secreto */
+function renderPromoStatus() {
+  const statusBlock = document.getElementById('promo-status-block');
+  const createBlock = document.getElementById('promo-create-block');
+  if (!statusBlock || !createBlock) return;
+
+  if (isPromoActive()) {
+    const p = state.promo;
+    const remainingMs = (p.endsAt || 0) - Date.now();
+    const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+    statusBlock.innerHTML = `
+      <div style="background:linear-gradient(135deg, color-mix(in srgb, var(--gold) 18%, var(--paper)), color-mix(in srgb, var(--terra) 12%, var(--paper)));border:1px solid var(--gold);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+        <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--terra-deep)">🔥 ${escapeHtml(p.name)}</div>
+        <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);margin-top:4px">${p.percentOff}% off · termina en ${remainingDays} día${remainingDays === 1 ? '' : 's'}</div>
+        <button class="claim-btn ghost" style="margin-top:10px;color:var(--terra-deep)" onclick="endPromoNow()">Terminar promo ahora</button>
+      </div>
+    `;
+    createBlock.style.display = 'none';
+  } else {
+    statusBlock.innerHTML = '';
+    createBlock.style.display = '';
+  }
+}
+
+/* Activar una nueva promo de tienda */
+function startPromo() {
+  if (!isSecretAdmin()) return;
+  const name = document.getElementById('promo-name').value.trim() || 'Promo';
+  const percentOff = parseInt(document.getElementById('promo-percent').value, 10);
+  const days = parseInt(document.getElementById('promo-days').value, 10);
+
+  if (!percentOff || percentOff < 5 || percentOff > 90) {
+    toast('Descuento debe ser entre 5% y 90%');
+    return;
+  }
+  if (!days || days < 1) {
+    toast('Duración mínima 1 día');
+    return;
+  }
+
+  const now = Date.now();
+  const promo = {
+    name,
+    percentOff,
+    startsAt: now,
+    endsAt: now + days * 24 * 60 * 60 * 1000,
+    createdBy: state.me,
+    createdAt: now
+  };
+  state.promo = promo;
+  dbSet('promo', promo);
+  toast(`🔥 ¡${name} activado!`);
+  renderPromoStatus();
+  renderAll();
+}
+
+/* Terminar la promo activa antes de tiempo */
+function endPromoNow() {
+  if (!isSecretAdmin()) return;
+  if (!confirm('¿Terminar la promo ahora?')) return;
+  state.promo = null;
+  dbSet('promo', null);
+  toast('Promo terminada');
+  renderPromoStatus();
+  renderAll();
+}
+
 function claimReward(rewardId) {
   const r = state.rewards[rewardId];
   if (!r) return;
   if ((r.remaining || 0) <= 0) { toast('Esta recompensa se acabó este mes'); return; }
   const myPoints = state.scores[state.me] || 0;
-  if (myPoints < r.cost) { toast(`Te faltan ${r.cost - myPoints} puntos`); return; }
+  const cost = effectiveRewardCost(r);
+  const wasDiscounted = cost < (r.cost || 0);
+  if (myPoints < cost) { toast(`Te faltan ${cost - myPoints} puntos`); return; }
 
   // Confirmar
-  if (!confirm(`¿Canjear "${r.name}" por ${r.cost} puntos?`)) return;
+  const promoNote = wasDiscounted ? ` (${r.cost} → ${cost} con promo)` : '';
+  if (!confirm(`¿Canjear "${r.name}" por ${cost} puntos${promoNote}?`)) return;
 
   // Aplicar localmente
   const couponId = uid('c');
   const coupon = {
     rewardId,
     name: r.name,
-    cost: r.cost,
+    cost,            // costo realmente pagado (puede ser menor por promo)
+    originalCost: r.cost || cost,
+    discounted: wasDiscounted,
+    promoName: wasDiscounted ? (state.promo?.name || '') : '',
     ownerKey: state.me,
     claimedAt: Date.now(),
     claimedBy: state.me,
     status: 'active'
   };
   state.coupons[couponId] = coupon;
-  state.scores[state.me] = myPoints - r.cost;
+  state.scores[state.me] = myPoints - cost;
   r.remaining = (r.remaining || 0) - 1;
   state.rewards[rewardId] = r;
 
-  pushHistory({ ts: Date.now(), by: state.me, taskName: r.name, action: 'canjeó' });
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: r.name,
+    action: wasDiscounted ? `canjeó (promo ${state.promo?.percentOff}% off)` : 'canjeó'
+  });
   playDoneSound();
-  toast(`✦ ¡Canjeaste "${r.name}"!`);
+  toast(wasDiscounted ? `🔥 ¡Canjeaste "${r.name}" con promo!` : `✦ ¡Canjeaste "${r.name}"!`);
   setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 100);
 
   // Persistir granular
@@ -7569,7 +8086,56 @@ function openEditTask(kind, id) {
   document.querySelectorAll('#modal-edit .parent-only').forEach(el => {
     el.style.display = isParent() ? '' : 'none';
   });
+  // Mostrar sección de BOUNTY solo a Emmanuel
+  const bountySection = document.getElementById('edit-bounty-section');
+  if (bountySection) {
+    bountySection.style.display = isSecretAdmin() ? '' : 'none';
+    // Marcar la pill activa según el bounty actual
+    const currentMult = item.bounty?.multiplier || 0;
+    document.querySelectorAll('#edit-bounty-section .bounty-pill').forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.mult, 10) === currentMult);
+    });
+    const current = document.getElementById('edit-bounty-current');
+    if (current) {
+      current.textContent = currentMult > 0 ? `(actual: ×${currentMult})` : '(sin bounty)';
+    }
+  }
   document.getElementById('modal-edit').classList.add('open');
+}
+
+/* Asigna o quita el bounty de la tarea que se está editando. Solo Emmanuel. */
+function setBounty(multiplier) {
+  if (!isSecretAdmin()) return;
+  if (!editTarget) return;
+  const { kind, id } = editTarget;
+  const listKey = kind === 'daily' ? 'catalogDaily'
+                : kind === 'sporadic' ? 'catalogSporadic'
+                : 'catalogDetails';
+  const list = state[listKey];
+  const item = list?.find(t => t.id === id);
+  if (!item) return;
+
+  if (multiplier > 0) {
+    item.bounty = { multiplier, addedBy: state.me, addedAt: Date.now() };
+  } else {
+    delete item.bounty;
+  }
+
+  // Actualizar UI del modal
+  document.querySelectorAll('#edit-bounty-section .bounty-pill').forEach(p => {
+    p.classList.toggle('active', parseInt(p.dataset.mult, 10) === multiplier);
+  });
+  const current = document.getElementById('edit-bounty-current');
+  if (current) {
+    current.textContent = multiplier > 0 ? `(actual: ×${multiplier})` : '(sin bounty)';
+  }
+
+  // Persistir el catálogo completo
+  protectFromListener(listKey, list);
+  dbSet(listKey, list);
+  // No cerramos el modal — el usuario aún puede editar nombre/meta
+  toast(multiplier > 0 ? `✦ Bounty ×${multiplier} activado` : 'Bounty removido');
+  renderAll();
 }
 
 function closeEditForm() {
@@ -7705,22 +8271,64 @@ function markDone(t, store, kind, evt) {
     weekKey: entry.weekKey || null
   };
   store[t.id] = newEntry;
-  state.scores[finisher] = (state.scores[finisher] || 0) + 1;
-  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + 1;
-  pushHistory({ ts: Date.now(), by: state.me, taskName: t.name, action: 'completó' });
+
+  // Calcular bonus (bounty manual de Emmanuel o loot crítico oculto)
+  const bonus = getTaskBonus(kind, t.id);
+  const pointsEarned = 1 * bonus.multiplier;
+  state.scores[finisher] = (state.scores[finisher] || 0) + pointsEarned;
+  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + pointsEarned;
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: t.name,
+    action: bonus.type === 'bounty' ? `completó (bounty ×${bonus.multiplier})`
+          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
+          : 'completó'
+  });
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
-  toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+
+  // Feedback especial según tipo de bonus
+  if (bonus.type === 'loot') {
+    // Loot crítico: celebración extra con confeti doble
+    setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
+    setTimeout(() => confettiBurst(window.innerWidth/3, window.innerHeight/2), 400);
+    toast(`✦ ¡LOOT CRÍTICO ×${bonus.multiplier}! Ganaste ${pointsEarned} puntos`);
+  } else if (bonus.type === 'bounty') {
+    toast(`✦ ¡Bounty cobrado! ×${bonus.multiplier} = ${pointsEarned} pts`);
+    setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
+  } else {
+    toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+  }
+
   // Firebase: escribimos la tarea y el score actualizado
   const storeName = kind === 'daily' ? 'daily' : 'sporadic';
-  dbBatch({
+  const updates = {
     [`${storeName}/${t.id}`]: newEntry,
     [`scores/${finisher}`]: state.scores[finisher],
     [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
-  });
+  };
+
+  // Si tenía bounty, consumirlo (limpiarlo del catálogo)
+  if (bonus.type === 'bounty') {
+    const catalogPath = kind === 'daily' ? 'catalogDaily' : 'catalogSporadic';
+    const catalog = state[catalogPath];
+    const item = catalog?.find(x => x.id === t.id);
+    if (item) {
+      delete item.bounty;
+      updates[catalogPath] = catalog;
+    }
+  }
+  // Si era el loot crítico del día, limpiarlo (ya fue descubierto)
+  if (bonus.type === 'loot') {
+    state.criticalLoot = null;
+    updates['criticalLoot'] = null;
+  }
+
+  dbBatch(updates);
   renderAll();
 }
 
@@ -7733,26 +8341,61 @@ function unmarkDone(t, store, kind) {
 
 function toggleDetail(d, evt) {
   if (state.details[d.id]?.done) {
-    // Ya atendido: no permitir desmarcar (previene farmeo de puntos)
     toast('Este detalle ya está atendido');
     return;
   }
   const entry = { done: true, by: state.me, at: Date.now() };
   state.details[d.id] = entry;
-  state.scores[state.me] = (state.scores[state.me] || 0) + 1;
-  state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + 1;
-  pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
+
+  const bonus = getTaskBonus('detail', d.id);
+  const pointsEarned = 1 * bonus.multiplier;
+  state.scores[state.me] = (state.scores[state.me] || 0) + pointsEarned;
+  state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + pointsEarned;
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: d.title,
+    action: bonus.type === 'bounty' ? `atendió (bounty ×${bonus.multiplier})`
+          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
+          : 'atendió'
+  });
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
-  toast(`✿ ${d.title} ✓`);
-  dbBatch({
+
+  if (bonus.type === 'loot') {
+    setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
+    setTimeout(() => confettiBurst(window.innerWidth/3, window.innerHeight/2), 400);
+    toast(`✦ ¡LOOT CRÍTICO ×${bonus.multiplier}! Ganaste ${pointsEarned} puntos`);
+  } else if (bonus.type === 'bounty') {
+    toast(`✦ ¡Bounty cobrado! ×${bonus.multiplier} = ${pointsEarned} pts`);
+    setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
+  } else {
+    toast(`✿ ${d.title} ✓`);
+  }
+
+  const updates = {
     [`details/${d.id}`]: entry,
     [`scores/${state.me}`]: state.scores[state.me],
     [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
-  });
+  };
+
+  if (bonus.type === 'bounty') {
+    const catalog = state.catalogDetails;
+    const item = catalog?.find(x => x.id === d.id);
+    if (item) {
+      delete item.bounty;
+      updates['catalogDetails'] = catalog;
+    }
+  }
+  if (bonus.type === 'loot') {
+    state.criticalLoot = null;
+    updates['criticalLoot'] = null;
+  }
+
+  dbBatch(updates);
   renderAll();
 }
 
