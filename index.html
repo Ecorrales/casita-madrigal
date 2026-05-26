@@ -265,6 +265,26 @@ body::before {
   color: var(--muted);
 }
 
+.brand-time {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-soft);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+.brand-time .away-hint {
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin-left: 6px;
+}
+
 .header-actions { display: flex; gap: 8px; align-items: center; }
 
 .icon-btn {
@@ -2103,6 +2123,23 @@ body::before {
   margin-left: 6px;
 }
 
+.travel-tag {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--terra-deep);
+  background: color-mix(in srgb, var(--terra) 14%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--terra) 28%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
 .family-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3279,6 +3316,7 @@ body::before {
       <div class="brand">
         <div class="brand-name">Casita Corrales</div>
         <div class="brand-date" id="brand-date"></div>
+        <div class="brand-time" id="brand-time"></div>
       </div>
       <div class="header-actions">
         <button class="me-chip" onclick="showProfileSwitcher()" title="Cambiar perfil">
@@ -3730,7 +3768,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.29';
+const APP_VERSION = '2026.05.22.30';
 
 async function checkForUpdate() {
   try {
@@ -3909,6 +3947,7 @@ let state = {
   history: [],                   // [{ ts, by, taskName, action }]
   scores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // puntos disponibles para canjear (saldo)
   lifetimeScores: { emm: 0, jov: 0, mar: 0, lup: 0 }, // total histórico acumulado (nunca baja)
+  tz: {},                          // { personKey: { zone, lastSeen } } - zona horaria detectada por persona
   // SUBTÍTULOS personalizables por cada miembro
   subtitles: {
     emm: 'El que organiza',
@@ -4086,16 +4125,140 @@ function isProtected(path, remoteValue) {
 }
 
 /* ===== UTILIDADES ===== */
+/* =====================================================================
+   ZONA HORARIA DE LA CASA
+   La casa vive en Monterrey. Todos los cálculos de "qué día es" y
+   "cuándo empieza/termina el día" se hacen en esta zona, sin importar
+   en qué huso horario esté el dispositivo de quien usa la app.
+   Esto evita que un integrante viajando rompa el rollover ni el conteo
+   diario para los que están en casa.
+   ===================================================================== */
+const HOUSE_TIMEZONE = 'America/Monterrey';
+
+/* Zona horaria local del dispositivo (donde está la persona ahora) */
+function deviceTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (e) {
+    return HOUSE_TIMEZONE;
+  }
+}
+
+/* True si el dispositivo está en una zona horaria diferente a la de la casa */
+function isAwayFromHome() {
+  return deviceTimezone() !== HOUSE_TIMEZONE;
+}
+
+/* Día actual en la zona de la casa, formato "YYYY-MM-DD".
+   Usa Intl.DateTimeFormat para obtener los componentes de fecha en la zona
+   correcta, independientemente del dispositivo. */
+function houseToday(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: HOUSE_TIMEZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const get = type => parts.find(p => p.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/* Timestamp UTC del inicio del día actual en la zona de la casa.
+   Útil para filtros tipo "completado hoy". */
+function houseTodayStartTs() {
+  const dayStr = houseToday();
+  // Construimos un Date que represente "00:00 del dayStr en la zona de la casa".
+  // Como no podemos pasar zona directamente al constructor, comparamos en bucle
+  // con una aproximación inicial.
+  const [y, m, d] = dayStr.split('-').map(Number);
+  // Aproximación: la medianoche en UTC del mismo día. Luego ajustamos según
+  // el offset que tenga la zona de la casa en ese momento.
+  const candidateUTC = Date.UTC(y, m - 1, d, 0, 0, 0);
+  // Obtener qué hora es ese candidato visto desde la zona de la casa
+  const probe = new Intl.DateTimeFormat('en-CA', {
+    timeZone: HOUSE_TIMEZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).formatToParts(new Date(candidateUTC));
+  const probeStr = `${probe.find(p => p.type === 'year').value}-${probe.find(p => p.type === 'month').value}-${probe.find(p => p.type === 'day').value}T${probe.find(p => p.type === 'hour').value}:${probe.find(p => p.type === 'minute').value}:${probe.find(p => p.type === 'second').value}`;
+  // Calculamos cuánto hay que restar/sumar para que sea 00:00:00 en la zona casa
+  const probeDate = new Date(probeStr + 'Z'); // tratamos como si fuera UTC
+  const desired = new Date(`${dayStr}T00:00:00Z`).getTime();
+  const offset = probeDate.getTime() - desired;
+  return candidateUTC - offset;
+}
+
 function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  // Mantenida por retrocompatibilidad, pero ahora retorna el día en hora de casa
+  return houseToday();
+}
+
+/* Convierte "YYYY-MM-DDTHH:MM" (de input datetime-local) a timestamp UTC,
+   interpretando esa hora como hora de la zona de la casa. */
+function parseHouseDateTimeInput(value) {
+  // value tiene formato "YYYY-MM-DDTHH:MM"
+  const [datePart, timePart] = value.split('T');
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh, mm] = (timePart || '00:00').split(':').map(Number);
+  return composeHouseTimestamp(y, m, d, hh, mm, 0);
+}
+
+/* Convierte "YYYY-MM-DD" (de input date) a timestamp UTC del final del día,
+   23:59:59 en hora de la casa. */
+function parseHouseDateInputEndOfDay(value) {
+  const [y, m, d] = value.split('-').map(Number);
+  return composeHouseTimestamp(y, m, d, 23, 59, 59);
+}
+
+/* Construye un timestamp UTC que corresponda a una fecha+hora dada
+   EN LA ZONA DE LA CASA. Hace una iteración corta para ajustar el offset. */
+function composeHouseTimestamp(y, m, d, hh, mm, ss) {
+  // Primera aproximación: tratarlo como UTC
+  let guess = Date.UTC(y, m - 1, d, hh, mm, ss);
+  // Iterar 2 veces es suficiente para ajustar offsets de hasta 24h
+  for (let i = 0; i < 2; i++) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: HOUSE_TIMEZONE,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).formatToParts(new Date(guess));
+    const get = type => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
+    const seenAsUTC = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+    const desiredUTC = Date.UTC(y, m - 1, d, hh, mm, ss);
+    guess += (desiredUTC - seenAsUTC);
+  }
+  return guess;
 }
 
 function formatDate() {
   const d = new Date();
-  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  return `${dias[d.getDay()]} ${d.getDate()} de ${meses[d.getMonth()]}`;
+  // Fecha formateada en zona de la casa
+  const fmt = new Intl.DateTimeFormat('es-MX', {
+    timeZone: HOUSE_TIMEZONE,
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
+  const formatted = fmt.format(d);
+  // Capitalizar primera letra ("lunes 26 de mayo" → "Lunes 26 de mayo")
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+/* Hora actual en la casa, formato "10:35 AM en la casita".
+   Si el dispositivo está en otra zona, anexa un hint con "viajas" */
+function formatHouseTime() {
+  const d = new Date();
+  const fmt = new Intl.DateTimeFormat('es-MX', {
+    timeZone: HOUSE_TIMEZONE,
+    hour: 'numeric', minute: '2-digit', hour12: true
+  });
+  const time = fmt.format(d).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM');
+  const base = `${time} en la casita`;
+  return isAwayFromHome()
+    ? `${base} <span class="away-hint">✈ viajas</span>`
+    : base;
+}
+
+function updateBrandTime() {
+  const el = document.getElementById('brand-time');
+  if (el) el.innerHTML = formatHouseTime();
 }
 
 function timeAgo(ts) {
@@ -4140,16 +4303,29 @@ function timeSince(ts) {
 
 /* Formato absoluto: "Vie 24 May" o "Vie 24 May · 7:00 PM" */
 function formatDue(ts, kind) {
+  // Formatear SIEMPRE en zona de la casa para que sea consistente entre todos
   const d = new Date(ts);
-  const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const base = `${dias[d.getDay()]} ${d.getDate()} ${meses[d.getMonth()]}`;
+  const parts = new Intl.DateTimeFormat('es-MX', {
+    timeZone: HOUSE_TIMEZONE,
+    weekday: 'short', day: 'numeric', month: 'short',
+    hour: kind === 'datetime' ? 'numeric' : undefined,
+    minute: kind === 'datetime' ? '2-digit' : undefined,
+    hour12: true
+  }).formatToParts(d);
+  const get = type => parts.find(p => p.type === type)?.value || '';
+  // Capitalizar día y mes
+  const weekday = get('weekday').replace('.', '').charAt(0).toUpperCase() + get('weekday').replace('.', '').slice(1, 3);
+  const month = get('month').replace('.', '').charAt(0).toUpperCase() + get('month').replace('.', '').slice(1, 3);
+  const base = `${weekday} ${get('day')} ${month}`;
   if (kind === 'datetime') {
-    let h = d.getHours();
-    const min = String(d.getMinutes()).padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${base} · ${h}:${min} ${ampm}`;
+    const hour = get('hour');
+    const min = get('minute');
+    const dayPeriod = (get('dayPeriod') || '').toUpperCase().replace('.', '').replace(/\s/g, '');
+    const houseTime = `${hour}:${min} ${dayPeriod}`;
+    // Si el dispositivo está en otra zona, anexar etiqueta
+    return isAwayFromHome()
+      ? `${base} · ${houseTime} (hora casa)`
+      : `${base} · ${houseTime}`;
   }
   return base;
 }
@@ -4690,6 +4866,7 @@ async function initFirebase() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        state.tz = data.tz || {};
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -4732,6 +4909,7 @@ async function initFirebase() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        state.tz = data.tz || {};
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -4779,9 +4957,13 @@ function init() {
   updateThemeBtn();
   updateMuteBtn();
   document.getElementById('brand-date').textContent = formatDate();
+  updateBrandTime();
 
   if (state.me) {
     showApp();
+    // Reportar zona horaria después de Firebase estar listo (la llamada se
+    // encolará si Firebase aún no está hidratado)
+    setTimeout(reportMyTimezone, 1500);
   } else {
     refreshWelcomeSubtitles();
     document.getElementById('welcome').classList.remove('hidden');
@@ -5040,6 +5222,7 @@ async function performRefresh() {
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
+        state.tz = data.tz || {};
         state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
@@ -5070,6 +5253,7 @@ async function performRefresh() {
 
   // Refrescar la fecha por si cambió el día
   document.getElementById('brand-date').textContent = formatDate();
+  updateBrandTime();
 
   renderAll();
   await minTime;
@@ -5078,7 +5262,27 @@ async function performRefresh() {
 function selectProfile(p) {
   state.me = p;
   localStorage.setItem('casita_me', p);
+  reportMyTimezone();
   showApp();
+}
+
+/* Reporta la zona horaria del dispositivo actual a Firebase, asociada al usuario.
+   Esto permite que la pestaña Familia muestre "✈ De viaje" cuando alguien no
+   está en la zona horaria de la casa. */
+function reportMyTimezone() {
+  if (!state.me) return;
+  if (!PEOPLE[state.me] || PEOPLE[state.me].passive) return;
+  const zone = deviceTimezone();
+  const entry = { zone, lastSeen: Date.now() };
+  if (!state.tz) state.tz = {};
+  // Solo subir si cambió la zona o pasó más de 1 hora desde el último report
+  const existing = state.tz[state.me];
+  const shouldUpdate = !existing
+    || existing.zone !== zone
+    || (Date.now() - (existing.lastSeen || 0)) > 60 * 60 * 1000;
+  if (!shouldUpdate) return;
+  state.tz[state.me] = entry;
+  dbSet(`tz/${state.me}`, entry);
 }
 
 function showApp() {
@@ -5598,7 +5802,7 @@ function renderFamily() {
     // "Hoy" cuenta TODO lo completado hoy: tareas, esporádicas, detalles y avisos
     // Filtramos por timestamp `at` o `doneAt` para no contar completaciones de días anteriores
     // (las esporádicas semanales pueden sobrevivir al rollover y seguir como `done`)
-    const todayStartTs = new Date().setHours(0, 0, 0, 0);
+    const todayStartTs = houseTodayStartTs();
     const completedToday = v => v.by === key && v.done && (v.at || 0) >= todayStartTs;
     const today = Object.values(state.daily).filter(completedToday).length
                 + Object.values(state.sporadic).filter(completedToday).length
@@ -5688,13 +5892,17 @@ function renderFamily() {
     }
 
     const card = document.createElement('div');
+    // ¿Esta persona está en una zona horaria diferente a la casa?
+    const personTz = state.tz?.[key]?.zone;
+    const isTraveling = personTz && personTz !== HOUSE_TIMEZONE;
+
     card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '') + (flippedCards.has(key) ? ' flipped' : '');
     card.dataset.p = key;
     card.innerHTML = `
       <div class="family-card-inner">
         <div class="family-card-face front">
           <div class="family-avatar">${p.initial}${isBdayToday ? '<span class="bday-crown">✿</span>' : ''}</div>
-          <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}</div>
+          <div class="family-name">${p.name}${isMe ? ' <span class="me-tag">tú</span>' : ''}${isTraveling ? ' <span class="travel-tag" title="No está en zona horaria de casa">✈ De viaje</span>' : ''}</div>
           <div class="family-don" id="don-${key}">
             <span class="don-text">${escapeHtml(subtitle)}</span>
             ${isMe ? `<button class="don-edit" onclick="editMySubtitle()" title="Cambiar mi subtítulo">
@@ -6631,13 +6839,12 @@ function submitNotice() {
   if (noticeType === 'date') {
     const v = document.getElementById('notice-date').value;
     if (!v) { toast('Elige una fecha'); return; }
-    const [y, m, d] = v.split('-').map(Number);
-    dueAt = new Date(y, m - 1, d, 23, 59, 59).getTime();
+    dueAt = parseHouseDateInputEndOfDay(v);
     dueKind = 'date';
   } else if (noticeType === 'datetime') {
     const v = document.getElementById('notice-datetime').value;
     if (!v) { toast('Elige fecha y hora'); return; }
-    dueAt = new Date(v).getTime();
+    dueAt = parseHouseDateTimeInput(v);
     dueKind = 'datetime';
   }
 
@@ -7522,9 +7729,11 @@ setInterval(() => {
     });
     renderAll();
     document.getElementById('brand-date').textContent = formatDate();
+  updateBrandTime();
     toast('🌅 Nuevo día — tareas reiniciadas');
   } else {
-    // Refrescar tiempos "hace X min" en panel Ahora y strip
+    // Refrescar tiempos "hace X min" en panel Ahora y strip + hora del header
+    updateBrandTime();
     renderLiveStrip();
     renderNow();
   }
