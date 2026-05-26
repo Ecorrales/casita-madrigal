@@ -218,7 +218,7 @@ body::before {
 
 /* Header */
 .header {
-  padding: 20px 24px 16px;
+  padding: 16px 24px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--bg-soft);
   position: sticky;
@@ -231,20 +231,14 @@ body::before {
   -webkit-user-select: none;
 }
 
-.header-row {
+/* Fila 1: nombre de la casa a la izquierda, fecha y hora a la derecha */
+.header-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   max-width: 1280px;
   margin: 0 auto;
-}
-
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .brand-name {
@@ -254,6 +248,16 @@ body::before {
   font-style: italic;
   letter-spacing: -0.02em;
   color: var(--terra);
+  line-height: 1.1;
+}
+
+/* Bloque fecha + hora a la derecha del nombre */
+.brand-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 1px;
 }
 
 .brand-date {
@@ -263,29 +267,67 @@ body::before {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
+  line-height: 1.3;
 }
 
 .brand-time {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 13px;
-  font-weight: 400;
+  /* Misma tipografía que la fecha pero más pequeño */
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--ink-soft);
-  margin-top: 2px;
-  line-height: 1.2;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 .brand-time .away-hint {
   font-family: 'Inter', sans-serif;
   font-style: normal;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--terra);
-  margin-left: 6px;
 }
 
-.header-actions { display: flex; gap: 8px; align-items: center; }
+/* Fila 2: controles de usuario */
+.header-bottom {
+  margin-top: 12px;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+/* En móvil: que los botones ocupen todo el ancho */
+@media (max-width: 640px) {
+  .header-actions {
+    justify-content: space-between;
+  }
+  .header-actions .icon-btn {
+    flex: 1;
+    min-width: 0;
+  }
+  /* El me-chip mantiene su tamaño natural pero también flex */
+  .header-actions .me-chip {
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+  }
+}
 
 .icon-btn {
   appearance: none;
@@ -3312,12 +3354,14 @@ body::before {
   </div>
 
   <header class="header">
-    <div class="header-row">
-      <div class="brand">
-        <div class="brand-name">Casita Corrales</div>
+    <div class="header-top">
+      <div class="brand-name">Casita Corrales</div>
+      <div class="brand-meta">
         <div class="brand-date" id="brand-date"></div>
         <div class="brand-time" id="brand-time"></div>
       </div>
+    </div>
+    <div class="header-bottom">
       <div class="header-actions">
         <button class="me-chip" onclick="showProfileSwitcher()" title="Cambiar perfil">
           <span class="me-chip-avatar" id="me-avatar"></span>
@@ -3768,7 +3812,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.32';
+const APP_VERSION = '2026.05.22.33';
 
 async function checkForUpdate() {
   try {
@@ -4229,19 +4273,18 @@ function formatDate() {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-/* Hora actual en la casa, formato "10:35 AM en la casita".
-   Si el dispositivo está en otra zona, anexa un hint con "viajas" */
+/* Hora actual en la casa, formato corto ("10:35 AM").
+   Si el dispositivo está en otra zona, anexa un hint "✈ VIAJAS" */
 function formatHouseTime() {
   const d = new Date();
   const fmt = new Intl.DateTimeFormat('es-MX', {
     timeZone: HOUSE_TIMEZONE,
     hour: 'numeric', minute: '2-digit', hour12: true
   });
-  const time = fmt.format(d).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM');
-  const base = `${time} en la casita`;
+  const time = fmt.format(d).replace(/\s?a\.?\s?m\.?/i, ' AM').replace(/\s?p\.?\s?m\.?/i, ' PM').trim();
   return isAwayFromHome()
-    ? `${base} <span class="away-hint">✈ viajas</span>`
-    : base;
+    ? `${time}<span class="away-hint">✈ viajas</span>`
+    : time;
 }
 
 function updateBrandTime() {
@@ -4660,7 +4703,7 @@ function load() {
 function applyLocalRollover() {
   if (useFirebase) return;
   let changed = false;
-  if (state.date !== todayKey()) {
+  if (dateIsBefore(state.date, todayKey())) {
     dailyRollover();
     state.date = todayKey();
     changed = true;
@@ -4682,6 +4725,14 @@ function applyLocalRollover() {
    - Sin scope (legado): se liberan
    - Detalles: siempre se liberan (son del día)
    =================================================================== */
+/* True si la fecha A es estrictamente anterior a la fecha B.
+   Ambas en formato "YYYY-MM-DD". Comparación lexicográfica funciona
+   correctamente para este formato. */
+function dateIsBefore(a, b) {
+  if (!a || !b) return false;
+  return a < b;
+}
+
 function dailyRollover() {
   const currentWeek = weekKey();
 
@@ -4839,7 +4890,7 @@ async function initFirebase() {
         return;
       }
       // Reset diario si cambió la fecha en remoto
-      if (data.date && data.date !== todayKey()) {
+      if (data.date && dateIsBefore(data.date, todayKey())) {
         // Aplicar rollover sobre los datos remotos (preservar tareas semanales)
         if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
         if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
@@ -5218,7 +5269,7 @@ async function performRefresh() {
         state.notices = data.notices || {};
         ensureCatalogs();
         // Aplicar rollover si cambió el día
-        if (data.date && data.date !== todayKey()) {
+        if (data.date && dateIsBefore(data.date, todayKey())) {
           const rolloverChanges = dailyRollover();
           state.date = todayKey();
           saveLocal();
@@ -7717,7 +7768,7 @@ document.addEventListener('click', (e) => {
 
 // Detectar cambio de día mientras la app está abierta
 setInterval(() => {
-  if (state.date !== todayKey()) {
+  if (dateIsBefore(state.date, todayKey())) {
     const rolloverChanges = dailyRollover();
     state.date = todayKey();
     saveLocal();
