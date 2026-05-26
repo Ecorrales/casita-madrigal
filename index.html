@@ -317,15 +317,14 @@ body::before {
   .header-actions {
     justify-content: space-between;
   }
+  /* Los iconos se reparten el espacio restante */
   .header-actions .icon-btn {
     flex: 1;
     min-width: 0;
   }
-  /* El me-chip mantiene su tamaño natural pero también flex */
+  /* El chip del nombre tiene prioridad: tamaño natural, no se comprime */
   .header-actions .me-chip {
-    flex: 1;
-    justify-content: center;
-    min-width: 0;
+    flex: 0 0 auto;
   }
 }
 
