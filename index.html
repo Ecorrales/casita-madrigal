@@ -3195,8 +3195,11 @@ body::before {
 /* Footer connection status */
 .conn-status {
   position: fixed;
-  bottom: 12px;
-  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));  /* respeta home indicator */
+  right: calc(12px + env(safe-area-inset-right, 0px));    /* iPhone landscape */
+  transform: translateZ(0);  
+  -webkit-transform: translateZ(0);
+  will-change: transform;
   display: flex;
   align-items: center;
   gap: 6px;
