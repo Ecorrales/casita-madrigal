@@ -361,6 +361,13 @@ body::before {
   font-weight: 500;
   color: var(--ink);
   cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.me-chip > span:not(.me-chip-avatar) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .me-chip-avatar {
@@ -374,6 +381,7 @@ body::before {
   font-family: 'Fraunces', serif;
   font-weight: 500;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 /* Tabs */
