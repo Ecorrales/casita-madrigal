@@ -3768,7 +3768,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.30';
+const APP_VERSION = '2026.05.22.32';
 
 async function checkForUpdate() {
   try {
@@ -3929,6 +3929,16 @@ const SEED_DETAILS = [
 let DAILY_TASKS = [];
 let SPORADIC_TASKS = [];
 let DETAILS = [];
+
+/* =====================================================================
+   ZONA HORARIA DE LA CASA
+   La casa vive en Monterrey. Todos los cálculos de "qué día es" y
+   "cuándo empieza/termina el día" se hacen en esta zona, sin importar
+   en qué huso horario esté el dispositivo de quien usa la app.
+   Declarada aquí (antes del state) porque la inicialización de state
+   llama a todayKey() que la necesita.
+   ===================================================================== */
+const HOUSE_TIMEZONE = 'America/Monterrey';
 
 /* ===== ESTADO ===== */
 let state = {
@@ -4125,15 +4135,8 @@ function isProtected(path, remoteValue) {
 }
 
 /* ===== UTILIDADES ===== */
-/* =====================================================================
-   ZONA HORARIA DE LA CASA
-   La casa vive en Monterrey. Todos los cálculos de "qué día es" y
-   "cuándo empieza/termina el día" se hacen en esta zona, sin importar
-   en qué huso horario esté el dispositivo de quien usa la app.
-   Esto evita que un integrante viajando rompa el rollover ni el conteo
-   diario para los que están en casa.
-   ===================================================================== */
-const HOUSE_TIMEZONE = 'America/Monterrey';
+/* (HOUSE_TIMEZONE está declarada arriba, cerca del inicio del script, porque
+   varias inicializaciones de top-level la usan via todayKey()) */
 
 /* Zona horaria local del dispositivo (donde está la persona ahora) */
 function deviceTimezone() {
@@ -4165,26 +4168,11 @@ function houseToday(ts) {
 /* Timestamp UTC del inicio del día actual en la zona de la casa.
    Útil para filtros tipo "completado hoy". */
 function houseTodayStartTs() {
+  // Estrategia robusta: tomar el día actual en zona casa "YYYY-MM-DD",
+  // luego usar composeHouseTimestamp para convertir a UTC el "00:00" de ese día.
   const dayStr = houseToday();
-  // Construimos un Date que represente "00:00 del dayStr en la zona de la casa".
-  // Como no podemos pasar zona directamente al constructor, comparamos en bucle
-  // con una aproximación inicial.
   const [y, m, d] = dayStr.split('-').map(Number);
-  // Aproximación: la medianoche en UTC del mismo día. Luego ajustamos según
-  // el offset que tenga la zona de la casa en ese momento.
-  const candidateUTC = Date.UTC(y, m - 1, d, 0, 0, 0);
-  // Obtener qué hora es ese candidato visto desde la zona de la casa
-  const probe = new Intl.DateTimeFormat('en-CA', {
-    timeZone: HOUSE_TIMEZONE,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  }).formatToParts(new Date(candidateUTC));
-  const probeStr = `${probe.find(p => p.type === 'year').value}-${probe.find(p => p.type === 'month').value}-${probe.find(p => p.type === 'day').value}T${probe.find(p => p.type === 'hour').value}:${probe.find(p => p.type === 'minute').value}:${probe.find(p => p.type === 'second').value}`;
-  // Calculamos cuánto hay que restar/sumar para que sea 00:00:00 en la zona casa
-  const probeDate = new Date(probeStr + 'Z'); // tratamos como si fuera UTC
-  const desired = new Date(`${dayStr}T00:00:00Z`).getTime();
-  const offset = probeDate.getTime() - desired;
-  return candidateUTC - offset;
+  return composeHouseTimestamp(y, m, d, 0, 0, 0);
 }
 
 function todayKey() {
@@ -5268,21 +5256,26 @@ function selectProfile(p) {
 
 /* Reporta la zona horaria del dispositivo actual a Firebase, asociada al usuario.
    Esto permite que la pestaña Familia muestre "✈ De viaje" cuando alguien no
-   está en la zona horaria de la casa. */
+   está en la zona horaria de la casa. Esta función NUNCA debe romper la app:
+   si Firebase rechaza o algo falla, simplemente no se reporta. */
 function reportMyTimezone() {
-  if (!state.me) return;
-  if (!PEOPLE[state.me] || PEOPLE[state.me].passive) return;
-  const zone = deviceTimezone();
-  const entry = { zone, lastSeen: Date.now() };
-  if (!state.tz) state.tz = {};
-  // Solo subir si cambió la zona o pasó más de 1 hora desde el último report
-  const existing = state.tz[state.me];
-  const shouldUpdate = !existing
-    || existing.zone !== zone
-    || (Date.now() - (existing.lastSeen || 0)) > 60 * 60 * 1000;
-  if (!shouldUpdate) return;
-  state.tz[state.me] = entry;
-  dbSet(`tz/${state.me}`, entry);
+  try {
+    if (!state.me) return;
+    if (!PEOPLE[state.me] || PEOPLE[state.me].passive) return;
+    const zone = deviceTimezone();
+    const entry = { zone, lastSeen: Date.now() };
+    if (!state.tz) state.tz = {};
+    // Solo subir si cambió la zona o pasó más de 1 hora desde el último report
+    const existing = state.tz[state.me];
+    const shouldUpdate = !existing
+      || existing.zone !== zone
+      || (Date.now() - (existing.lastSeen || 0)) > 60 * 60 * 1000;
+    if (!shouldUpdate) return;
+    state.tz[state.me] = entry;
+    dbSet(`tz/${state.me}`, entry);
+  } catch (e) {
+    console.warn('reportMyTimezone failed:', e);
+  }
 }
 
 function showApp() {
@@ -5291,7 +5284,12 @@ function showApp() {
   document.getElementById('me-avatar').textContent = PEOPLE[state.me].initial;
   document.getElementById('me-avatar').style.background = `var(--${state.me})`;
   document.getElementById('me-name').textContent = PEOPLE[state.me].name;
-  renderAll();
+  try {
+    renderAll();
+  } catch (e) {
+    console.error('renderAll falló:', e);
+    toast('⚠ Algo falló al renderizar. Revisa la consola.');
+  }
 }
 
 function refreshWelcomeSubtitles() {
