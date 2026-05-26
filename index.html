@@ -3730,7 +3730,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.27';
+const APP_VERSION = '2026.05.22.29';
 
 async function checkForUpdate() {
   try {
@@ -4521,6 +4521,10 @@ function applyLocalRollover() {
 function dailyRollover() {
   const currentWeek = weekKey();
 
+  // Cambios granulares para aplicar a Firebase (cada id individualmente)
+  // para respetar las reglas que prohíben escrituras a `daily`/`sporadic`/`details` en bloque
+  const fbChanges = {};
+
   // Rollover de tareas DIARIAS y ESPORÁDICAS
   ['daily', 'sporadic'].forEach(storeName => {
     const store = state[storeName];
@@ -4530,21 +4534,30 @@ function dailyRollover() {
       if (!entry) return;
       // scope 'week' + misma semana → conservar dueño, resetear check
       if (entry.scope === 'week' && entry.weekKey === currentWeek && entry.takenBy) {
-        store[id] = {
+        const newEntry = {
           scope: 'week',
           weekKey: entry.weekKey,
           takenBy: entry.takenBy,
           takenAt: entry.takenAt
         };
+        store[id] = newEntry;
+        fbChanges[`${storeName}/${id}`] = newEntry;
       } else {
-        // scope 'day' o semana vieja o sin scope → liberar
+        // scope 'day' o semana vieja o sin scope → liberar (borrar el nodo)
         delete store[id];
+        fbChanges[`${storeName}/${id}`] = null; // null = delete en Firebase update
       }
     });
   });
 
-  // Detalles: siempre se liberan
+  // Detalles: siempre se liberan (borrar cada uno individualmente)
+  Object.keys(state.details || {}).forEach(id => {
+    fbChanges[`details/${id}`] = null;
+  });
   state.details = {};
+
+  // Devolvemos los cambios para que el caller los persista
+  return fbChanges;
 }
 
 /* Devuelve key de la semana actual: "YYYY-Www" (lunes como inicio) */
@@ -4683,17 +4696,16 @@ async function initFirebase() {
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
-        dailyRollover();
+        const rolloverChanges = dailyRollover();
         const refilled = monthlyRewardsRefill();
         state.date = todayKey();
         firebaseHydrated = true;
-        // Persistir el rollover granularmente: solo los nodos que cambiaron
+        // Persistir el rollover granularmente: solo los ids que cambiaron
+        // (NO mandamos los nodos completos daily/sporadic/details — las reglas lo rechazan)
         saveLocal();
         const updates = {
           date: state.date,
-          daily: state.daily,
-          sporadic: state.sporadic,
-          details: state.details
+          ...rolloverChanges  // cambios por id: `daily/t1`, `sporadic/s2`, `details/d3`...
         };
         if (refilled) {
           updates.rewards = state.rewards;
@@ -5036,14 +5048,12 @@ async function performRefresh() {
         ensureCatalogs();
         // Aplicar rollover si cambió el día
         if (data.date && data.date !== todayKey()) {
-          dailyRollover();
+          const rolloverChanges = dailyRollover();
           state.date = todayKey();
           saveLocal();
           dbBatch({
             date: state.date,
-            daily: state.daily,
-            sporadic: state.sporadic,
-            details: state.details
+            ...rolloverChanges
           });
         } else {
           saveLocal();
@@ -5383,8 +5393,9 @@ function buildTaskRow(t, store, kind) {
   check.className = 'check';
   if (status === 'done') {
     check.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-    check.title = 'Desmarcar como hecha';
-    check.onclick = (e) => { e.stopPropagation(); unmarkDone(t, store, kind); };
+    check.title = 'Ya completada';
+    check.style.cursor = 'default';
+    // No permitir desmarcar: previene farmeo de puntos
   } else if (status === 'taken') {
     // Punto pulsante que indica "en progreso"
     check.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';
@@ -5677,7 +5688,7 @@ function renderFamily() {
     }
 
     const card = document.createElement('div');
-    card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '');
+    card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '') + (flippedCards.has(key) ? ' flipped' : '');
     card.dataset.p = key;
     card.innerHTML = `
       <div class="family-card-inner">
@@ -6476,9 +6487,20 @@ function consumeCoupon(couponId) {
 }
 
 /* Voltear la tarjeta de familia */
+/* Set de tarjetas de familia que están "volteadas" (mostrando cupones).
+   Se persiste entre renders para que un renderAll() por sync de Firebase
+   no las regrese al frente. */
+const flippedCards = new Set();
+
 function flipFamilyCard(key) {
   const card = document.querySelector(`.family-card[data-p="${key}"]`);
-  if (card) card.classList.toggle('flipped');
+  if (!card) return;
+  const isFlipped = card.classList.toggle('flipped');
+  if (isFlipped) {
+    flippedCards.add(key);
+  } else {
+    flippedCards.delete(key);
+  }
 }
 
 function renderNotifs() {
@@ -7440,45 +7462,34 @@ function markDone(t, store, kind, evt) {
 }
 
 function unmarkDone(t, store, kind) {
-  const prevBy = store[t.id]?.by;
-  if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
-  delete store[t.id];
-  pushHistory({ ts: Date.now(), by: state.me, taskName: t.name, action: 'desmarcó' });
-  toast('Tarea desmarcada');
-  const storeName = kind === 'daily' ? 'daily' : 'sporadic';
-  const updates = { [`${storeName}/${t.id}`]: null };
-  if (prevBy) updates[`scores/${prevBy}`] = state.scores[prevBy];
-  dbBatch(updates);
-  renderAll();
+  // Bloqueado para prevenir farmeo de puntos. Las tareas completadas se
+  // mantienen como tales hasta el rollover del día siguiente.
+  toast('Las tareas completadas no se pueden desmarcar');
+  return;
 }
 
 function toggleDetail(d, evt) {
   if (state.details[d.id]?.done) {
-    const prevBy = state.details[d.id].by;
-    if (prevBy && state.scores[prevBy] > 0) state.scores[prevBy]--;
-    delete state.details[d.id];
-    pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'desmarcó el detalle' });
-    const updates = { [`details/${d.id}`]: null };
-    if (prevBy) updates[`scores/${prevBy}`] = state.scores[prevBy];
-    dbBatch(updates);
-  } else {
-    const entry = { done: true, by: state.me, at: Date.now() };
-    state.details[d.id] = entry;
-    state.scores[state.me] = (state.scores[state.me] || 0) + 1;
-    state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + 1;
-    pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
-    playDoneSound();
-    if (evt) {
-      const rect = evt.currentTarget.getBoundingClientRect();
-      confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
-    }
-    toast(`✿ ${d.title} ✓`);
-    dbBatch({
-      [`details/${d.id}`]: entry,
-      [`scores/${state.me}`]: state.scores[state.me],
-      [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
-    });
+    // Ya atendido: no permitir desmarcar (previene farmeo de puntos)
+    toast('Este detalle ya está atendido');
+    return;
   }
+  const entry = { done: true, by: state.me, at: Date.now() };
+  state.details[d.id] = entry;
+  state.scores[state.me] = (state.scores[state.me] || 0) + 1;
+  state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + 1;
+  pushHistory({ ts: Date.now(), by: state.me, taskName: d.title, action: 'atendió' });
+  playDoneSound();
+  if (evt) {
+    const rect = evt.currentTarget.getBoundingClientRect();
+    confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
+  }
+  toast(`✿ ${d.title} ✓`);
+  dbBatch({
+    [`details/${d.id}`]: entry,
+    [`scores/${state.me}`]: state.scores[state.me],
+    [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
+  });
   renderAll();
 }
 
@@ -7502,14 +7513,12 @@ document.addEventListener('click', (e) => {
 // Detectar cambio de día mientras la app está abierta
 setInterval(() => {
   if (state.date !== todayKey()) {
-    dailyRollover();
+    const rolloverChanges = dailyRollover();
     state.date = todayKey();
     saveLocal();
     dbBatch({
       date: state.date,
-      daily: state.daily,
-      sporadic: state.sporadic,
-      details: state.details
+      ...rolloverChanges
     });
     renderAll();
     document.getElementById('brand-date').textContent = formatDate();
