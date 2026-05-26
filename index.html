@@ -3851,6 +3851,17 @@ body::before {
     <label class="form-label">Detalle <span class="form-hint">(opcional)</span></label>
     <input type="text" class="form-input" id="edit-meta" maxlength="80" />
 
+    <!-- FRECUENCIA: solo para tareas esporádicas -->
+    <div id="edit-frequency-section" style="display:none">
+      <label class="form-label">Frecuencia</label>
+      <p class="form-hint" style="margin:0 0 6px;display:block">Cada cuánto se puede volver a hacer.</p>
+      <select id="edit-frequency" class="form-input">
+        <option value="weekly">Semanal · cada lunes</option>
+        <option value="biweekly">Quincenal · día 1 y día 15</option>
+        <option value="monthly">Mensual · día 1 de cada mes</option>
+      </select>
+    </div>
+
     <!-- BOUNTY: solo Emmanuel ve esta sección -->
     <div id="edit-bounty-section" style="display:none; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line)">
       <label class="form-label">
@@ -4041,7 +4052,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.34';
+const APP_VERSION = '2026.05.22.35';
 
 async function checkForUpdate() {
   try {
@@ -4178,17 +4189,31 @@ function getBounty(kind, taskId) {
 function assignDailyCriticalLoot() {
   if (!state.config?.criticalLootEnabled) return null;
 
-  // Candidatos: tareas de los 3 tipos que no tienen bounty manual
+  // Candidatos: tareas que NO tienen bounty manual Y están realmente disponibles hoy.
+  // Para esporádicas con frequency, una completada en su periodo NO es candidata
+  // porque está bloqueada hasta que su periodo termine.
   const candidates = [];
+
   (state.catalogDaily || []).forEach(t => {
-    if (!t.bounty) candidates.push({ kind: 'daily', id: t.id });
+    if (t.bounty) return;
+    // Las diarias se liberan cada día, siempre disponibles tras rollover
+    candidates.push({ kind: 'daily', id: t.id });
   });
+
   (state.catalogSporadic || []).forEach(t => {
-    if (!t.bounty) candidates.push({ kind: 'sporadic', id: t.id });
+    if (t.bounty) return;
+    // Si tiene frequency y hay una entry done aún en periodo, está bloqueada
+    const entry = state.sporadic?.[t.id];
+    if (isPeriodicallyLocked(t, entry)) return;
+    candidates.push({ kind: 'sporadic', id: t.id });
   });
+
   (state.catalogDetails || []).forEach(t => {
-    if (!t.bounty) candidates.push({ kind: 'detail', id: t.id });
+    if (t.bounty) return;
+    // Los detalles se liberan cada día con el rollover, siempre disponibles
+    candidates.push({ kind: 'detail', id: t.id });
   });
+
   if (!candidates.length) return null;
 
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
@@ -4337,6 +4362,29 @@ function ensureCatalogs() {
   if (!state.catalogDaily)    state.catalogDaily    = JSON.parse(JSON.stringify(SEED_DAILY));
   if (!state.catalogSporadic) state.catalogSporadic = JSON.parse(JSON.stringify(SEED_SPORADIC));
   if (!state.catalogDetails)  state.catalogDetails  = JSON.parse(JSON.stringify(SEED_DETAILS));
+
+  // MIGRACIÓN: asignar frequency a esporádicas sin él, detectándolo del texto meta
+  // con fallback a 'weekly' si el texto no dice nada reconocible.
+  let migrated = false;
+  state.catalogSporadic.forEach(t => {
+    if (!t.frequency) {
+      const detected = detectFrequency(t.meta);
+      // Si detecta diaria, ignorar (eso no es esporádica realmente)
+      if (detected && detected.key !== 'daily') {
+        t.frequency = detected.key;
+      } else {
+        t.frequency = 'weekly'; // fallback razonable
+      }
+      migrated = true;
+    }
+  });
+  if (migrated) {
+    // Solo persistir si Firebase ya hidrató; de lo contrario se perderá al hidratarse
+    if (firebaseHydrated && useFirebase) {
+      dbSet('catalogSporadic', state.catalogSporadic);
+    }
+  }
+
   DAILY_TASKS    = state.catalogDaily;
   SPORADIC_TASKS = state.catalogSporadic;
   DETAILS        = state.catalogDetails;
@@ -5047,14 +5095,12 @@ function dailyRollover() {
   // para respetar las reglas que prohíben escrituras a `daily`/`sporadic`/`details` en bloque
   const fbChanges = {};
 
-  // Rollover de tareas DIARIAS y ESPORÁDICAS
-  ['daily', 'sporadic'].forEach(storeName => {
-    const store = state[storeName];
-    if (!store) return;
-    Object.keys(store).forEach(id => {
-      const entry = store[id];
+  // Rollover de tareas DIARIAS
+  const dailyStore = state.daily;
+  if (dailyStore) {
+    Object.keys(dailyStore).forEach(id => {
+      const entry = dailyStore[id];
       if (!entry) return;
-      // scope 'week' + misma semana → conservar dueño, resetear check
       if (entry.scope === 'week' && entry.weekKey === currentWeek && entry.takenBy) {
         const newEntry = {
           scope: 'week',
@@ -5062,15 +5108,55 @@ function dailyRollover() {
           takenBy: entry.takenBy,
           takenAt: entry.takenAt
         };
-        store[id] = newEntry;
-        fbChanges[`${storeName}/${id}`] = newEntry;
+        dailyStore[id] = newEntry;
+        fbChanges[`daily/${id}`] = newEntry;
       } else {
-        // scope 'day' o semana vieja o sin scope → liberar (borrar el nodo)
-        delete store[id];
-        fbChanges[`${storeName}/${id}`] = null; // null = delete en Firebase update
+        delete dailyStore[id];
+        fbChanges[`daily/${id}`] = null;
       }
     });
-  });
+  }
+
+  // Rollover de ESPORÁDICAS — más sutil porque hay que respetar frequency
+  const sporadicStore = state.sporadic;
+  if (sporadicStore) {
+    Object.keys(sporadicStore).forEach(id => {
+      const entry = sporadicStore[id];
+      if (!entry) return;
+      const catalogItem = state.catalogSporadic?.find(t => t.id === id);
+
+      // CASO 1: Tarea esporádica con frequency (semanal/quincenal/mensual)
+      // Si está completada y aún dentro de su periodo, CONSERVAR como completada.
+      // Si su periodo ya terminó, liberar.
+      if (catalogItem?.frequency && catalogItem.frequency !== 'daily' && entry.done) {
+        if (isPeriodicallyLocked(catalogItem, entry)) {
+          // Aún en periodo: conservar tal cual (no se libera al rollover diario)
+          // No hacemos nada — la entrada permanece como está
+        } else {
+          // Periodo terminó: liberar
+          delete sporadicStore[id];
+          fbChanges[`sporadic/${id}`] = null;
+        }
+        return;
+      }
+
+      // CASO 2: scope 'week' + misma semana → conservar dueño, resetear check
+      if (entry.scope === 'week' && entry.weekKey === currentWeek && entry.takenBy) {
+        const newEntry = {
+          scope: 'week',
+          weekKey: entry.weekKey,
+          takenBy: entry.takenBy,
+          takenAt: entry.takenAt
+        };
+        sporadicStore[id] = newEntry;
+        fbChanges[`sporadic/${id}`] = newEntry;
+      } else {
+        // scope 'day', sin scope, o semana vieja → liberar
+        delete sporadicStore[id];
+        fbChanges[`sporadic/${id}`] = null;
+      }
+    });
+  }
 
   // Detalles: siempre se liberan (borrar cada uno individualmente)
   Object.keys(state.details || {}).forEach(id => {
@@ -5981,6 +6067,112 @@ function detectFrequency(metaText) {
   return null;
 }
 
+/* =====================================================================
+   PERIODOS para tareas esporádicas con frecuencia (weekly/biweekly/monthly)
+   Cada periodo es un par [startTs, endTs] en zona casa.
+   - weekly:   lunes 00:00 → domingo 23:59:59
+   - biweekly: día 1 00:00 → día 14 23:59:59 OR día 15 00:00 → fin de mes
+   - monthly:  día 1 00:00 → último día del mes 23:59:59
+   ===================================================================== */
+
+/* Periodo actual para una frecuencia dada. Retorna { start, end, key }. */
+function currentPeriod(frequencyKey, refDate) {
+  const d = refDate || new Date();
+  // Obtener componentes en zona casa
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: HOUSE_TIMEZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const get = type => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
+  const y = get('year'), m = get('month'), day = get('day');
+
+  if (frequencyKey === 'weekly' || frequencyKey === 'twice-week') {
+    // Encontrar el lunes de esta semana
+    const today = new Date(Date.UTC(y, m - 1, day));
+    const dayOfWeek = today.getUTCDay() || 7; // domingo = 7
+    const monday = new Date(today);
+    monday.setUTCDate(today.getUTCDate() - (dayOfWeek - 1));
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+    const my = monday.getUTCFullYear(), mm = monday.getUTCMonth() + 1, md = monday.getUTCDate();
+    const sy = sunday.getUTCFullYear(), sm = sunday.getUTCMonth() + 1, sd = sunday.getUTCDate();
+    return {
+      key: `${my}-${String(mm).padStart(2,'0')}-${String(md).padStart(2,'0')}_weekly`,
+      start: composeHouseTimestamp(my, mm, md, 0, 0, 0),
+      end:   composeHouseTimestamp(sy, sm, sd, 23, 59, 59)
+    };
+  }
+
+  if (frequencyKey === 'biweekly') {
+    if (day <= 14) {
+      return {
+        key: `${y}-${String(m).padStart(2,'0')}-Q1`,
+        start: composeHouseTimestamp(y, m, 1, 0, 0, 0),
+        end:   composeHouseTimestamp(y, m, 14, 23, 59, 59)
+      };
+    } else {
+      const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      return {
+        key: `${y}-${String(m).padStart(2,'0')}-Q2`,
+        start: composeHouseTimestamp(y, m, 15, 0, 0, 0),
+        end:   composeHouseTimestamp(y, m, lastDay, 23, 59, 59)
+      };
+    }
+  }
+
+  if (frequencyKey === 'monthly') {
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return {
+      key: `${y}-${String(m).padStart(2,'0')}`,
+      start: composeHouseTimestamp(y, m, 1, 0, 0, 0),
+      end:   composeHouseTimestamp(y, m, lastDay, 23, 59, 59)
+    };
+  }
+
+  // Por defecto (sin frecuencia, daily, etc): periodo de "hoy"
+  return {
+    key: `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`,
+    start: composeHouseTimestamp(y, m, day, 0, 0, 0),
+    end:   composeHouseTimestamp(y, m, day, 23, 59, 59)
+  };
+}
+
+/* True si la tarea esporádica ya fue completada en su periodo actual y por
+   tanto NO está disponible para tomar/hacer hasta el siguiente periodo. */
+function isPeriodicallyLocked(catalogItem, entry) {
+  if (!catalogItem || !entry || !entry.done) return false;
+  const freq = catalogItem.frequency || detectFrequency(catalogItem.meta)?.key || null;
+  // Sin frecuencia: comportamiento viejo (se libera con rollover diario)
+  if (!freq || freq === 'daily') return false;
+  // 2× semana, trimestral, anual: por ahora tratar como semanal/mensual
+  const periodFreq = freq === 'twice-week' ? 'weekly'
+                   : freq === 'quarterly' ? 'monthly'
+                   : freq === 'yearly' ? 'monthly'
+                   : freq;
+  const period = currentPeriod(periodFreq);
+  const completedAt = entry.at || 0;
+  // Si fue completada dentro del periodo actual, está bloqueada
+  return completedAt >= period.start && completedAt <= period.end;
+}
+
+/* Formatea el inicio del próximo periodo en texto legible */
+function nextPeriodLabel(catalogItem) {
+  const freq = catalogItem?.frequency || detectFrequency(catalogItem?.meta)?.key || null;
+  if (!freq || freq === 'daily') return 'mañana';
+  const periodFreq = freq === 'twice-week' ? 'weekly'
+                   : freq === 'quarterly' ? 'monthly'
+                   : freq === 'yearly' ? 'monthly'
+                   : freq;
+  const period = currentPeriod(periodFreq);
+  const nextStart = new Date(period.end + 1000); // 1 segundo después del fin
+  // Formatear en zona casa
+  const fmt = new Intl.DateTimeFormat('es-MX', {
+    timeZone: HOUSE_TIMEZONE,
+    day: 'numeric', month: 'long'
+  });
+  return fmt.format(nextStart);
+}
+
 function buildTaskRow(t, store, kind) {
   const row = document.createElement('div');
   const entry = store[t.id] || {};
@@ -6054,7 +6246,25 @@ function buildTaskRow(t, store, kind) {
   if (status === 'done') {
     const p = PEOPLE[entry.by];
     const scopeNote = entry.scope === 'week' ? ' · responsable de la semana' : '';
-    meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}${scopeNote}`;
+    // Para esporádicas con frequency, mostrar cuándo se reactiva
+    let availabilityNote = '';
+    if (kind === 'sporadic') {
+      const catalogItem = state.catalogSporadic?.find(c => c.id === t.id);
+      if (catalogItem && isPeriodicallyLocked(catalogItem, entry)) {
+        const freq = catalogItem.frequency;
+        const label = freq === 'monthly' ? 'este mes'
+                    : freq === 'biweekly' ? 'esta quincena'
+                    : freq === 'weekly' ? 'esta semana' : '';
+        const nextDate = nextPeriodLabel(catalogItem);
+        availabilityNote = ` · <span style="color:var(--terra-deep);font-weight:600">disponible el ${nextDate}</span>`;
+        // Reemplazar el "Hecho por X · hace 5 min" por algo más claro
+        meta.innerHTML = `Hecha ${label} por <strong>${p.name}</strong>${availabilityNote}`;
+      } else {
+        meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}${scopeNote}`;
+      }
+    } else {
+      meta.innerHTML = `Hecho por <strong>${p.name}</strong> · ${timeAgo(entry.at)}${scopeNote}`;
+    }
   } else if (status === 'taken') {
     const p = PEOPLE[entry.takenBy];
     const scopeLabel = entry.scope === 'week' ? 'esta semana' : 'hoy';
@@ -8082,6 +8292,19 @@ function openEditTask(kind, id) {
   editTarget = { kind, id };
   document.getElementById('edit-name').value = kind === 'detail' ? item.title : item.name;
   document.getElementById('edit-meta').value = kind === 'detail' ? (item.desc || '') : (item.meta || '');
+
+  // Mostrar dropdown de frecuencia SOLO para esporádicas
+  const freqSection = document.getElementById('edit-frequency-section');
+  const freqSelect = document.getElementById('edit-frequency');
+  if (freqSection && freqSelect) {
+    if (kind === 'sporadic') {
+      freqSection.style.display = '';
+      freqSelect.value = item.frequency || 'weekly';
+    } else {
+      freqSection.style.display = 'none';
+    }
+  }
+
   // Mostrar botón "Eliminar" solo a los papás
   document.querySelectorAll('#modal-edit .parent-only').forEach(el => {
     el.style.display = isParent() ? '' : 'none';
@@ -8090,7 +8313,6 @@ function openEditTask(kind, id) {
   const bountySection = document.getElementById('edit-bounty-section');
   if (bountySection) {
     bountySection.style.display = isSecretAdmin() ? '' : 'none';
-    // Marcar la pill activa según el bounty actual
     const currentMult = item.bounty?.multiplier || 0;
     document.querySelectorAll('#edit-bounty-section .bounty-pill').forEach(p => {
       p.classList.toggle('active', parseInt(p.dataset.mult, 10) === currentMult);
@@ -8162,9 +8384,13 @@ function saveEditTask() {
     item.name = name;
     item.meta = meta;
   }
+  // Guardar frecuencia solo para esporádicas
+  if (kind === 'sporadic') {
+    const freqSelect = document.getElementById('edit-frequency');
+    if (freqSelect) item.frequency = freqSelect.value;
+  }
   ensureCatalogs();
   closeEditForm();
-  // Granular + protegido contra race condition con el listener
   protectFromListener(listKey, state[listKey]);
   dbSet(listKey, state[listKey]);
   renderAll();
