@@ -4059,7 +4059,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.37';
+const APP_VERSION = '2026.05.22.38';
 
 async function checkForUpdate() {
   try {
@@ -7570,7 +7570,7 @@ function endPromoNow() {
   renderAll();
 }
 
-function claimReward(rewardId) {
+async function claimReward(rewardId) {
   const r = state.rewards[rewardId];
   if (!r) return;
   if ((r.remaining || 0) <= 0) { toast('Esta recompensa se acabó este mes'); return; }
@@ -7583,12 +7583,60 @@ function claimReward(rewardId) {
   const promoNote = wasDiscounted ? ` (${r.cost} → ${cost} con promo)` : '';
   if (!confirm(`¿Canjear "${r.name}" por ${cost} puntos${promoNote}?`)) return;
 
-  // Aplicar localmente
+  // ATOMIC DECREMENT vía Firebase transaction
+  // Esto previene race conditions cuando hay clicks rápidos seguidos.
+  // Si Firebase no está disponible, hacemos el descuento local optimista.
+  let actualDeducted = cost;
+  let transactionSucceeded = false;
+
+  if (useFirebase && db && firebaseHydrated) {
+    try {
+      transactionSucceeded = await new Promise((resolve) => {
+        db.ref(`casita/scores/${state.me}`).transaction(currentValue => {
+          const current = (typeof currentValue === 'number') ? currentValue : 0;
+          if (current < cost) {
+            // No hay fondos suficientes (otra acción los gastó primero)
+            return; // abort transaction
+          }
+          return current - cost;
+        }, (error, committed, snapshot) => {
+          if (error || !committed) {
+            resolve(false);
+            return;
+          }
+          // Actualizar state local con el valor que Firebase confirmó
+          const finalValue = snapshot && snapshot.val();
+          if (typeof finalValue === 'number') {
+            state.scores[state.me] = finalValue;
+          }
+          resolve(true);
+        }, false);
+      });
+    } catch(e) {
+      console.warn('Transaction scores error:', e);
+      transactionSucceeded = false;
+    }
+  }
+
+  if (!transactionSucceeded) {
+    // Fallback: si Firebase no está o falló la transacción, revisar de nuevo y aplicar local
+    if ((state.scores[state.me] || 0) < cost) {
+      toast(`Te faltan puntos — algo cambió mientras canjeabas`);
+      return;
+    }
+    state.scores[state.me] = (state.scores[state.me] || 0) - cost;
+    // Persistir directamente (sin transacción)
+    if (useFirebase && db) {
+      dbSet(`scores/${state.me}`, state.scores[state.me]);
+    }
+  }
+
+  // Crear cupón
   const couponId = uid('c');
   const coupon = {
     rewardId,
     name: r.name,
-    cost,            // costo realmente pagado (puede ser menor por promo)
+    cost,
     originalCost: r.cost || cost,
     discounted: wasDiscounted,
     promoName: wasDiscounted ? (state.promo?.name || '') : '',
@@ -7598,9 +7646,26 @@ function claimReward(rewardId) {
     status: 'active'
   };
   state.coupons[couponId] = coupon;
-  state.scores[state.me] = myPoints - cost;
-  r.remaining = (r.remaining || 0) - 1;
-  state.rewards[rewardId] = r;
+
+  // Decremento de stock — también atómico vía transacción
+  if (useFirebase && db && firebaseHydrated) {
+    db.ref(`casita/rewards/${rewardId}/remaining`).transaction(currentValue => {
+      const current = (typeof currentValue === 'number') ? currentValue : 0;
+      if (current <= 0) return; // abort
+      return current - 1;
+    }, (error, committed, snapshot) => {
+      if (committed && snapshot) {
+        const finalValue = snapshot.val();
+        if (typeof finalValue === 'number') {
+          r.remaining = finalValue;
+          state.rewards[rewardId] = r;
+        }
+      }
+    }, false);
+  } else {
+    r.remaining = (r.remaining || 0) - 1;
+    state.rewards[rewardId] = r;
+  }
 
   pushHistory({
     ts: Date.now(),
@@ -7612,12 +7677,9 @@ function claimReward(rewardId) {
   toast(wasDiscounted ? `🔥 ¡Canjeaste "${r.name}" con promo!` : `✦ ¡Canjeaste "${r.name}"!`);
   setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 100);
 
-  // Persistir granular
-  dbBatch({
-    [`coupons/${couponId}`]: coupon,
-    [`rewards/${rewardId}/remaining`]: r.remaining,
-    [`scores/${state.me}`]: state.scores[state.me]
-  });
+  // Persistir el cupón (no necesita transacción porque es nuevo)
+  dbSet(`coupons/${couponId}`, coupon);
+
   renderAll();
 }
 
