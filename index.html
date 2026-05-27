@@ -3192,14 +3192,14 @@ body::before {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Footer connection status */
+/* Footer connection status
+   En iOS Safari, position:fixed se "despega" al hacer scroll rubber band.
+   Usamos transform: translateZ(0) para forzar un nuevo stacking context,
+   y env(safe-area-inset-bottom) para respetar el home indicator del iPhone. */
 .conn-status {
   position: fixed;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));  /* respeta home indicator */
-  right: calc(12px + env(safe-area-inset-right, 0px));    /* iPhone landscape */
-  transform: translateZ(0);  
-  -webkit-transform: translateZ(0);
-  will-change: transform;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3212,6 +3212,10 @@ body::before {
   font-weight: 500;
   color: var(--muted);
   z-index: 30;
+  /* Fix iOS rubber band detach */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 .conn-dot {
@@ -4055,7 +4059,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.35';
+const APP_VERSION = '2026.05.22.37';
 
 async function checkForUpdate() {
   try {
@@ -4549,9 +4553,31 @@ function deviceTimezone() {
   }
 }
 
-/* True si el dispositivo está en una zona horaria diferente a la de la casa */
+/* Compara si dos zonas horarias son equivalentes en este momento.
+   No basta con comparar strings porque "America/Mexico_City" y "America/Monterrey"
+   son nombres distintos pero idénticas en offset y reglas DST.
+   Devuelve true si dan el mismo wall-clock time en este instante. */
+function sameTimezoneEffective(zoneA, zoneB) {
+  if (zoneA === zoneB) return true;
+  if (!zoneA || !zoneB) return false;
+  try {
+    const now = new Date();
+    const fmt = (tz) => new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(now);
+    return fmt(zoneA) === fmt(zoneB);
+  } catch (e) {
+    return false;
+  }
+}
+
+/* True si el dispositivo está en una zona horaria efectivamente diferente a la de la casa.
+   "Efectivamente" porque America/Mexico_City y America/Monterrey son nombres distintos
+   pero comportan idéntico — no debería marcarse como viaje. */
 function isAwayFromHome() {
-  return deviceTimezone() !== HOUSE_TIMEZONE;
+  return !sameTimezoneEffective(deviceTimezone(), HOUSE_TIMEZONE);
 }
 
 /* Día actual en la zona de la casa, formato "YYYY-MM-DD".
@@ -4968,6 +4994,101 @@ function dbBatch(updates) {
   db.ref().update(prefixed).catch(e => console.warn('dbBatch error:', e));
 }
 
+/* =====================================================================
+   ROLLOVER LOCK — Leader election para el rollover diario
+   Garantiza que solo UN dispositivo ejecute el rollover por día, sin importar
+   cuántos abran la app simultáneamente. Usa Firebase transactions para
+   atomicidad. Si el líder se cuelga, el lock expira a los 2 minutos.
+   ===================================================================== */
+const ROLLOVER_LOCK_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutos
+
+/* Intenta tomar el lock del rollover para `targetDate`. Resuelve a true si
+   este dispositivo ganó la elección (debe ejecutar rollover), false si otro
+   ya lo hizo o está en proceso. */
+function tryAcquireRolloverLock(targetDate) {
+  return new Promise(resolve => {
+    if (!useFirebase || !db) {
+      // En modo local, no hay competencia — siempre soy el líder
+      resolve(true);
+      return;
+    }
+    const me = state.me || 'anon';
+    const now = Date.now();
+    db.ref('casita/rolloverLock').transaction(current => {
+      // Si no hay lock previo, tomarlo
+      if (!current) {
+        return { date: targetDate, by: me, at: now };
+      }
+      // Si el lock es para una fecha anterior (ya pasó), reemplazar
+      if (typeof current === 'object' && current.date && current.date < targetDate) {
+        return { date: targetDate, by: me, at: now };
+      }
+      // Si el lock es para esta fecha pero expiró (líder colgado), tomarlo
+      if (typeof current === 'object' && current.date === targetDate
+          && current.at && (now - current.at) > ROLLOVER_LOCK_TIMEOUT_MS) {
+        return { date: targetDate, by: me, at: now };
+      }
+      // Otro caso: abortar transacción, alguien más ya tiene el lock vigente
+      return; // undefined = abort
+    }, (error, committed, snapshot) => {
+      if (error) {
+        console.warn('Rollover lock transaction error:', error);
+        resolve(false);
+        return;
+      }
+      if (!committed) {
+        resolve(false);
+        return;
+      }
+      // Verificar que el snapshot realmente nos asignó como líder
+      const finalValue = snapshot && snapshot.val();
+      const iAmLeader = finalValue
+        && finalValue.date === targetDate
+        && finalValue.by === me
+        && Math.abs((finalValue.at || 0) - now) < 5000; // tolerancia de 5s
+      resolve(!!iAmLeader);
+    }, false); // false = no aplicar update local optimista
+  });
+}
+
+/* Ejecuta rollover SI somos el líder elegido. Si no, solo actualiza el state
+   local con la fecha nueva (otro dispositivo ya lo hizo o lo hará).
+   Retorna true si ejecutó rollover, false si no.
+   IMPORTANTE: esta función NO toca daily/sporadic/details si no es líder —
+   esos los traerá el snapshot del Firebase del líder cuando termine. */
+async function rolloverWithLeaderElection() {
+  const targetDate = todayKey();
+  const iAmLeader = await tryAcquireRolloverLock(targetDate);
+
+  if (!iAmLeader) {
+    // No soy líder. Actualizo mi fecha local pero NO toco las tareas.
+    // El líder publicará el rollover y mi listener lo recibirá normalmente.
+    state.date = targetDate;
+    saveLocal();
+    return false;
+  }
+
+  // Soy el líder. Ejecuto el rollover de verdad.
+  const rolloverChanges = dailyRollover();
+  state.date = targetDate;
+  saveLocal();
+
+  const updates = {
+    date: state.date,
+    ...rolloverChanges
+  };
+
+  const refilled = monthlyRewardsRefill();
+  if (refilled) {
+    updates.rewards = state.rewards;
+    updates.coupons = state.coupons;
+    updates.rewardsMonth = state.rewardsMonth;
+  }
+
+  dbBatch(updates);
+  return true;
+}
+
 /* Aplica mutaciones que quedaron encoladas mientras esperábamos hidratación */
 function flushPendingMutations() {
   if (!pendingMutations.length) return;
@@ -5296,15 +5417,13 @@ async function initFirebase() {
         flushPendingMutations();
         return;
       }
-      // Reset diario si cambió la fecha en remoto
+      // Reset diario si cambió la fecha en remoto Y soy el líder elegido
       if (data.date && dateIsBefore(data.date, todayKey())) {
-        // Aplicar rollover sobre los datos remotos (preservar tareas semanales)
+        // PRIMERO actualizar todo el estado local con lo que llega, EXCEPTO daily/sporadic/details
+        // (esos los maneja el rollover si soy líder, o los recibo del eco si no)
         if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
         if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
         if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
-        state.daily = data.daily || {};
-        state.sporadic = data.sporadic || {};
-        state.details = data.details || {};
         state.history = normalizeHistory(data.history);
         state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
@@ -5322,35 +5441,84 @@ async function initFirebase() {
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
-        const rolloverChanges = dailyRollover();
-        const refilled = monthlyRewardsRefill();
-        state.date = todayKey();
+
+        // Solo si soy el primer hidratado, también guardo daily/sporadic/details
+        // de lo remoto (para tener punto de partida del rollover).
+        // Si ya estaba hidratado, mantengo mis cambios locales y dejo que el líder
+        // publique el rollover, que llegará por el siguiente snapshot.
+        const wasFirstHydration = !firebaseHydrated;
+        if (wasFirstHydration) {
+          state.daily = data.daily || {};
+          state.sporadic = data.sporadic || {};
+          state.details = data.details || {};
+        }
         firebaseHydrated = true;
-        // Persistir el rollover granularmente: solo los ids que cambiaron
-        // (NO mandamos los nodos completos daily/sporadic/details — las reglas lo rechazan)
-        saveLocal();
-        const updates = {
-          date: state.date,
-          ...rolloverChanges  // cambios por id: `daily/t1`, `sporadic/s2`, `details/d3`...
-        };
-        if (refilled) {
-          updates.rewards = state.rewards;
-          updates.coupons = state.coupons;
-          updates.rewardsMonth = state.rewardsMonth;
-        }
-        if (state._needsLifetimeSync) {
-          state._needsLifetimeSync = false;
-          updates.lifetimeScores = state.lifetimeScores;
-        }
-        dbBatch(updates);
+
+        // Leader election: intentar tomar el lock del rollover
+        rolloverWithLeaderElection().then(wasLeader => {
+          if (wasLeader && state._needsLifetimeSync) {
+            state._needsLifetimeSync = false;
+            dbSet('lifetimeScores', state.lifetimeScores);
+          }
+          renderAll();
+        }).catch(e => {
+          console.warn('Rollover election error:', e);
+          // Fallback: aplicar localmente sin Firebase
+          state.date = todayKey();
+          saveLocal();
+          renderAll();
+        });
         flushPendingMutations();
       } else {
         if (data.catalogDaily && !isProtected('catalogDaily', data.catalogDaily)) state.catalogDaily = data.catalogDaily;
         if (data.catalogSporadic && !isProtected('catalogSporadic', data.catalogSporadic)) state.catalogSporadic = data.catalogSporadic;
         if (data.catalogDetails && !isProtected('catalogDetails', data.catalogDetails)) state.catalogDetails = data.catalogDetails;
-        state.daily = data.daily || {};
-        state.sporadic = data.sporadic || {};
-        state.details = data.details || {};
+        // CRÍTICO: protegemos daily/sporadic/details de sobrescrituras dañinas.
+        // 1. Si data.X llega undefined (Firebase eliminó el nodo padre), NO pisar
+        //    porque eso borra el trabajo de quien acaba de marcar tareas.
+        // 2. Si data.X tiene entries pero alguna está protegida (acabamos de escribir),
+        //    preservar la local hasta que llegue eco coherente o pase el timeout.
+        if (data.daily !== undefined) {
+          const remoteDaily = data.daily || {};
+          const mergedDaily = {};
+          // Combinar local (preservar protegidas) con remoto (lo nuevo)
+          const allIds = new Set([...Object.keys(state.daily || {}), ...Object.keys(remoteDaily)]);
+          allIds.forEach(id => {
+            if (isProtected(`daily.${id}`, remoteDaily[id])) {
+              // Mantener local
+              if (state.daily[id]) mergedDaily[id] = state.daily[id];
+            } else if (remoteDaily[id] !== undefined) {
+              mergedDaily[id] = remoteDaily[id];
+            }
+          });
+          state.daily = mergedDaily;
+        }
+        if (data.sporadic !== undefined) {
+          const remoteSporadic = data.sporadic || {};
+          const mergedSporadic = {};
+          const allIds = new Set([...Object.keys(state.sporadic || {}), ...Object.keys(remoteSporadic)]);
+          allIds.forEach(id => {
+            if (isProtected(`sporadic.${id}`, remoteSporadic[id])) {
+              if (state.sporadic[id]) mergedSporadic[id] = state.sporadic[id];
+            } else if (remoteSporadic[id] !== undefined) {
+              mergedSporadic[id] = remoteSporadic[id];
+            }
+          });
+          state.sporadic = mergedSporadic;
+        }
+        if (data.details !== undefined) {
+          const remoteDetails = data.details || {};
+          const mergedDetails = {};
+          const allIds = new Set([...Object.keys(state.details || {}), ...Object.keys(remoteDetails)]);
+          allIds.forEach(id => {
+            if (isProtected(`details.${id}`, remoteDetails[id])) {
+              if (state.details[id]) mergedDetails[id] = state.details[id];
+            } else if (remoteDetails[id] !== undefined) {
+              mergedDetails[id] = remoteDetails[id];
+            }
+          });
+          state.details = mergedDetails;
+        }
         state.history = normalizeHistory(data.history);
         state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
@@ -5684,15 +5852,9 @@ async function performRefresh() {
         state.proposals = data.proposals || {};
         state.notices = data.notices || {};
         ensureCatalogs();
-        // Aplicar rollover si cambió el día
+        // Aplicar rollover si cambió el día — pero con leader election
         if (data.date && dateIsBefore(data.date, todayKey())) {
-          const rolloverChanges = dailyRollover();
-          state.date = todayKey();
-          saveLocal();
-          dbBatch({
-            date: state.date,
-            ...rolloverChanges
-          });
+          await rolloverWithLeaderElection();
         } else {
           saveLocal();
         }
@@ -6514,7 +6676,7 @@ function renderFamily() {
     const card = document.createElement('div');
     // ¿Esta persona está en una zona horaria diferente a la casa?
     const personTz = state.tz?.[key]?.zone;
-    const isTraveling = personTz && personTz !== HOUSE_TIMEZONE;
+    const isTraveling = personTz && !sameTimezoneEffective(personTz, HOUSE_TIMEZONE);
 
     card.className = 'family-card' + (isBdayToday ? ' is-birthday' : '') + (flippedCards.has(key) ? ' flipped' : '');
     card.dataset.p = key;
@@ -8472,6 +8634,7 @@ function claimTask(t, store, kind, who, scope) {
   toast(`✦ ${PEOPLE[who].name} tomó "${t.name}" por ${scopeLabel}`);
   // Firebase: solo escribimos el nodo de esta tarea, no el árbol entero
   const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  protectFromListener(`${storeName}.${t.id}`, entry);
   dbSet(`${storeName}/${t.id}`, entry);
   renderAll();
 }
@@ -8483,6 +8646,8 @@ function releaseTask(t, store, kind) {
   pushHistory({ ts: Date.now(), by: prevBy, taskName: t.name, action: 'soltó' });
   toast(`Tarea liberada — alguien más puede tomarla`);
   const storeName = kind === 'daily' ? 'daily' : 'sporadic';
+  // Proteger: esperamos que llegue undefined (nodo borrado)
+  protectFromListener(`${storeName}.${t.id}`, undefined);
   dbRemove(`${storeName}/${t.id}`);
   renderAll();
 }
@@ -8540,6 +8705,9 @@ function markDone(t, store, kind, evt) {
     [`scores/${finisher}`]: state.scores[finisher],
     [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
   };
+
+  // Protegemos contra eco del listener que podría pisarnos durante 10s
+  protectFromListener(`${storeName}.${t.id}`, newEntry);
 
   // Si tenía bounty, consumirlo (limpiarlo del catálogo)
   if (bonus.type === 'bounty') {
@@ -8610,6 +8778,9 @@ function toggleDetail(d, evt) {
     [`scores/${state.me}`]: state.scores[state.me],
     [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
   };
+
+  // Protegemos del eco del listener
+  protectFromListener(`details.${d.id}`, entry);
 
   if (bonus.type === 'bounty') {
     const catalog = state.catalogDetails;
