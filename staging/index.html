@@ -3230,6 +3230,94 @@ body::before {
   50% { opacity: 0.4; }
 }
 
+/* =================================================
+   BANNER OFFLINE — Overlay full-screen bloqueante
+   ================================================= */
+.offline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(42, 31, 26, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: offline-fade-in 250ms ease-out;
+}
+.offline-overlay.visible {
+  display: flex;
+}
+@keyframes offline-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.offline-card {
+  max-width: 380px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 20px 60px -20px rgba(42, 31, 26, 0.5);
+  border: 1px solid var(--line);
+}
+
+.offline-icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+  filter: grayscale(0.2);
+}
+
+.offline-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.offline-message {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+
+.offline-spinner {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.offline-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--terra);
+  border-radius: 50%;
+  animation: offline-bounce 1.4s ease-in-out infinite;
+}
+.offline-dot:nth-child(2) { animation-delay: 0.15s; }
+.offline-dot:nth-child(3) { animation-delay: 0.30s; }
+@keyframes offline-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1.0); opacity: 1; }
+}
+
+.offline-tip {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
 /* Confetti for completing tasks */
 @keyframes confetti-fall {
   0% { transform: translateY(0) rotate(0); opacity: 1; }
@@ -3461,92 +3549,6 @@ body::before {
 </head>
 <body>
 
-<!-- =================================================
-     BOTÓN DE PRUEBA — REFACTOR DEBUG (REMOVER EN PROD)
-     Solo visible para Emmanuel. Incremento aislado de scores
-     y lifetimeScores, sin lógica adicional.
-     ================================================= -->
-<div id="debug-incrementer" style="
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 99999;
-  background: #2a1f1a;
-  color: #fbf6ed;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 12px;
-  display: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  cursor: pointer;
-  user-select: none;
-">
-  <span id="debug-incrementer-label">+1 pts</span>
-</div>
-
-<script>
-// Mostrar solo si el usuario es Emmanuel, después de cargar
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    if (typeof state !== 'undefined' && state.me === 'emm') {
-      document.getElementById('debug-incrementer').style.display = 'block';
-    }
-  }, 1500);
-});
-
-// Click: incrementa SCORES y LIFETIME en +1 cada uno, sin más lógica
-document.getElementById('debug-incrementer').addEventListener('click', async () => {
-  const me = state.me;
-  if (!me) return;
-
-  // 1. LECTURA: valores actuales en memoria
-  const scoreBefore    = state.scores[me]         || 0;
-  const lifetimeBefore = state.lifetimeScores[me] || 0;
-
-  console.log('═══ PRUEBA INCREMENTO ═══');
-  console.log('Antes:', { score: scoreBefore, lifetime: lifetimeBefore });
-
-  // 2. CÁLCULO: nuevos valores
-  const scoreAfter    = scoreBefore + 1;
-  const lifetimeAfter = lifetimeBefore + 1;
-
-  console.log('Voy a mandar:', { score: scoreAfter, lifetime: lifetimeAfter });
-
-  // 3. ESCRITURA: directo a Firebase, sin tocar state local
-  // El listener actualizará el state cuando llegue el snapshot
-  try {
-    await db.ref().update({
-      [`casita/scores/${me}`]:         scoreAfter,
-      [`casita/lifetimeScores/${me}`]: lifetimeAfter
-    });
-    console.log('✅ Firebase ACEPTÓ la escritura');
-  } catch (e) {
-    console.error('❌ Firebase RECHAZÓ:', e);
-    return;
-  }
-
-  // 4. VERIFICACIÓN: esperar un momento y leer state
-  setTimeout(() => {
-    console.log('Después de 500ms — state actual:', {
-      score:    state.scores[me],
-      lifetime: state.lifetimeScores[me]
-    });
-    console.log('═══ FIN PRUEBA ═══');
-  }, 500);
-
-  // Feedback visual instantáneo
-  const btn = document.getElementById('debug-incrementer');
-  const label = document.getElementById('debug-incrementer-label');
-  const original = label.textContent;
-  label.textContent = '⏳...';
-  btn.style.background = '#c4634a';
-  setTimeout(() => {
-    label.textContent = original;
-    btn.style.background = '#2a1f1a';
-  }, 800);
-});
-</script>
 
 <!-- =================================================
      PANTALLA DE BIENVENIDA / SELECTOR DE PERFIL
@@ -4139,6 +4141,27 @@ document.getElementById('debug-incrementer').addEventListener('click', async () 
   <span id="conn-text">Local</span>
 </div>
 
+<!-- =================================================
+     BANNER OFFLINE — Bloqueo total cuando se cae Firebase
+     Filosofía: honestidad operacional. Si no hay conexión,
+     la app NO miente diciendo que funciona.
+     Ver REQUIREMENTS.md sección 5.3.1
+     ================================================= -->
+<div class="offline-overlay" id="offline-overlay" aria-hidden="true">
+  <div class="offline-card">
+    <div class="offline-icon">⚠</div>
+    <div class="offline-title">Sin conexión con la casita</div>
+    <div class="offline-message">Esperando reconectar con el servidor…</div>
+    <div class="offline-spinner">
+      <span class="offline-dot"></span>
+      <span class="offline-dot"></span>
+      <span class="offline-dot"></span>
+    </div>
+    <div class="offline-tip">Las acciones se reanudarán automáticamente cuando vuelva la conexión</div>
+  </div>
+</div>
+
+
 <script>
 /* ===== CONTROL DE VERSIÓN PARA PWA =====
    Sube APP_VERSION cada vez que actualices el código. Cada minuto la
@@ -4590,6 +4613,66 @@ let useFirebase = false;
 let db = null;
 let firebaseHydrated = false;     // true después de la primera respuesta del listener
 let pendingMutations = [];         // mutaciones encoladas esperando hidratación
+
+/* =================================================
+   GESTIÓN DEL BANNER OFFLINE
+   Filosofía: bloqueo total cuando se cae Firebase.
+   Sin conexión = sin app. Ver REQUIREMENTS.md sección 5.3.1
+   ================================================= */
+let _isOffline = false;
+let _offlineGraceTimer = null;
+const OFFLINE_GRACE_MS = 1500;   // Tolerar 1.5s de desconexión antes de mostrar banner
+                                  // (evita parpadeos en transiciones cortas de red)
+
+function showOfflineBanner() {
+  const overlay = document.getElementById('offline-overlay');
+  if (!overlay) return;
+  overlay.classList.add('visible');
+  overlay.setAttribute('aria-hidden', 'false');
+  _isOffline = true;
+}
+
+function hideOfflineBanner() {
+  const overlay = document.getElementById('offline-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('visible');
+  overlay.setAttribute('aria-hidden', 'true');
+  _isOffline = false;
+}
+
+function handleConnectionChange(connected) {
+  if (connected) {
+    // Reconectó: cancelar grace timer si existe, ocultar banner
+    if (_offlineGraceTimer) {
+      clearTimeout(_offlineGraceTimer);
+      _offlineGraceTimer = null;
+    }
+    if (_isOffline) hideOfflineBanner();
+    // Actualizar el indicador chiquito de la esquina
+    const cs = document.getElementById('conn-status');
+    if (cs) {
+      cs.classList.remove('offline');
+      cs.classList.add('online');
+    }
+    const ct = document.getElementById('conn-text');
+    if (ct) ct.textContent = 'En vivo';
+  } else {
+    // Desconectó: esperar grace period antes de bloquear UI
+    const cs = document.getElementById('conn-status');
+    if (cs) {
+      cs.classList.remove('online');
+      cs.classList.add('offline');
+    }
+    const ct = document.getElementById('conn-text');
+    if (ct) ct.textContent = 'Reconectando…';
+
+    if (_offlineGraceTimer) clearTimeout(_offlineGraceTimer);
+    _offlineGraceTimer = setTimeout(() => {
+      showOfflineBanner();
+      _offlineGraceTimer = null;
+    }, OFFLINE_GRACE_MS);
+  }
+}
 
 /* ===========================================================
    ===  LEGACY: sistema de protección del listener obsoleto         ===
@@ -5572,6 +5655,12 @@ async function initFirebase() {
     document.getElementById('conn-status').classList.remove('offline');
     document.getElementById('conn-status').classList.add('online');
     document.getElementById('conn-text').textContent = 'En vivo';
+
+    // Listener de conexión: muestra banner offline cuando se cae Firebase
+    db.ref('.info/connected').on('value', snap => {
+      const connected = snap.val() === true;
+      handleConnectionChange(connected);
+    });
 
     // PROTECCIÓN DE VERSIÓN MÍNIMA
     // 1. Esta app sube su versión a Firebase (sirve como "última versión vista")
