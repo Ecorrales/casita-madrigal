@@ -5480,7 +5480,10 @@ async function initFirebase() {
         rolloverWithLeaderElection().then(wasLeader => {
           if (wasLeader && state._needsLifetimeSync) {
             state._needsLifetimeSync = false;
-            dbSet('lifetimeScores', state.lifetimeScores);
+            // Escribir cada persona por separado (reglas no permiten padre completo)
+            Object.entries(state.lifetimeScores || {}).forEach(([k, v]) => {
+              dbSet(`lifetimeScores/${k}`, v);
+            });
           }
           renderAll();
         }).catch(e => {
@@ -5559,9 +5562,12 @@ async function initFirebase() {
         state.notices = data.notices || {};
         ensureCatalogs(); // reconectar referencias DAILY_TASKS, etc.
         // Si la migración de lifetimeScores corrió, persistirla a Firebase
+        // Escribir cada persona por separado (reglas no permiten padre completo)
         if (state._needsLifetimeSync) {
           state._needsLifetimeSync = false;
-          dbSet('lifetimeScores', state.lifetimeScores);
+          Object.entries(state.lifetimeScores || {}).forEach(([k, v]) => {
+            dbSet(`lifetimeScores/${k}`, v);
+          });
         }
         // Verificar si cambió el mes para reabastecer recompensas
         if (monthlyRewardsRefill()) {
