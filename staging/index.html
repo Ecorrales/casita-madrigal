@@ -3462,6 +3462,93 @@ body::before {
 <body>
 
 <!-- =================================================
+     BOTÓN DE PRUEBA — REFACTOR DEBUG (REMOVER EN PROD)
+     Solo visible para Emmanuel. Incremento aislado de scores
+     y lifetimeScores, sin lógica adicional.
+     ================================================= -->
+<div id="debug-incrementer" style="
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 99999;
+  background: #2a1f1a;
+  color: #fbf6ed;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  cursor: pointer;
+  user-select: none;
+">
+  <span id="debug-incrementer-label">+1 pts</span>
+</div>
+
+<script>
+// Mostrar solo si el usuario es Emmanuel, después de cargar
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (typeof state !== 'undefined' && state.me === 'emm') {
+      document.getElementById('debug-incrementer').style.display = 'block';
+    }
+  }, 1500);
+});
+
+// Click: incrementa SCORES y LIFETIME en +1 cada uno, sin más lógica
+document.getElementById('debug-incrementer').addEventListener('click', async () => {
+  const me = state.me;
+  if (!me) return;
+
+  // 1. LECTURA: valores actuales en memoria
+  const scoreBefore    = state.scores[me]         || 0;
+  const lifetimeBefore = state.lifetimeScores[me] || 0;
+
+  console.log('═══ PRUEBA INCREMENTO ═══');
+  console.log('Antes:', { score: scoreBefore, lifetime: lifetimeBefore });
+
+  // 2. CÁLCULO: nuevos valores
+  const scoreAfter    = scoreBefore + 1;
+  const lifetimeAfter = lifetimeBefore + 1;
+
+  console.log('Voy a mandar:', { score: scoreAfter, lifetime: lifetimeAfter });
+
+  // 3. ESCRITURA: directo a Firebase, sin tocar state local
+  // El listener actualizará el state cuando llegue el snapshot
+  try {
+    await db.ref().update({
+      [`casita/scores/${me}`]:         scoreAfter,
+      [`casita/lifetimeScores/${me}`]: lifetimeAfter
+    });
+    console.log('✅ Firebase ACEPTÓ la escritura');
+  } catch (e) {
+    console.error('❌ Firebase RECHAZÓ:', e);
+    return;
+  }
+
+  // 4. VERIFICACIÓN: esperar un momento y leer state
+  setTimeout(() => {
+    console.log('Después de 500ms — state actual:', {
+      score:    state.scores[me],
+      lifetime: state.lifetimeScores[me]
+    });
+    console.log('═══ FIN PRUEBA ═══');
+  }, 500);
+
+  // Feedback visual instantáneo
+  const btn = document.getElementById('debug-incrementer');
+  const label = document.getElementById('debug-incrementer-label');
+  const original = label.textContent;
+  label.textContent = '⏳...';
+  btn.style.background = '#c4634a';
+  setTimeout(() => {
+    label.textContent = original;
+    btn.style.background = '#2a1f1a';
+  }, 800);
+});
+</script>
+
+<!-- =================================================
      PANTALLA DE BIENVENIDA / SELECTOR DE PERFIL
      ================================================= -->
 <div class="welcome" id="welcome">
@@ -4151,7 +4238,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "813605958461",
   appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
 };
-  
+
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
   emm: { name: 'Emmanuel',  initial: 'E', color: 'emm', parent: true },
