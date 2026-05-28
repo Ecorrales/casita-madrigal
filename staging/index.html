@@ -4230,7 +4230,7 @@ document.addEventListener('visibilitychange', () => {
    2. Crea un proyecto gratis
    3. Activa Realtime Database (modo de prueba)
    4. Pega tu configuración aquí abajo */
-const FIREBASE_CONFIG ={
+const {
   apiKey: "AIzaSyCd-HtCZAAaCKAJAJGZ8yxfQgyeC7AQudk",
   authDomain: "casita-test-8e857.firebaseapp.com",
   projectId: "casita-test-8e857",
@@ -4238,7 +4238,6 @@ const FIREBASE_CONFIG ={
   messagingSenderId: "813605958461",
   appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
 };
-
 
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
@@ -5028,25 +5027,35 @@ function confettiBurst(x, y) {
 
 /* ===== PERSISTENCIA ===== */
 /* ===================================================================
-   PERSISTENCIA — Firebase es la fuente de verdad
-   - saveLocal(): cachea el state en localStorage para arranque rápido
+   PERSISTENCIA — Firebase es la única fuente de verdad
    - dbSet(path, value): escribe un nodo específico en Firebase
    - dbRemove(path): elimina un nodo específico
    - dbBatch(updates): aplica múltiples updates atómicamente
-   Todas estas funciones respetan el candado firebaseHydrated.
+   - saveLocal()/save(): STUB no-op (eliminado en refactor Firebase-céntrico)
    =================================================================== */
 
+/* ===========================================================
+   ===  LEGACY: saveLocal y save obsoletos                          ===
+   ===  Razón: el state local ya no se persiste en localStorage.    ===
+   ===  Firebase es la única fuente de verdad. Al recargar, el      ===
+   ===  listener hidrata el state desde Firebase.                   ===
+   ===  Se mantienen como no-op para que código viejo no truene.    ===
+   =========================================================== */
+function saveLocal() { /* no-op */ }
+function save()      { /* no-op */ }
+
+/*
 function saveLocal() {
   try {
     localStorage.setItem('casita_state', JSON.stringify(state));
   } catch(e) { console.warn('localStorage error', e); }
 }
 
-/* save() ahora solo guarda local. Las mutaciones específicas usan dbSet/dbBatch.
-   Se mantiene la función por compatibilidad con código viejo que la llame. */
 function save() {
   saveLocal();
 }
+*/
+/* === FIN LEGACY saveLocal/save === */
 
 /* ===========================================================
    ===  dbSet / dbRemove / dbBatch — REFACTOR FIREBASE-CÉNTRICO     ===
@@ -5319,6 +5328,30 @@ function pushHistory(entry) {
 }
 
 function load() {
+  /* REFACTOR FIREBASE-CÉNTRICO:
+     Ya no leemos el state desde localStorage. Firebase es la fuente de verdad.
+     Solo conservamos las PREFERENCIAS LOCALES del dispositivo:
+     - casita_me     → quién soy en este dispositivo
+     - casita_theme  → modo claro/oscuro
+     - casita_muted  → sonidos sí/no
+     El resto del state lo entrega el listener cuando Firebase hidrata. */
+  try {
+    // Limpiar el state legacy si existe (de versiones previas al refactor)
+    try { localStorage.removeItem('casita_state'); } catch(e) {}
+
+    const savedMe = localStorage.getItem('casita_me');
+    if (savedMe) state.me = savedMe;
+    const savedTheme = localStorage.getItem('casita_theme');
+    if (savedTheme) state.theme = savedTheme;
+    state.muted = localStorage.getItem('casita_muted') === '1';
+  } catch(e) { console.warn('load preferences error', e); }
+
+  ensureCatalogs();
+}
+
+/*
+function load() {
+  // LEGACY: cargaba el state completo desde localStorage
   try {
     const raw = localStorage.getItem('casita_state');
     if (raw) {
@@ -5333,12 +5366,9 @@ function load() {
   } catch(e) { console.warn('load error', e); }
 
   ensureCatalogs();
-
-  // NOTA: NO hacemos rollover ni save aquí porque podría sobrescribir
-  // los datos remotos de Firebase antes de que el listener los hidrate.
-  // El rollover se aplica en el listener de Firebase (si está activo) o
-  // en applyLocalRollover() abajo después de un timeout (si no hay Firebase).
 }
+*/
+/* === FIN LEGACY load === */
 
 /* Aplica rollover y guarda si la fecha cambió. Solo se usa en modo LOCAL
    (sin Firebase activo) — para modo Firebase, el listener maneja esto. */
