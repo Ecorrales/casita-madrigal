@@ -5790,8 +5790,34 @@ function tryAcquireRolloverLock(targetDate) {
         && finalValue.date === targetDate
         && finalValue.by === me
         && Math.abs((finalValue.at || 0) - now) < 5000; // tolerancia de 5s
+
+      // Si gané el lock, incrementar mi contador de rolloverStats
+      // (sección 7.4.7 — narrativa familiar a largo plazo)
+      if (iAmLeader && PEOPLE[me]) {
+        incrementRolloverStats(me).catch(e => {
+          console.warn('rolloverStats increment failed:', e);
+        });
+      }
+
       resolve(!!iAmLeader);
     }, false); // false = no aplicar update local optimista
+  });
+}
+
+/* Incrementa atómicamente el contador de rollover del miembro dado.
+   Estructura: casita/rolloverStats/{personKey} = number
+   Esto se acumula en silencio durante el año para el "Wrapped" anual. */
+function incrementRolloverStats(personKey) {
+  return new Promise((resolve, reject) => {
+    if (!useFirebase || !db) { resolve(); return; }
+    db.ref(`casita/rolloverStats/${personKey}`).transaction(current => {
+      return (typeof current === 'number' ? current : 0) + 1;
+    }, (error, committed) => {
+      if (error) { reject(error); return; }
+      // También actualizar lastUpdated (best-effort, no transaccional)
+      db.ref('casita/rolloverStats/lastUpdated').set(Date.now()).catch(() => {});
+      resolve(committed);
+    }, false);
   });
 }
 
@@ -6953,6 +6979,23 @@ function hideRolloverOverlay() {
    Útil para probar el efecto sin tener que esperar al cambio de día real.
    Uso: testRolloverOverlay()  */
 window.testRolloverOverlay = () => showRolloverOverlay();
+
+/* DEBUG: imprime los rolloverStats actuales en la consola.
+   Útil para validar que el contador va subiendo. Uso: showRolloverStats()  */
+window.showRolloverStats = async () => {
+  if (!useFirebase || !db) { console.log('Firebase no disponible'); return; }
+  const snap = await db.ref('casita/rolloverStats').once('value');
+  const data = snap.val() || {};
+  console.log('═══ rolloverStats ═══');
+  Object.entries(data).forEach(([k, v]) => {
+    if (k === 'lastUpdated') {
+      console.log(`  lastUpdated: ${new Date(v).toLocaleString('es-MX')}`);
+    } else {
+      const name = PEOPLE[k]?.name || k;
+      console.log(`  ${name.padEnd(10)} → ${v} rollover${v === 1 ? '' : 's'}`);
+    }
+  });
+};
 
 /* Muestra la pantalla "Entrando a la casita..." con una frase aleatoria */
 function showEnteringScreen() {
