@@ -5120,6 +5120,9 @@ function normalizeHistory(raw) {
    servidor. Las bajas (canjeos, desmarcar) sí se aplican porque vienen como
    updates explícitos que ya están reflejados localmente — el `Math.max` mantiene
    ambos lados sincronizados al valor más actual. */
+/* Para hidratación INICIAL: tomar el máximo entre local y remoto.
+   Esto protege puntos ganados offline que aún no se han sincronizado.
+   USAR SOLO en el primer snapshot del listener. */
 function mergeScoresMax(remote) {
   const out = {};
   Object.keys(activePeople()).forEach(k => {
@@ -5135,6 +5138,25 @@ function mergeLifetimeMax(remote) {
     const local = state.lifetimeScores?.[k] || 0;
     const r = remote?.[k] || 0;
     out[k] = Math.max(local, r);
+  });
+  return out;
+}
+
+/* Para snapshots POST-HIDRATACIÓN: Firebase es la fuente de verdad.
+   Tomar el valor remoto directamente. Esto permite que correcciones admin
+   (ajustes manuales en Firebase Console) se reflejen instantáneamente
+   en todos los dispositivos sin necesidad de recargas manuales. */
+function adoptScoresFromRemote(remote) {
+  const out = {};
+  Object.keys(activePeople()).forEach(k => {
+    out[k] = remote?.[k] || 0;
+  });
+  return out;
+}
+function adoptLifetimeFromRemote(remote) {
+  const out = {};
+  Object.keys(activePeople()).forEach(k => {
+    out[k] = remote?.[k] || 0;
   });
   return out;
 }
@@ -5520,7 +5542,7 @@ async function initFirebase() {
           state.details = mergedDetails;
         }
         state.history = normalizeHistory(data.history);
-        state.scores = mergeScoresMax(data.scores);
+        state.scores = adoptScoresFromRemote(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
@@ -5530,7 +5552,7 @@ async function initFirebase() {
         state.promo = data.promo || null;
         state.criticalLoot = data.criticalLoot || null;
         if (data.config) state.config = { ...state.config, ...data.config };
-        state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
+        state.lifetimeScores = adoptLifetimeFromRemote(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
@@ -5836,7 +5858,7 @@ async function performRefresh() {
         state.sporadic = data.sporadic || {};
         state.details = data.details || {};
         state.history = normalizeHistory(data.history);
-        state.scores = mergeScoresMax(data.scores);
+        state.scores = adoptScoresFromRemote(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
         if (data.menu) state.menu = data.menu;
@@ -5846,7 +5868,7 @@ async function performRefresh() {
         state.promo = data.promo || null;
         state.criticalLoot = data.criticalLoot || null;
         if (data.config) state.config = { ...state.config, ...data.config };
-        state.lifetimeScores = mergeLifetimeMax(data.lifetimeScores);
+        state.lifetimeScores = adoptLifetimeFromRemote(data.lifetimeScores);
         state.coupons = data.coupons || {};
         if (data.rewardsMonth) state.rewardsMonth = data.rewardsMonth;
         state.proposals = data.proposals || {};
