@@ -8714,13 +8714,14 @@ async function executeClaimReward(rewardId) {
     // Después de mostrar la palomita un rato, ocultar y disparar confeti
     setTimeout(() => {
       hideRedeemOverlay();
-      // Confeti en el centro de la pantalla (la app ya volvió a estar visible)
+      // Esperar a que el overlay termine su fade-out (300ms) antes del confeti
+      // — si no, el backdrop-filter:blur del overlay esconde el confeti
       setTimeout(() => {
         confettiBurst(window.innerWidth / 2, window.innerHeight / 2);
         if (wasDiscounted) {
           toast(`🔥 ¡Canjeaste "${r.name}" con promo!`);
         }
-      }, 100);
+      }, REDEEM_FADE_OUT_MS + 50);  // 300ms fade-out + 50ms margen
     }, REDEEM_HOLD_AFTER_MS);
   }, wait);
 }
