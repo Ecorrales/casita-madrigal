@@ -1,0 +1,23 @@
+{
+  "name": "Casita Corrales",
+  "short_name": "Casita",
+  "description": "Planificador familiar de la Casita Corrales",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6ece0",
+  "theme_color": "#c4634a",
+  "orientation": "portrait",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iI2Y2ZWNlMCIgcng9IjI4Ii8+PHRleHQgeD0iOTYiIHk9IjEzMiIgZm9udC1zaXplPSIxMTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfjIo8L3RleHQ+PC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iI2Y2ZWNlMCIgcng9Ijc2Ii8+PHRleHQgeD0iMjU2IiB5PSIzNTYiIGZvbnQtc2l6ZT0iMjk2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn4yKPC90ZXh0Pjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
