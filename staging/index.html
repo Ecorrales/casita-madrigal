@@ -3359,34 +3359,20 @@ body::before {
 }
 
 .entering-house {
-  width: 160px;
-  height: 160px;
   display: block;
+  width: 280px;
+  max-width: 80vw;
+  height: auto;
   margin: 0 auto 24px;
+  /* Sutil "respiración" — la casita parece estar viva */
+  animation: entering-house-breathe 4s ease-in-out infinite;
+}
+@keyframes entering-house-breathe {
+  0%, 100% { transform: translateY(0)    scale(1.000); }
+  50%      { transform: translateY(-2px) scale(1.008); }
 }
 
-/* Humo: 3 volutas con tiempos desfasados */
-.entering-smoke .smoke-puff {
-  opacity: 0;
-  transform-origin: center bottom;
-}
-.entering-smoke .smoke-1 {
-  animation: smoke-rise 3.6s ease-out infinite;
-}
-.entering-smoke .smoke-2 {
-  animation: smoke-rise 3.6s ease-out infinite;
-  animation-delay: 1.2s;
-}
-.entering-smoke .smoke-3 {
-  animation: smoke-rise 3.6s ease-out infinite;
-  animation-delay: 2.4s;
-}
-@keyframes smoke-rise {
-  0%   { opacity: 0; transform: translateY(0) scale(0.6); }
-  20%  { opacity: 0.55; }
-  60%  { opacity: 0.35; transform: translateY(-12px) scale(1.0); }
-  100% { opacity: 0;    transform: translateY(-28px) scale(1.3); }
-}
+/* (Las animaciones de humo SVG ya no se usan — la imagen PNG las incluye) */
 
 .entering-title {
   font-family: 'Fraunces', serif;
@@ -3710,35 +3696,8 @@ body::before {
 <div class="entering" id="entering" aria-hidden="true">
   <div class="entering-stage">
 
-    <!-- Casita SVG con chimenea -->
-    <svg class="entering-house" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <!-- Humo: 3 volutas que ascienden en loop -->
-      <g class="entering-smoke" stroke="var(--muted)" fill="none" stroke-width="2.4" stroke-linecap="round">
-        <path class="smoke-puff smoke-1" d="M 132 78 q -4 -8 0 -16 q 4 -8 0 -16"/>
-        <path class="smoke-puff smoke-2" d="M 137 76 q -4 -8 0 -16 q 4 -8 0 -16"/>
-        <path class="smoke-puff smoke-3" d="M 142 78 q -4 -8 0 -16 q 4 -8 0 -16"/>
-      </g>
-      <!-- Tejado -->
-      <path d="M 40 110 L 100 60 L 160 110 Z" fill="var(--terra)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
-      <!-- Chimenea -->
-      <rect x="125" y="75" width="14" height="20" fill="var(--terra-dark, #a04e3a)" stroke="var(--ink)" stroke-width="2"/>
-      <!-- Cuerpo de la casa -->
-      <rect x="55" y="105" width="90" height="65" fill="var(--paper)" stroke="var(--ink)" stroke-width="2.5"/>
-      <!-- Puerta -->
-      <rect x="88" y="130" width="24" height="40" fill="var(--leaf, #6b8e6b)" stroke="var(--ink)" stroke-width="2" rx="2"/>
-      <!-- Pomo de la puerta -->
-      <circle cx="106" cy="151" r="1.5" fill="var(--ink)"/>
-      <!-- Ventana izquierda -->
-      <rect x="65" y="118" width="16" height="14" fill="var(--bg, #f8f1e4)" stroke="var(--ink)" stroke-width="1.8"/>
-      <line x1="73" y1="118" x2="73" y2="132" stroke="var(--ink)" stroke-width="1.2"/>
-      <line x1="65" y1="125" x2="81" y2="125" stroke="var(--ink)" stroke-width="1.2"/>
-      <!-- Ventana derecha -->
-      <rect x="119" y="118" width="16" height="14" fill="var(--bg, #f8f1e4)" stroke="var(--ink)" stroke-width="1.8"/>
-      <line x1="127" y1="118" x2="127" y2="132" stroke="var(--ink)" stroke-width="1.2"/>
-      <line x1="119" y1="125" x2="135" y2="125" stroke="var(--ink)" stroke-width="1.2"/>
-      <!-- Línea de suelo -->
-      <line x1="30" y1="170" x2="170" y2="170" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
-    </svg>
+    <!-- Casita ilustrada (PNG con fondo transparente, ya incluye humo) -->
+    <img class="entering-house" src="casita.png" alt="" aria-hidden="true">
 
     <div class="entering-title">
       Entrando a la casita<span class="entering-dots"><span>.</span><span>.</span><span>.</span></span>
@@ -6458,7 +6417,7 @@ const ENTERING_PHRASES = [
 ];
 
 /* Tiempos de la pantalla "Entrando a la casita" */
-const ENTERING_MIN_MS  = 600;    // Mínimo 600ms para que se vea (REQUIREMENTS 3.1.1)
+const ENTERING_MIN_MS  = 3000;   // 3 segundos mínimos para que se vea la ilustración
 const ENTERING_SLOW_MS = 8000;   // Si tarda >8s, mostrar "Tomando un poquito más..."
 
 let _enteringStartedAt = 0;
@@ -6492,27 +6451,24 @@ function showEnteringScreen() {
   }, ENTERING_SLOW_MS);
 }
 
-/* Oculta la pantalla "Entrando a la casita" respetando el tiempo mínimo */
+/* Oculta la pantalla "Entrando a la casita" con fade-out.
+   El caller es responsable de respetar el tiempo mínimo antes de llamar esto. */
 function hideEnteringScreen() {
   const el = document.getElementById('entering');
   if (!el || !el.classList.contains('visible')) return;
 
-  const elapsed = Date.now() - _enteringStartedAt;
-  const wait = Math.max(0, ENTERING_MIN_MS - elapsed);
+  if (_enteringSlowTimer) {
+    clearTimeout(_enteringSlowTimer);
+    _enteringSlowTimer = null;
+  }
 
+  el.classList.add('fading-out');
+  // Después de la animación de fade-out, ocultar completamente
   setTimeout(() => {
-    if (_enteringSlowTimer) {
-      clearTimeout(_enteringSlowTimer);
-      _enteringSlowTimer = null;
-    }
-    el.classList.add('fading-out');
-    // Después de la animación de fade-out, ocultar completamente
-    setTimeout(() => {
-      el.classList.remove('visible');
-      el.classList.remove('fading-out');
-      el.setAttribute('aria-hidden', 'true');
-    }, 400);
-  }, wait);
+    el.classList.remove('visible');
+    el.classList.remove('fading-out');
+    el.setAttribute('aria-hidden', 'true');
+  }, 400);
 }
 
 function selectProfile(p) {
@@ -6528,20 +6484,25 @@ function selectProfile(p) {
     document.getElementById('welcome').classList.add('hidden');
     showEnteringScreen();
 
-    // Cuando Firebase termine de hidratar (o ya esté hidratado), pasar a la app
+    // Función helper: ocultar overlay y entrar a la app respetando tiempo mínimo
+    const finishEntering = () => {
+      const elapsed = Date.now() - _enteringStartedAt;
+      const wait = Math.max(0, ENTERING_MIN_MS - elapsed);
+      setTimeout(() => {
+        hideEnteringScreen();
+        // showApp después del fade-out (400ms)
+        setTimeout(() => showApp(), 400);
+      }, wait);
+    };
+
     if (firebaseHydrated) {
-      // Ya está hidratado: pasar directo (respetando tiempo mínimo)
-      hideEnteringScreen();
-      setTimeout(() => showApp(), ENTERING_MIN_MS);
+      finishEntering();
     } else {
-      // Esperar a que el listener marque firebaseHydrated = true
-      // Lo hacemos con un polling sencillo cada 100ms
+      // Polling cada 100ms hasta que el listener marque hidratado
       const waitForHydration = setInterval(() => {
         if (firebaseHydrated) {
           clearInterval(waitForHydration);
-          hideEnteringScreen();
-          // showApp después de que termine el fade-out
-          setTimeout(() => showApp(), 400);
+          finishEntering();
         }
       }, 100);
     }
