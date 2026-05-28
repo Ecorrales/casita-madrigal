@@ -5860,9 +5860,47 @@ async function performRefresh() {
         if (data.catalogDaily) state.catalogDaily = data.catalogDaily;
         if (data.catalogSporadic) state.catalogSporadic = data.catalogSporadic;
         if (data.catalogDetails) state.catalogDetails = data.catalogDetails;
-        state.daily = data.daily || {};
-        state.sporadic = data.sporadic || {};
-        state.details = data.details || {};
+        // Mismo merge inteligente que en el listener: preserva entradas protegidas
+        // y no pisa con {} si llega undefined.
+        if (data.daily !== undefined) {
+          const remoteDaily = data.daily || {};
+          const mergedDaily = {};
+          const allIds = new Set([...Object.keys(state.daily || {}), ...Object.keys(remoteDaily)]);
+          allIds.forEach(id => {
+            if (isProtected(`daily.${id}`, remoteDaily[id])) {
+              if (state.daily[id]) mergedDaily[id] = state.daily[id];
+            } else if (remoteDaily[id] !== undefined) {
+              mergedDaily[id] = remoteDaily[id];
+            }
+          });
+          state.daily = mergedDaily;
+        }
+        if (data.sporadic !== undefined) {
+          const remoteSporadic = data.sporadic || {};
+          const mergedSporadic = {};
+          const allIds = new Set([...Object.keys(state.sporadic || {}), ...Object.keys(remoteSporadic)]);
+          allIds.forEach(id => {
+            if (isProtected(`sporadic.${id}`, remoteSporadic[id])) {
+              if (state.sporadic[id]) mergedSporadic[id] = state.sporadic[id];
+            } else if (remoteSporadic[id] !== undefined) {
+              mergedSporadic[id] = remoteSporadic[id];
+            }
+          });
+          state.sporadic = mergedSporadic;
+        }
+        if (data.details !== undefined) {
+          const remoteDetails = data.details || {};
+          const mergedDetails = {};
+          const allIds = new Set([...Object.keys(state.details || {}), ...Object.keys(remoteDetails)]);
+          allIds.forEach(id => {
+            if (isProtected(`details.${id}`, remoteDetails[id])) {
+              if (state.details[id]) mergedDetails[id] = state.details[id];
+            } else if (remoteDetails[id] !== undefined) {
+              mergedDetails[id] = remoteDetails[id];
+            }
+          });
+          state.details = mergedDetails;
+        }
         state.history = normalizeHistory(data.history);
         state.scores = adoptScoresFromRemote(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
@@ -5936,6 +5974,12 @@ function reportMyTimezone() {
 }
 
 function showApp() {
+  // Guard: si por algún motivo state.me no es válido, volver al welcome
+  if (!state.me || !PEOPLE[state.me]) {
+    document.getElementById('welcome').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    return;
+  }
   document.getElementById('welcome').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('me-avatar').textContent = PEOPLE[state.me].initial;
@@ -7315,6 +7359,11 @@ function renderStore() {
 function renderMyBalance() {
   const el = document.getElementById('store-mybalance');
   if (!el) return;
+  // Si aún no se ha elegido persona (ej. primera carga, navegación privada), no renderizar
+  if (!state.me || !PEOPLE[state.me]) {
+    el.innerHTML = '';
+    return;
+  }
   const points = state.scores[state.me] || 0;
   const myCoupons = Object.values(state.coupons || {}).filter(c => c.ownerKey === state.me && c.status === 'active').length;
   el.innerHTML = `
