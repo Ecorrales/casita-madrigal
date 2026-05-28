@@ -4230,7 +4230,7 @@ document.addEventListener('visibilitychange', () => {
    2. Crea un proyecto gratis
    3. Activa Realtime Database (modo de prueba)
    4. Pega tu configuración aquí abajo */
-const FIREBASE_CONFIG = {
+const FIREBASE_CONFIG ={
   apiKey: "AIzaSyCd-HtCZAAaCKAJAJGZ8yxfQgyeC7AQudk",
   authDomain: "casita-test-8e857.firebaseapp.com",
   projectId: "casita-test-8e857",
@@ -4238,6 +4238,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "813605958461",
   appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
 };
+
 
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
@@ -7849,6 +7850,11 @@ function endPromoNow() {
 }
 
 async function claimReward(rewardId) {
+  /* REFACTOR HONEST UI:
+     Las transactions Firebase de scores/stock ya estaban bien.
+     Pero NO actualizamos state.coupons ni state.rewards localmente —
+     dejamos que el listener lo haga cuando llegue el snapshot. */
+
   const r = state.rewards[rewardId];
   if (!r) return;
   if ((r.remaining || 0) <= 0) { toast('Esta recompensa se acabó este mes'); return; }
@@ -7857,17 +7863,15 @@ async function claimReward(rewardId) {
   const wasDiscounted = cost < (r.cost || 0);
   if (myPoints < cost) { toast(`Te faltan ${cost - myPoints} puntos`); return; }
 
-  // Confirmar
+  // Confirmar (TODO: reemplazar por doble confirmación inline en futuro checkpoint)
   const promoNote = wasDiscounted ? ` (${r.cost} → ${cost} con promo)` : '';
   if (!confirm(`¿Canjear "${r.name}" por ${cost} puntos${promoNote}?`)) return;
 
-  // ATOMIC DECREMENT vía Firebase transaction
-  // Esto previene race conditions cuando hay clicks rápidos seguidos.
-  // Si Firebase no está disponible, hacemos el descuento local optimista.
-  let actualDeducted = cost;
+  // ATOMIC DECREMENT de scores vía Firebase transaction
+  // (esto previene race conditions; deja que el listener actualice state.scores)
   let transactionSucceeded = false;
 
-  if (useFirebase && db && firebaseHydrated) {
+  if (useFirebase && db) {
     try {
       transactionSucceeded = await new Promise((resolve) => {
         db.ref(`casita/scores/${state.me}`).transaction(currentValue => {
@@ -7877,16 +7881,12 @@ async function claimReward(rewardId) {
             return; // abort transaction
           }
           return current - cost;
-        }, (error, committed, snapshot) => {
+        }, (error, committed) => {
           if (error || !committed) {
             resolve(false);
             return;
           }
-          // Actualizar state local con el valor que Firebase confirmó
-          const finalValue = snapshot && snapshot.val();
-          if (typeof finalValue === 'number') {
-            state.scores[state.me] = finalValue;
-          }
+          // NO actualizamos state.scores localmente — el listener lo hará
           resolve(true);
         }, false);
       });
@@ -7897,19 +7897,21 @@ async function claimReward(rewardId) {
   }
 
   if (!transactionSucceeded) {
-    // Fallback: si Firebase no está o falló la transacción, revisar de nuevo y aplicar local
-    if ((state.scores[state.me] || 0) < cost) {
-      toast(`Te faltan puntos — algo cambió mientras canjeabas`);
-      return;
-    }
-    state.scores[state.me] = (state.scores[state.me] || 0) - cost;
-    // Persistir directamente (sin transacción)
-    if (useFirebase && db) {
-      dbSet(`scores/${state.me}`, state.scores[state.me]);
-    }
+    toast(`No se pudo canjear — revisa tu conexión`);
+    return;
   }
 
-  // Crear cupón
+  // Decremento atómico del stock vía transaction
+  if (useFirebase && db) {
+    db.ref(`casita/rewards/${rewardId}/remaining`).transaction(currentValue => {
+      const current = (typeof currentValue === 'number') ? currentValue : 0;
+      if (current <= 0) return; // abort
+      return current - 1;
+    }, null, false);
+    // NO actualizamos state.rewards localmente — el listener lo hará
+  }
+
+  // Crear cupón en Firebase (no necesita transacción porque es nuevo)
   const couponId = uid('c');
   const coupon = {
     rewardId,
@@ -7923,28 +7925,10 @@ async function claimReward(rewardId) {
     claimedBy: state.me,
     status: 'active'
   };
-  state.coupons[couponId] = coupon;
+  dbSet(`coupons/${couponId}`, coupon);
+  // NO actualizamos state.coupons localmente — el listener lo hará
 
-  // Decremento de stock — también atómico vía transacción
-  if (useFirebase && db && firebaseHydrated) {
-    db.ref(`casita/rewards/${rewardId}/remaining`).transaction(currentValue => {
-      const current = (typeof currentValue === 'number') ? currentValue : 0;
-      if (current <= 0) return; // abort
-      return current - 1;
-    }, (error, committed, snapshot) => {
-      if (committed && snapshot) {
-        const finalValue = snapshot.val();
-        if (typeof finalValue === 'number') {
-          r.remaining = finalValue;
-          state.rewards[rewardId] = r;
-        }
-      }
-    }, false);
-  } else {
-    r.remaining = (r.remaining || 0) - 1;
-    state.rewards[rewardId] = r;
-  }
-
+  // Historial y feedback inmediato
   pushHistory({
     ts: Date.now(),
     by: state.me,
@@ -7955,10 +7939,7 @@ async function claimReward(rewardId) {
   toast(wasDiscounted ? `🔥 ¡Canjeaste "${r.name}" con promo!` : `✦ ¡Canjeaste "${r.name}"!`);
   setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 100);
 
-  // Persistir el cupón (no necesita transacción porque es nuevo)
-  dbSet(`coupons/${couponId}`, coupon);
-
-  renderAll();
+  /* NOTA: NO llamamos renderAll() aquí. El listener lo dispara. */
 }
 
 /* Marcar cupón como consumido (verbal, solo papás) */
@@ -8218,63 +8199,63 @@ function releaseNotice(id) {
 }
 
 function doneNotice(id, evt) {
+  /* REFACTOR HONEST UI: no actualizar state local, solo calcular y mandar */
   const n = state.notices[id];
   if (!n) return;
   const mode = noticeMode_of(n);
   const finisher = state.me;
 
-  // Inicializar estructuras nuevas si no existen
-  if (!n.doneBy || typeof n.doneBy !== 'object') n.doneBy = {};
-  if (n.doneBy[finisher]) return; // ya lo marqué hecho
+  // Inicializar estructuras nuevas si no existen (solo lectura local)
+  const doneBy = (n.doneBy && typeof n.doneBy === 'object') ? { ...n.doneBy } : {};
+  if (doneBy[finisher]) return; // ya lo marqué hecho
 
-  // Marcar para esta persona
-  n.doneBy[finisher] = { at: Date.now() };
+  // Marcar para esta persona (en copia local)
+  doneBy[finisher] = { at: Date.now() };
 
-  // Puntos para quien marca
-  state.scores[finisher] = (state.scores[finisher] || 0) + 1;
-  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + 1;
-  pushHistory({ ts: Date.now(), by: finisher, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
+  // CÁLCULO de nuevos valores (sin tocar state local)
+  const newScore    = (state.scores[finisher]         || 0) + 1;
+  const newLifetime = (state.lifetimeScores[finisher] || 0) + 1;
+
+  // Feedback inmediato
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
 
+  // Armar batch
   const updates = {
-    [`notices/${id}/doneBy/${finisher}`]: n.doneBy[finisher],
-    [`scores/${finisher}`]: state.scores[finisher],
-    [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
+    [`notices/${id}/doneBy/${finisher}`]: doneBy[finisher],
+    [`scores/${finisher}`]:         newScore,
+    [`lifetimeScores/${finisher}`]: newLifetime
   };
 
   // Decidir si el aviso queda totalmente completado
   let fullyDone = false;
   if (mode === 'any') {
-    // Basta con uno: ya está listo
     fullyDone = true;
   } else {
-    // 'all': todos los takers deben haberlo hecho. Si no hay takers, basta
-    // con que TODOS los miembros activos lo hayan hecho.
     const takers = noticeTakers(n);
     const expectedSet = takers.length ? takers : Object.keys(activePeople());
-    const finishersSet = Object.keys(n.doneBy);
+    const finishersSet = Object.keys(doneBy);
     fullyDone = expectedSet.every(k => finishersSet.includes(k));
   }
 
   if (fullyDone) {
-    n.done = true;
-    n.doneAt = Date.now();
     updates[`notices/${id}/done`] = true;
-    updates[`notices/${id}/doneAt`] = n.doneAt;
+    updates[`notices/${id}/doneAt`] = Date.now();
     toast(`✦ ¡Aviso completado!`);
   } else {
     const remaining = mode === 'all'
-      ? (noticeTakers(n).length || Object.keys(activePeople()).length) - Object.keys(n.doneBy).length
+      ? (noticeTakers(n).length || Object.keys(activePeople()).length) - Object.keys(doneBy).length
       : 0;
     toast(`✦ Atendido por ti${remaining > 0 ? ` · falta${remaining === 1 ? '' : 'n'} ${remaining}` : ''}`);
   }
 
+  pushHistory({ ts: Date.now(), by: finisher, taskName: n.text.slice(0, 40), action: 'completó el aviso' });
+
   dbBatch(updates);
-  renderAll();
+  /* NOTA: NO renderAll() — el listener lo dispara */
 }
 
 function deleteNotice(id) {
@@ -8993,6 +8974,12 @@ function releaseTask(t, store, kind) {
 }
 
 function markDone(t, store, kind, evt) {
+  /* REFACTOR HONEST UI:
+     NO actualizamos state.scores ni state.lifetimeScores localmente.
+     Solo calculamos los nuevos valores y los mandamos a Firebase.
+     El listener actualizará el state cuando llegue el snapshot.
+     Esto previene el bug de "listener pisa state durante el vuelo". */
+
   const entry = store[t.id] || {};
   const finisher = entry.takenBy || state.me;
   const newEntry = {
@@ -9004,30 +8991,22 @@ function markDone(t, store, kind, evt) {
     scope: entry.scope || null,
     weekKey: entry.weekKey || null
   };
-  store[t.id] = newEntry;
 
   // Calcular bonus (bounty manual de Emmanuel o loot crítico oculto)
   const bonus = getTaskBonus(kind, t.id);
   const pointsEarned = 1 * bonus.multiplier;
-  state.scores[finisher] = (state.scores[finisher] || 0) + pointsEarned;
-  state.lifetimeScores[finisher] = (state.lifetimeScores[finisher] || 0) + pointsEarned;
-  pushHistory({
-    ts: Date.now(),
-    by: state.me,
-    taskName: t.name,
-    action: bonus.type === 'bounty' ? `completó (bounty ×${bonus.multiplier})`
-          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
-          : 'completó'
-  });
+
+  // CÁLCULO de los nuevos valores (sin modificar state local)
+  const newScore    = (state.scores[finisher]         || 0) + pointsEarned;
+  const newLifetime = (state.lifetimeScores[finisher] || 0) + pointsEarned;
+
+  // Feedback inmediato al usuario (no espera a Firebase)
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
-
-  // Feedback especial según tipo de bonus
   if (bonus.type === 'loot') {
-    // Loot crítico: celebración extra con confeti doble
     setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
     setTimeout(() => confettiBurst(window.innerWidth/3, window.innerHeight/2), 400);
     toast(`✦ ¡LOOT CRÍTICO ×${bonus.multiplier}! Ganaste ${pointsEarned} puntos`);
@@ -9038,16 +9017,13 @@ function markDone(t, store, kind, evt) {
     toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
   }
 
-  // Firebase: escribimos la tarea y el score actualizado
+  // Armar el batch de Firebase
   const storeName = kind === 'daily' ? 'daily' : 'sporadic';
   const updates = {
     [`${storeName}/${t.id}`]: newEntry,
-    [`scores/${finisher}`]: state.scores[finisher],
-    [`lifetimeScores/${finisher}`]: state.lifetimeScores[finisher]
+    [`scores/${finisher}`]:         newScore,
+    [`lifetimeScores/${finisher}`]: newLifetime
   };
-
-  // Protegemos contra eco del listener que podría pisarnos durante 10s
-  protectFromListener(`${storeName}.${t.id}`, newEntry);
 
   // Si tenía bounty, consumirlo (limpiarlo del catálogo)
   if (bonus.type === 'bounty') {
@@ -9055,18 +9031,36 @@ function markDone(t, store, kind, evt) {
     const catalog = state[catalogPath];
     const item = catalog?.find(x => x.id === t.id);
     if (item) {
-      delete item.bounty;
-      updates[catalogPath] = catalog;
+      // Clonamos para no mutar state directamente
+      const newCatalog = catalog.map(c =>
+        c.id === t.id ? { ...c, bounty: undefined } : c
+      );
+      // Limpiamos bounty undefined del item
+      newCatalog.forEach(c => { if (c.bounty === undefined) delete c.bounty; });
+      updates[catalogPath] = newCatalog;
     }
   }
   // Si era el loot crítico del día, limpiarlo (ya fue descubierto)
   if (bonus.type === 'loot') {
-    state.criticalLoot = null;
     updates['criticalLoot'] = null;
   }
 
+  // pushHistory escribe a Firebase aparte (push() genera key única)
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: t.name,
+    action: bonus.type === 'bounty' ? `completó (bounty ×${bonus.multiplier})`
+          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
+          : 'completó'
+  });
+
+  // Escribir todo el batch a Firebase. El listener actualizará state.
   dbBatch(updates);
-  renderAll();
+
+  /* NOTA: NO llamamos renderAll() aquí.
+     El listener disparará el render cuando llegue el snapshot actualizado.
+     Esto evita parpadeos por renders con state inconsistente. */
 }
 
 function unmarkDone(t, store, kind) {
@@ -9081,27 +9075,26 @@ function toggleDetail(d, evt) {
     toast('Este detalle ya está atendido');
     return;
   }
+  /* REFACTOR HONEST UI:
+     NO actualizamos state.scores, state.lifetimeScores ni state.details localmente.
+     Solo escribimos a Firebase. El listener actualizará el state cuando llegue
+     el snapshot. */
+
   const entry = { done: true, by: state.me, at: Date.now() };
-  state.details[d.id] = entry;
 
   const bonus = getTaskBonus('detail', d.id);
   const pointsEarned = 1 * bonus.multiplier;
-  state.scores[state.me] = (state.scores[state.me] || 0) + pointsEarned;
-  state.lifetimeScores[state.me] = (state.lifetimeScores[state.me] || 0) + pointsEarned;
-  pushHistory({
-    ts: Date.now(),
-    by: state.me,
-    taskName: d.title,
-    action: bonus.type === 'bounty' ? `atendió (bounty ×${bonus.multiplier})`
-          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
-          : 'atendió'
-  });
+
+  // CÁLCULO de nuevos valores (sin modificar state local)
+  const newScore    = (state.scores[state.me]         || 0) + pointsEarned;
+  const newLifetime = (state.lifetimeScores[state.me] || 0) + pointsEarned;
+
+  // Feedback inmediato
   playDoneSound();
   if (evt) {
     const rect = evt.currentTarget.getBoundingClientRect();
     confettiBurst(rect.left + rect.width/2, rect.top + rect.height/2);
   }
-
   if (bonus.type === 'loot') {
     setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
     setTimeout(() => confettiBurst(window.innerWidth/3, window.innerHeight/2), 400);
@@ -9113,30 +9106,39 @@ function toggleDetail(d, evt) {
     toast(`✿ ${d.title} ✓`);
   }
 
+  // Armar batch para Firebase
   const updates = {
-    [`details/${d.id}`]: entry,
-    [`scores/${state.me}`]: state.scores[state.me],
-    [`lifetimeScores/${state.me}`]: state.lifetimeScores[state.me]
+    [`details/${d.id}`]:             entry,
+    [`scores/${state.me}`]:          newScore,
+    [`lifetimeScores/${state.me}`]:  newLifetime
   };
 
-  // Protegemos del eco del listener
-  protectFromListener(`details.${d.id}`, entry);
-
+  // Consumir bounty si aplica
   if (bonus.type === 'bounty') {
     const catalog = state.catalogDetails;
-    const item = catalog?.find(x => x.id === d.id);
-    if (item) {
-      delete item.bounty;
-      updates['catalogDetails'] = catalog;
-    }
+    const newCatalog = catalog.map(c =>
+      c.id === d.id ? { ...c, bounty: undefined } : c
+    );
+    newCatalog.forEach(c => { if (c.bounty === undefined) delete c.bounty; });
+    updates['catalogDetails'] = newCatalog;
   }
   if (bonus.type === 'loot') {
-    state.criticalLoot = null;
     updates['criticalLoot'] = null;
   }
 
+  // Registrar en historial (push aparte porque genera key única)
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: d.title,
+    action: bonus.type === 'bounty' ? `atendió (bounty ×${bonus.multiplier})`
+          : bonus.type === 'loot' ? `descubrió loot crítico ×${bonus.multiplier}`
+          : 'atendió'
+  });
+
   dbBatch(updates);
-  renderAll();
+
+  /* NOTA: NO llamamos renderAll() aquí. El listener lo dispara. */
 }
 
 function closeModal() {
