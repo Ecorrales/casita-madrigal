@@ -3319,6 +3319,70 @@ body::before {
 }
 
 /* =================================================
+   LOADER DE HIDRATACIÓN — Minimalista, siempre visible al cargar
+   ================================================= */
+.hydrating {
+  position: fixed;
+  inset: 0;
+  z-index: 99500;        /* Encima de welcome/app, debajo del offline banner */
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  /* IMPORTANTE: visible por default (sin animación de entrada — ya estamos esperando) */
+}
+.hydrating.hidden {
+  animation: hydrating-fade-out 350ms ease-in forwards;
+  pointer-events: none;
+}
+@keyframes hydrating-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; visibility: hidden; }
+}
+
+.hydrating-stage {
+  text-align: center;
+}
+
+.hydrating-mark {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  margin-bottom: 22px;
+  opacity: 0.7;  /* Más suave que el welcome — solo es loader */
+}
+.hydrating-amp {
+  color: var(--terra);
+  font-style: italic;
+  margin: 0 2px;
+}
+
+.hydrating-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.hydrating-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--terra);
+  opacity: 0.3;
+  animation: hydrating-pulse 1.4s ease-in-out infinite;
+}
+.hydrating-dots span:nth-child(1) { animation-delay: 0.0s; }
+.hydrating-dots span:nth-child(2) { animation-delay: 0.2s; }
+.hydrating-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes hydrating-pulse {
+  0%, 60%, 100% { opacity: 0.25; transform: scale(1.0); }
+  30%           { opacity: 1.0;  transform: scale(1.25); }
+}
+
+/* =================================================
    PANTALLA "ENTRANDO A LA CASITA"
    Para usuarios vírgenes, después del welcome.
    ================================================= */
@@ -3658,6 +3722,22 @@ body::before {
 </head>
 <body>
 
+<!-- =================================================
+     LOADER DE HIDRATACIÓN — Pantalla minimalista
+     Aparece SIEMPRE al cargar (si Firebase tarda >200ms).
+     Evita el flash de "todo en cero" mientras Firebase hidrata.
+     Distinta de "Entrando a la casita" (que es solo para vírgenes).
+     ================================================= -->
+<div class="hydrating" id="hydrating" aria-hidden="false">
+  <div class="hydrating-stage">
+    <div class="hydrating-mark">Casita <span class="hydrating-amp">&amp;</span> Corrales</div>
+    <div class="hydrating-dots">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</div>
 
 <!-- =================================================
      PANTALLA DE BIENVENIDA / SELECTOR DE PERFIL
@@ -6054,6 +6134,68 @@ function loadScript(src) {
 }
 
 /* ===== INICIO ===== */
+/* =================================================
+   LOADER DE HIDRATACIÓN
+   Pantalla minimalista que tapa el flash de "todo en cero"
+   mientras Firebase termina de cargar el state inicial.
+   ================================================= */
+const HYDRATING_GRACE_MS = 200;   // Si Firebase responde antes de 200ms, no se ve
+let _hydratingGraceTimer = null;
+let _hydratingPollTimer  = null;
+let _hydratingShown      = false;
+
+function hideHydratingLoader() {
+  const el = document.getElementById('hydrating');
+  if (!el) return;
+  // Si nunca se mostró (Firebase respondió rapidísimo), simplemente ocultarlo sin animar
+  if (!_hydratingShown) {
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    return;
+  }
+  // Fade-out elegante
+  el.classList.add('hidden');
+  el.setAttribute('aria-hidden', 'true');
+  // Limpiar el DOM después del fade
+  setTimeout(() => {
+    el.style.display = 'none';
+  }, 400);
+}
+
+/* Inicia el ciclo de espera de hidratación.
+   - Si Firebase ya respondió antes del grace period: oculta sin mostrar
+   - Si tarda más: mantiene el loader visible hasta que firebaseHydrated = true */
+function startHydratingWatch() {
+  // Grace period: si Firebase responde rapidísimo, evitamos el "flash de loader"
+  _hydratingGraceTimer = setTimeout(() => {
+    if (!firebaseHydrated) {
+      _hydratingShown = true;
+      // (El loader ya está visible por default — no hay que hacer nada para mostrarlo)
+    }
+  }, HYDRATING_GRACE_MS);
+
+  // Polling: cuando Firebase hidrata, ocultamos
+  _hydratingPollTimer = setInterval(() => {
+    if (firebaseHydrated) {
+      clearInterval(_hydratingPollTimer);
+      clearTimeout(_hydratingGraceTimer);
+      _hydratingPollTimer = null;
+      _hydratingGraceTimer = null;
+      hideHydratingLoader();
+    }
+  }, 50);
+
+  // Failsafe: si después de 15 segundos Firebase no hidrata, ocultar de todas formas
+  // (el banner offline ya está manejando la situación)
+  setTimeout(() => {
+    if (_hydratingPollTimer) {
+      clearInterval(_hydratingPollTimer);
+      _hydratingPollTimer = null;
+      hideHydratingLoader();
+    }
+  }, 15000);
+}
+
 function init() {
   load();
   document.documentElement.setAttribute('data-theme', state.theme);
@@ -6061,6 +6203,9 @@ function init() {
   updateMuteBtn();
   document.getElementById('brand-date').textContent = formatDate();
   updateBrandTime();
+
+  // Arrancar el watcher de hidratación ANTES de cualquier render
+  startHydratingWatch();
 
   if (state.me) {
     showApp();
@@ -6429,6 +6574,10 @@ function showEnteringScreen() {
   const phraseEl = document.getElementById('entering-phrase');
   const slowEl = document.getElementById('entering-slow');
   if (!el || !phraseEl) return;
+
+  // Ocultar el loader minimalista de hidratación (si está visible)
+  // — la pantalla ceremonial toma su lugar
+  hideHydratingLoader();
 
   // Frase aleatoria del pool
   const phrase = ENTERING_PHRASES[Math.floor(Math.random() * ENTERING_PHRASES.length)];
