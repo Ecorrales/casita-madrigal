@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casita Corrales · En mantenimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6ece0;
+  --bg-soft: #faf3e8;
+  --paper: #fbf6ed;
+  --ink: #2a1f1a;
+  --ink-soft: #6b5a52;
+  --muted: #998779;
+  --line: #e8dccc;
+  --terra: #c4634a;
+  --terra-deep: #a04b34;
+  --leaf: #5b7a4e;
+  --gold: #c89b3c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  background-image:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--terra) 6%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, var(--leaf) 5%, transparent) 0%, transparent 50%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  max-width: 560px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 20px;
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: 0 8px 40px -10px rgba(60, 30, 10, 0.18);
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--terra), var(--gold), var(--leaf), var(--gold), var(--terra));
+  background-size: 200% 100%;
+  animation: shimmer 8s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.brand {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.brand em {
+  font-style: italic;
+  color: var(--terra);
+  font-weight: 500;
+}
+
+.icon {
+  font-size: 48px;
+  margin: 12px 0 20px;
+  display: inline-block;
+  animation: gentle-rock 4s ease-in-out infinite;
+}
+
+@keyframes gentle-rock {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
+
+h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: clamp(28px, 5vw, 36px);
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
+}
+
+h1 em {
+  font-style: italic;
+  color: var(--terra);
+}
+
+.subtitle {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin-bottom: 32px;
+}
+
+.message {
+  background: var(--bg-soft);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.message-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--terra);
+  margin-bottom: 10px;
+}
+
+.message-text {
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.message-text strong {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+.eta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--leaf);
+  background: color-mix(in srgb, var(--leaf) 12%, transparent);
+  padding: 8px 16px;
+  border-radius: 999px;
+  margin-bottom: 24px;
+}
+
+.eta-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--leaf);
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.signature {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--muted);
+  padding-top: 24px;
+  border-top: 1px dashed var(--line);
+}
+
+.signature strong {
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.tip {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
+.tip strong {
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--terra);
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="brand">La <em>Casita</em> Corrales</div>
+
+  <div class="icon">🪴</div>
+
+  <h1>Volvemos en <em>poquito</em></h1>
+
+  <p class="subtitle">Estamos haciendo mejoras al corazón del sistema.</p>
+
+  <div class="message">
+    <div class="message-title">✦ Mientras tanto</div>
+    <p class="message-text">
+      La aplicación está temporalmente fuera de servicio para <strong>una mejora importante</strong>
+      que va a hacer que todo sea más confiable y rápido. Estamos trabajando para tenerla de vuelta
+      muy pronto.
+    </p>
+  </div>
+
+  <div class="eta">
+    <span class="eta-dot"></span>
+    Disponible en pocos días
+  </div>
+
+  <p class="tip">
+    Por mientras, los <strong>quehaceres siguen</strong> como siempre — solo que sin la app.
+    <br>Los puntos acumulados, los cupones y todo lo importante <strong>está seguro</strong>.
+  </p>
+
+  <div class="signature">
+    Con cariño,<br>
+    <strong>La dirección</strong>
+  </div>
+
+</div>
+
+</body>
+</html>
