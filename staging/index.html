@@ -3662,6 +3662,22 @@ body::before {
   to   { opacity: 0.85; transform: translateY(0); }
 }
 
+/* Hint sutil "Toca para cerrar" — aparece tarde para no robar protagonismo */
+.jamboree-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #5a2a14;
+  opacity: 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 20px;
+  animation: jamboree-hint-appear 800ms ease-out 1800ms forwards;
+}
+@keyframes jamboree-hint-appear {
+  from { opacity: 0; }
+  to   { opacity: 0.5; }
+}
+
 /* Contenedor de confetti DENTRO del overlay para garantizar
    que las piezas vayan por encima del fondo + imagen + texto */
 .jamboree-confetti {
@@ -3670,6 +3686,152 @@ body::before {
   pointer-events: none;
   z-index: 2;
   overflow: hidden;
+}
+
+/* =================================================
+   MODAL GENÉRICO — reemplazo de prompt/confirm nativos
+   ================================================= */
+.casita-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99820;          /* Por encima de redeem y jamboree */
+  background: rgba(42, 31, 26, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: casita-modal-fade-in 200ms ease-out;
+}
+.casita-modal.visible {
+  display: flex;
+}
+.casita-modal.fading-out {
+  animation: casita-modal-fade-out 220ms ease-in forwards;
+}
+@keyframes casita-modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes casita-modal-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.casita-modal-card {
+  max-width: 380px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 28px 24px 22px;
+  box-shadow: 0 20px 60px -20px rgba(42, 31, 26, 0.5);
+  border: 1px solid var(--line);
+  animation: casita-modal-rise 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes casita-modal-rise {
+  from { transform: translateY(14px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+
+.casita-modal-title {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.casita-modal-message {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--ink-soft, var(--muted));
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+.casita-modal-message:empty {
+  display: none;
+  margin-bottom: 0;
+}
+
+.casita-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--bg-soft, var(--bg));
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  outline: none;
+  margin-bottom: 18px;
+  transition: border-color 150ms ease;
+  -webkit-appearance: none;
+}
+.casita-modal-input:focus {
+  border-color: var(--terra);
+}
+/* Cuando el modal es solo confirmación (sin input), ocultar input */
+.casita-modal.no-input .casita-modal-input {
+  display: none;
+}
+/* Si no hay mensaje pero sí input, ajustar margen */
+.casita-modal-message:empty + .casita-modal-input {
+  margin-top: 4px;
+}
+
+.casita-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.casita-modal-btn {
+  padding: 10px 18px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  cursor: pointer;
+  transition: all 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 90px;
+}
+.casita-modal-btn-cancel {
+  background: transparent;
+  color: var(--muted);
+}
+.casita-modal-btn-cancel:hover,
+.casita-modal-btn-cancel:active {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.casita-modal-btn-confirm {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.casita-modal-btn-confirm:hover,
+.casita-modal-btn-confirm:active {
+  background: var(--ink-soft, var(--ink));
+  transform: translateY(-1px);
+}
+
+/* Variante destructiva — para eliminar/terminar */
+.casita-modal.destructive .casita-modal-btn-confirm {
+  background: var(--terra);
+  border-color: var(--terra);
+  color: #fff;
+}
+.casita-modal.destructive .casita-modal-btn-confirm:hover,
+.casita-modal.destructive .casita-modal-btn-confirm:active {
+  background: #a85540;
+  border-color: #a85540;
 }
 
 /* =================================================
@@ -4777,9 +4939,27 @@ body::before {
     <div class="jamboree-title" id="jamboree-title">¡JAMBOREE!</div>
     <div class="jamboree-multiplier" id="jamboree-multiplier">×3</div>
     <div class="jamboree-subtitle" id="jamboree-subtitle">Ganaste 3 puntos</div>
+    <div class="jamboree-hint">Toca para cerrar</div>
   </div>
   <!-- Contenedor de confetti DENTRO del overlay para que vaya por encima -->
   <div class="jamboree-confetti" id="jamboree-confetti" aria-hidden="true"></div>
+</div>
+
+<!-- =================================================
+     MODAL GENÉRICO para prompts y confirmaciones
+     Reemplaza los alert/confirm/prompt nativos del navegador.
+     Funciones expuestas: casitaPrompt() y casitaConfirm()
+     ================================================= -->
+<div class="casita-modal" id="casita-modal" aria-hidden="true">
+  <div class="casita-modal-card">
+    <div class="casita-modal-title" id="casita-modal-title">Título</div>
+    <div class="casita-modal-message" id="casita-modal-message">Mensaje</div>
+    <input class="casita-modal-input" id="casita-modal-input" type="text" autocomplete="off">
+    <div class="casita-modal-actions">
+      <button type="button" class="casita-modal-btn casita-modal-btn-cancel" id="casita-modal-cancel">Cancelar</button>
+      <button type="button" class="casita-modal-btn casita-modal-btn-confirm" id="casita-modal-confirm">Aceptar</button>
+    </div>
+  </div>
 </div>
 
 
@@ -4792,22 +4972,26 @@ body::before {
 
 const APP_VERSION = '2026.05.22.38';
 
-async function checkForUpdate() {
+async function checkForUpdate(opts = {}) {
+  const { silent = true } = opts;
   try {
     const res = await fetch('./index.html?_=' + Date.now(), {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache' }
     });
-    if (!res.ok) return;
+    if (!res.ok) return false;
     const text = await res.text();
     const match = text.match(/const APP_VERSION = '([^']+)'/);
-    if (!match) return;
+    if (!match) return false;
     const remoteVersion = match[1];
     if (remoteVersion !== APP_VERSION) {
       showUpdateBanner(remoteVersion);
+      return true;  // hay versión nueva
     }
+    return false;  // estamos al día
   } catch(e) {
     // Sin conexión, ignorar silenciosamente
+    return false;
   }
 }
 
@@ -5807,6 +5991,128 @@ function playPopSound() {
     sparkle.start(now + delay);
     sparkle.stop(now + delay + 0.25);
   }
+}
+
+/* =================================================
+   MODAL GENÉRICO — casitaPrompt() y casitaConfirm()
+   Reemplazan a los prompt/confirm/alert nativos del navegador.
+   Retornan Promises para drop-in replacement.
+
+   USOS:
+     const valor = await casitaPrompt({ title, message, defaultValue, placeholder });
+       → string (valor ingresado) | null (canceló)
+
+     const ok = await casitaConfirm({ title, message, confirmText, cancelText, destructive });
+       → true (confirmó) | false (canceló)
+   ================================================= */
+
+let _casitaModalCloseHandler = null;
+
+function _casitaModalShow({ title, message, mode, defaultValue, placeholder, confirmText, cancelText, destructive }) {
+  return new Promise(resolve => {
+    const modal    = document.getElementById('casita-modal');
+    const titleEl  = document.getElementById('casita-modal-title');
+    const msgEl    = document.getElementById('casita-modal-message');
+    const inputEl  = document.getElementById('casita-modal-input');
+    const confirmBtn = document.getElementById('casita-modal-confirm');
+    const cancelBtn  = document.getElementById('casita-modal-cancel');
+    if (!modal) { resolve(mode === 'prompt' ? null : false); return; }
+
+    // Configurar contenido
+    titleEl.textContent = title || '';
+    msgEl.textContent   = message || '';
+    confirmBtn.textContent = confirmText || (mode === 'prompt' ? 'Guardar' : 'Aceptar');
+    cancelBtn.textContent  = cancelText  || 'Cancelar';
+
+    // Configurar modo (con o sin input)
+    modal.classList.toggle('no-input', mode !== 'prompt');
+    if (mode === 'prompt') {
+      inputEl.value = defaultValue || '';
+      inputEl.placeholder = placeholder || '';
+    } else {
+      inputEl.value = '';
+    }
+
+    // Configurar variante destructiva
+    modal.classList.toggle('destructive', !!destructive);
+
+    // Mostrar
+    modal.classList.remove('fading-out');
+    modal.classList.add('visible');
+    modal.setAttribute('aria-hidden', 'false');
+
+    // Focus en input si es prompt
+    if (mode === 'prompt') {
+      setTimeout(() => {
+        inputEl.focus();
+        inputEl.select();
+      }, 100);
+    }
+
+    // Handlers
+    const cleanup = () => {
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', onCancel);
+      inputEl.removeEventListener('keydown', onKeydown);
+      document.removeEventListener('keydown', onEscape);
+      modal.removeEventListener('click', onBackdropClick);
+      _casitaModalCloseHandler = null;
+    };
+
+    const close = (result) => {
+      cleanup();
+      modal.classList.add('fading-out');
+      setTimeout(() => {
+        modal.classList.remove('visible', 'fading-out', 'no-input', 'destructive');
+        modal.setAttribute('aria-hidden', 'true');
+      }, 220);
+      resolve(result);
+    };
+
+    const onConfirm = () => {
+      const result = mode === 'prompt' ? inputEl.value : true;
+      close(result);
+    };
+    const onCancel = () => {
+      close(mode === 'prompt' ? null : false);
+    };
+    const onKeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onConfirm();
+      }
+    };
+    const onEscape = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+    const onBackdropClick = (e) => {
+      // Solo cerrar si tocan el backdrop directamente, no el card
+      if (e.target === modal) onCancel();
+    };
+
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', onCancel);
+    if (mode === 'prompt') inputEl.addEventListener('keydown', onKeydown);
+    document.addEventListener('keydown', onEscape);
+    modal.addEventListener('click', onBackdropClick);
+    _casitaModalCloseHandler = cleanup;
+  });
+}
+
+/* Versión "prompt" — pide texto al usuario.
+   Retorna string ingresado, o null si canceló. */
+function casitaPrompt(opts = {}) {
+  return _casitaModalShow({ ...opts, mode: 'prompt' });
+}
+
+/* Versión "confirm" — solo Aceptar/Cancelar.
+   Retorna true si confirmó, false si canceló.
+   Pasa `destructive: true` para resaltar el botón de aceptar en terracota. */
+function casitaConfirm(opts = {}) {
+  return _casitaModalShow({ ...opts, mode: 'confirm' });
 }
 
 function confettiBurst(x, y, container) {
@@ -7051,6 +7357,13 @@ async function performRefresh() {
   updateBrandTime();
 
   renderAll();
+
+  // Verificar si hay versión nueva del código (no solo datos).
+  // Esto es CRÍTICO para PWAs en iOS donde el service worker cachea
+  // el HTML agresivamente. Si hay versión nueva, aparecerá el banner
+  // "Hay una nueva versión de la Casita" automáticamente.
+  checkForUpdate();
+
   await minTime;
 }
 
@@ -7210,8 +7523,39 @@ window.showRolloverStats = async () => {
    ambos celebran POR la persona que descubrió. La selección es ALEATORIA
    en cada Jamboree, todos los miembros pueden ver cualquiera de las dos. */
 const JAMBOREE_CELEBRATORS = ['mar', 'mat'];
-const JAMBOREE_SHOW_MS = 2500;   // Tiempo visible total del overlay
-const JAMBOREE_FADE_MS = 400;    // Duración del fade-out
+const JAMBOREE_FADE_MS    = 400;    // Duración del fade-out al cerrar
+const JAMBOREE_LOCK_MS    = 1200;   // Ignora taps en los primeros 1.2s (evita cierres accidentales)
+const JAMBOREE_AUTO_CLOSE_MS = 12000;  // Failsafe: cierra solo si el usuario nunca toca (12s)
+
+let _jamboreeCloseHandler = null;
+let _jamboreeAutoTimer = null;
+
+/* Cierra el overlay del Jamboree con fade-out y limpia listeners. */
+function closeJamboreeOverlay() {
+  const overlay = document.getElementById('jamboree-overlay');
+  const confettiEl = document.getElementById('jamboree-confetti');
+  if (!overlay) return;
+  if (!overlay.classList.contains('visible')) return;
+
+  // Remover listener de cierre
+  if (_jamboreeCloseHandler) {
+    overlay.removeEventListener('click', _jamboreeCloseHandler);
+    _jamboreeCloseHandler = null;
+  }
+  // Cancelar failsafe
+  if (_jamboreeAutoTimer) {
+    clearTimeout(_jamboreeAutoTimer);
+    _jamboreeAutoTimer = null;
+  }
+
+  overlay.classList.add('fading-out');
+  setTimeout(() => {
+    overlay.classList.remove('visible', 'fading-out', 'no-image');
+    overlay.setAttribute('aria-hidden', 'true');
+    // Limpiar cualquier confetti restante
+    if (confettiEl) confettiEl.innerHTML = '';
+  }, JAMBOREE_FADE_MS);
+}
 
 /* Muestra el overlay del Jamboree.
    @param finisherKey: clave del descubridor (solo para subtítulo, no afecta imagen)
@@ -7247,16 +7591,21 @@ function showJamboreeOverlay(finisherKey, multiplier, pointsEarned) {
   setTimeout(() => confettiBurst(cx - window.innerWidth / 6, cy - 40, confettiEl), 100);
   setTimeout(() => confettiBurst(cx + window.innerWidth / 6, cy - 40, confettiEl), 200);
 
-  // Programar cierre automático
-  setTimeout(() => {
-    overlay.classList.add('fading-out');
-    setTimeout(() => {
-      overlay.classList.remove('visible', 'fading-out', 'no-image');
-      overlay.setAttribute('aria-hidden', 'true');
-      // Limpiar cualquier confetti restante
-      if (confettiEl) confettiEl.innerHTML = '';
-    }, JAMBOREE_FADE_MS);
-  }, JAMBOREE_SHOW_MS);
+  // Set up cierre al tocar (con grace period inicial para evitar cierres accidentales
+  // mientras todavía está apareciendo la animación)
+  const overlayShownAt = Date.now();
+  _jamboreeCloseHandler = () => {
+    const elapsed = Date.now() - overlayShownAt;
+    if (elapsed < JAMBOREE_LOCK_MS) return;  // todavía en grace period, ignorar
+    closeJamboreeOverlay();
+  };
+  // Remover listener viejo si quedó por error
+  overlay.removeEventListener('click', _jamboreeCloseHandler);
+  overlay.addEventListener('click', _jamboreeCloseHandler);
+
+  // Failsafe: si nadie toca en 12 segundos, cierra solo
+  if (_jamboreeAutoTimer) clearTimeout(_jamboreeAutoTimer);
+  _jamboreeAutoTimer = setTimeout(closeJamboreeOverlay, JAMBOREE_AUTO_CLOSE_MS);
 }
 
 /* DEBUG: dispara el overlay del Jamboree manualmente.
@@ -8211,9 +8560,14 @@ function renderFamily() {
 }
 
 /* Editar mi propio subtítulo (solo el del perfil activo) */
-function editMySubtitle() {
+async function editMySubtitle() {
   const current = state.subtitles?.[state.me] || '';
-  const newVal = prompt('Tu subtítulo (cómo brillas en la casa):', current);
+  const newVal = await casitaPrompt({
+    title: 'Tu subtítulo',
+    message: 'Cómo brillas en la casa (máximo 40 caracteres).',
+    defaultValue: current,
+    placeholder: 'Ej: la madrugadora, el detallista…'
+  });
   if (newVal === null) return; // canceló
   const trimmed = newVal.trim().slice(0, 40);
   if (!state.subtitles) state.subtitles = {};
@@ -8224,9 +8578,14 @@ function editMySubtitle() {
 }
 
 /* Editar mi propio cumpleaños */
-function editMyBirthday() {
+async function editMyBirthday() {
   const current = state.birthdays?.[state.me] || '';
-  const newVal = prompt('Tu fecha de nacimiento (formato AAAA-MM-DD, ej: 1992-05-23):', current);
+  const newVal = await casitaPrompt({
+    title: 'Tu fecha de nacimiento',
+    message: 'Formato: AAAA-MM-DD (deja vacío para borrar).',
+    defaultValue: current,
+    placeholder: '1992-05-23'
+  });
   if (newVal === null) return; // canceló
   const trimmed = newVal.trim();
   if (trimmed === '') {
@@ -8249,11 +8608,16 @@ function editMyBirthday() {
 }
 
 /* Editar cumpleaños de un miembro pasivo (cualquier adulto puede) */
-function editPassiveBirthday(key) {
+async function editPassiveBirthday(key) {
   const p = PEOPLE[key];
   if (!p) return;
   const current = state.birthdays?.[key] || '';
-  const newVal = prompt(`Fecha de nacimiento de ${p.name} (formato AAAA-MM-DD):`, current);
+  const newVal = await casitaPrompt({
+    title: `Cumpleaños de ${p.name}`,
+    message: 'Formato: AAAA-MM-DD (deja vacío para borrar).',
+    defaultValue: current,
+    placeholder: '2024-03-15'
+  });
   if (newVal === null) return;
   const trimmed = newVal.trim();
   if (trimmed === '') {
@@ -8931,10 +9295,16 @@ function saveReward() {
   renderAll();
 }
 
-function deleteReward() {
+async function deleteReward() {
   if (!isParent()) return;
   if (!editingReward) return;
-  if (!confirm('¿Eliminar esta recompensa? Los cupones ya canjeados se mantendrán.')) return;
+  const ok = await casitaConfirm({
+    title: '¿Eliminar esta recompensa?',
+    message: 'Los cupones ya canjeados se mantendrán intactos.',
+    confirmText: 'Eliminar',
+    destructive: true
+  });
+  if (!ok) return;
   delete state.rewards[editingReward];
   const id = editingReward;
   closeRewardForm();
@@ -9056,9 +9426,15 @@ function startPromo() {
 }
 
 /* Terminar la promo activa antes de tiempo */
-function endPromoNow() {
+async function endPromoNow() {
   if (!isSecretAdmin()) return;
-  if (!confirm('¿Terminar la promo ahora?')) return;
+  const ok = await casitaConfirm({
+    title: '¿Terminar la promo ahora?',
+    message: 'Los canjes futuros volverán a costar el precio normal.',
+    confirmText: 'Terminar',
+    destructive: true
+  });
+  if (!ok) return;
   state.promo = null;
   dbSet('promo', null);
   toast('Promo terminada');
@@ -9246,12 +9622,17 @@ async function executeClaimReward(rewardId) {
 }
 
 /* Marcar cupón como consumido (verbal, solo papás) */
-function consumeCoupon(couponId) {
+async function consumeCoupon(couponId) {
   if (!isParent()) { toast('Solo los papás pueden marcar cupones como usados'); return; }
   const c = state.coupons[couponId];
   if (!c) return;
   if (c.status === 'consumed') return;
-  if (!confirm(`¿Marcar "${c.name}" como ya usado por ${PEOPLE[c.ownerKey].name}?`)) return;
+  const ok = await casitaConfirm({
+    title: `¿Marcar como cobrado?`,
+    message: `"${c.name}" — de ${PEOPLE[c.ownerKey].name}`,
+    confirmText: 'Sí, cobrado'
+  });
+  if (!ok) return;
 
   c.status = 'consumed';
   c.consumedAt = Date.now();
@@ -9561,11 +9942,17 @@ function doneNotice(id, evt) {
   /* NOTA: NO renderAll() — el listener lo dispara */
 }
 
-function deleteNotice(id) {
+async function deleteNotice(id) {
   const n = state.notices[id];
   if (!n) return;
   if (n.createdBy !== state.me && !n.done) {
-    if (!confirm('Este aviso lo creó ' + PEOPLE[n.createdBy].name + '. ¿Eliminarlo de todas formas?')) return;
+    const ok = await casitaConfirm({
+      title: '¿Eliminar este aviso?',
+      message: `Lo creó ${PEOPLE[n.createdBy].name}. ¿Eliminarlo de todas formas?`,
+      confirmText: 'Eliminar',
+      destructive: true
+    });
+    if (!ok) return;
   }
   delete state.notices[id];
   dbRemove(`notices/${id}`);
@@ -10186,13 +10573,19 @@ function saveEditTask() {
   toast('✦ Tarea actualizada');
 }
 
-function confirmDeleteTask() {
+async function confirmDeleteTask() {
   if (!editTarget) return;
   if (!isParent()) {
     toast('Solo los papás pueden eliminar tareas');
     return;
   }
-  if (!confirm('¿Eliminar esta tarea del catálogo de la casa?')) return;
+  const ok = await casitaConfirm({
+    title: '¿Eliminar esta tarea?',
+    message: 'Se quita del catálogo de la casa. Los historiales pasados se mantienen.',
+    confirmText: 'Eliminar',
+    destructive: true
+  });
+  if (!ok) return;
   const { kind, id } = editTarget;
   const listKey = kind === 'daily' ? 'catalogDaily'
                 : kind === 'sporadic' ? 'catalogSporadic'
