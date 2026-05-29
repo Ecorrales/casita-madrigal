@@ -3835,6 +3835,206 @@ body::before {
 }
 
 /* =================================================
+   PANTALLA DE INTERCAMBIO DE CUPONES
+   ================================================= */
+.slot-exchange-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99810;          /* Por encima de redeem (99800) y jamboree (99750) */
+  background: rgba(42, 31, 26, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  animation: slot-exchange-fade-in 220ms ease-out;
+}
+.slot-exchange-overlay.visible {
+  display: flex;
+}
+.slot-exchange-overlay.fading-out {
+  animation: slot-exchange-fade-out 220ms ease-in forwards;
+}
+@keyframes slot-exchange-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slot-exchange-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.slot-exchange-card {
+  max-width: 480px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 18px;
+  padding: 24px 22px 18px;
+  box-shadow: 0 20px 60px -20px rgba(42, 31, 26, 0.5);
+  border: 1px solid var(--line);
+  animation: slot-exchange-rise 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@keyframes slot-exchange-rise {
+  from { transform: translateY(16px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+.slot-exchange-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.slot-exchange-title {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.slot-exchange-message {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink-soft, var(--muted));
+  line-height: 1.5;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+/* Card del cupón pendiente (arriba) */
+.slot-exchange-pending {
+  background: linear-gradient(135deg, #fef0e0 0%, #fde0c4 100%);
+  border: 2px dashed var(--terra);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  position: relative;
+}
+.slot-pending-badge {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  background: var(--terra);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.slot-pending-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.slot-pending-cost {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Divisor "Descarta uno" */
+.slot-exchange-divider {
+  position: relative;
+  text-align: center;
+  margin: 18px 0 14px;
+}
+.slot-exchange-divider::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 0;
+  border-top: 1px dashed var(--line);
+}
+.slot-exchange-divider span {
+  position: relative;
+  background: var(--paper);
+  padding: 0 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Grid 2x3 de cupones activos */
+.slot-exchange-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+@media (max-width: 380px) {
+  .slot-exchange-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.slot-card {
+  background: var(--bg-soft, var(--bg));
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 110px;
+  transition: all 200ms ease;
+}
+.slot-card-name {
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.slot-card-meta {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: -4px;
+}
+.slot-card-btn {
+  background: transparent;
+  border: 1.5px solid var(--line);
+  color: var(--ink-soft, var(--muted));
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.slot-card-btn:hover,
+.slot-card-btn:active {
+  background: var(--terra);
+  border-color: var(--terra);
+  color: #fff;
+}
+
+.slot-exchange-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* =================================================
    LOADER DE HIDRATACIÓN — Minimalista, siempre visible al cargar
    ================================================= */
 .hydrating {
@@ -4962,6 +5162,36 @@ body::before {
   </div>
 </div>
 
+<!-- =================================================
+     PANTALLA DE INTERCAMBIO DE CUPONES (sección 4.2.1)
+     Aparece cuando el usuario canjea con slots llenos.
+     Debe escoger cuál de sus 6 cupones reemplazar — o cancelar.
+     ================================================= -->
+<div class="slot-exchange-overlay" id="slot-exchange-overlay" aria-hidden="true">
+  <div class="slot-exchange-card">
+    <div class="slot-exchange-header">
+      <div class="slot-exchange-title">Cupones llenos</div>
+      <div class="slot-exchange-message">Tu nuevo cupón te espera. Para activarlo, descarta uno de los 6 que ya tienes — recuperarás sus puntos.</div>
+    </div>
+
+    <div class="slot-exchange-pending" id="slot-exchange-pending">
+      <!-- Se llena por JS con el cupón pendiente -->
+    </div>
+
+    <div class="slot-exchange-divider">
+      <span>Descarta uno para activarlo</span>
+    </div>
+
+    <div class="slot-exchange-grid" id="slot-exchange-grid">
+      <!-- Se llena por JS con los 6 cupones activos -->
+    </div>
+
+    <div class="slot-exchange-actions">
+      <button type="button" class="casita-modal-btn casita-modal-btn-cancel" id="slot-exchange-later">Decidir después</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 /* ===== CONTROL DE VERSIÓN PARA PWA =====
@@ -5088,6 +5318,14 @@ function isParent() {
   return PEOPLE[state.me]?.parent === true;
 }
 
+/* Verifica si el usuario actual puede marcar este cupón como cobrado.
+   Regla: el dueño puede cobrar los suyos, los papás pueden cobrar cualquiera. */
+function canConsumeCoupon(coupon) {
+  if (!coupon || !state.me) return false;
+  if (coupon.status !== 'active') return false;
+  return coupon.ownerKey === state.me || isParent();
+}
+
 /* Solo Emmanuel: acceso al menú secreto y mecánicas avanzadas (bounties,
    loot crítico, promos de tienda). Mariel es papá pero NO ve estas cosas. */
 function isSecretAdmin() {
@@ -5170,6 +5408,168 @@ function effectiveRewardCost(reward) {
   if (!isPromoActive()) return base;
   const off = state.promo.percentOff || 0;
   return Math.max(1, Math.ceil(base * (100 - off) / 100));
+}
+
+/* =================================================
+   SLOTS DE CUPONES (sección 4.2.1)
+   Cada miembro activo tiene 6 slots máximo de cupones activos.
+   Cuando llena los slots, debe descartar uno para canjear más.
+   Propuesta original de Mariel — coautora narrativa de esta mecánica.
+   ================================================= */
+const COUPON_SLOTS_MAX = 6;
+const COUPON_PENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h sin reembolso
+
+/* Cuenta cupones activos (status === 'active') de una persona. */
+function countActiveCoupons(personKey) {
+  if (!state.coupons) return 0;
+  return Object.values(state.coupons).filter(
+    c => c.ownerKey === personKey && c.status === 'active'
+  ).length;
+}
+
+/* Devuelve el cupón pending_slot del usuario (si tiene uno).
+   Solo puede haber uno por persona a la vez. */
+function getMyPendingCoupon() {
+  if (!state.coupons) return null;
+  return Object.values(state.coupons).find(
+    c => c.ownerKey === state.me && c.status === 'pending_slot'
+  ) || null;
+}
+
+/* ID del cupón pendiente (no solo objeto). */
+function getMyPendingCouponId() {
+  if (!state.coupons) return null;
+  for (const [id, c] of Object.entries(state.coupons)) {
+    if (c.ownerKey === state.me && c.status === 'pending_slot') return id;
+  }
+  return null;
+}
+
+/* =================================================
+   PANTALLA DE INTERCAMBIO DE CUPONES
+   Aparece cuando el usuario canjea con slots llenos.
+   Debe escoger cuál de sus 6 cupones reemplazar.
+   ================================================= */
+
+/* Abre la pantalla de intercambio.
+   Solo tiene sentido si el usuario tiene un pending_slot propio. */
+function openSlotExchangeScreen() {
+  const overlay   = document.getElementById('slot-exchange-overlay');
+  const pendingEl = document.getElementById('slot-exchange-pending');
+  const gridEl    = document.getElementById('slot-exchange-grid');
+  const laterBtn  = document.getElementById('slot-exchange-later');
+  if (!overlay || !pendingEl || !gridEl) return;
+
+  const pendingId = getMyPendingCouponId();
+  const pending   = pendingId ? state.coupons[pendingId] : null;
+  if (!pending) {
+    // No hay cupón pendiente, no abrir
+    return;
+  }
+
+  // Llenar el cupón pendiente
+  pendingEl.innerHTML = `
+    <span class="slot-pending-badge">Esperando slot</span>
+    <div class="slot-pending-name">${escapeHtml(pending.name)}</div>
+    <div class="slot-pending-cost">Pagaste ${pending.cost} ${pending.cost === 1 ? 'punto' : 'puntos'}${pending.discounted ? ' (con promo)' : ''}</div>
+  `;
+
+  // Llenar el grid con los cupones activos del usuario
+  const activeCoupons = Object.entries(state.coupons || {})
+    .filter(([id, c]) => c.ownerKey === state.me && c.status === 'active')
+    .sort(([, a], [, b]) => (a.claimedAt || 0) - (b.claimedAt || 0));
+
+  gridEl.innerHTML = activeCoupons.map(([id, c]) => `
+    <div class="slot-card">
+      <div>
+        <div class="slot-card-name">${escapeHtml(c.name)}</div>
+        <div class="slot-card-meta">Pagaste ${c.cost} pts · ${timeAgo(c.claimedAt)}</div>
+      </div>
+      <button type="button" class="slot-card-btn" onclick="exchangeCouponSlot('${id}')">
+        Descartar y reemplazar
+      </button>
+    </div>
+  `).join('');
+
+  // Botón "Decidir después"
+  if (laterBtn) {
+    laterBtn.onclick = () => closeSlotExchangeScreen();
+  }
+
+  // Mostrar
+  overlay.classList.remove('fading-out');
+  overlay.classList.add('visible');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeSlotExchangeScreen() {
+  const overlay = document.getElementById('slot-exchange-overlay');
+  if (!overlay) return;
+  overlay.classList.add('fading-out');
+  setTimeout(() => {
+    overlay.classList.remove('visible', 'fading-out');
+    overlay.setAttribute('aria-hidden', 'true');
+  }, 220);
+}
+
+/* Ejecuta el intercambio: descarta el cupón viejo (con reembolso) y
+   activa el cupón pendiente. */
+async function exchangeCouponSlot(oldCouponId) {
+  const oldCoupon = state.coupons?.[oldCouponId];
+  if (!oldCoupon) { toast('Cupón no encontrado'); return; }
+  if (oldCoupon.ownerKey !== state.me) { toast('Solo el dueño puede descartar'); return; }
+  if (oldCoupon.status !== 'active') { toast('Ese cupón ya no está activo'); return; }
+
+  const pendingId = getMyPendingCouponId();
+  if (!pendingId) {
+    closeSlotExchangeScreen();
+    return;
+  }
+
+  // Confirmación
+  const ok = await casitaConfirm({
+    title: '¿Descartar este cupón?',
+    message: `Vas a perder "${oldCoupon.name}" pero recuperarás ${oldCoupon.cost} ${oldCoupon.cost === 1 ? 'punto' : 'puntos'}. El stock de la recompensa también se restaurará.`,
+    confirmText: 'Sí, descartar',
+    destructive: true
+  });
+  if (!ok) return;
+
+  // Refund de puntos vía transacción atómica
+  if (useFirebase && db) {
+    db.ref(`casita/scores/${state.me}`).transaction(current => {
+      return (typeof current === 'number' ? current : 0) + oldCoupon.cost;
+    }, null, false);
+
+    // Restaurar el stock del reward (si todavía existe)
+    if (oldCoupon.rewardId && state.rewards?.[oldCoupon.rewardId]) {
+      db.ref(`casita/rewards/${oldCoupon.rewardId}/remaining`).transaction(current => {
+        const c = typeof current === 'number' ? current : 0;
+        return c + 1;
+      }, null, false);
+    }
+  }
+
+  // Marcar el cupón viejo como descartado
+  dbSet(`coupons/${oldCouponId}/status`, 'discarded');
+  dbSet(`coupons/${oldCouponId}/discardedAt`, Date.now());
+  dbSet(`coupons/${oldCouponId}/discardedBy`, state.me);
+
+  // Activar el pendiente
+  dbSet(`coupons/${pendingId}/status`, 'active');
+  dbSet(`coupons/${pendingId}/pendingExpiresAt`, null);
+  dbSet(`coupons/${pendingId}/activatedAt`, Date.now());
+
+  // Historial
+  pushHistory({
+    ts: Date.now(),
+    by: state.me,
+    taskName: oldCoupon.name,
+    action: `liberó cupón (recuperó ${oldCoupon.cost} pts)`
+  });
+
+  toast(`✦ Cupón nuevo activado · +${oldCoupon.cost} pts devueltos`);
+  closeSlotExchangeScreen();
 }
 
 const SEED_DAILY = [
@@ -8476,13 +8876,16 @@ function renderFamily() {
       `;
     }
 
-    // Cupones de esta persona
+    // Cupones de esta persona (excluye descartados, pero muestra pending_slot con etiqueta)
     const myCoupons = Object.entries(state.coupons || {})
-      .filter(([_, c]) => c.ownerKey === key)
+      .filter(([_, c]) => c.ownerKey === key && c.status !== 'discarded')
       .map(([id, c]) => ({ id, ...c }))
       .sort((a, b) => {
-        // activos primero, luego por fecha más reciente
-        if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+        // pending_slot primero, luego active, luego consumed; por fecha más reciente
+        const order = { 'pending_slot': 0, 'active': 1, 'consumed': 2 };
+        const ao = order[a.status] ?? 3;
+        const bo = order[b.status] ?? 3;
+        if (ao !== bo) return ao - bo;
         return (b.claimedAt || 0) - (a.claimedAt || 0);
       });
 
@@ -8493,10 +8896,13 @@ function renderFamily() {
       couponsHtml = `<div class="coupon-empty">Aún no hay cupones canjeados</div>`;
     } else {
       couponsHtml = myCoupons.map(c => {
-        const showConsumeBtn = isParent() && c.status === 'active';
+        const showConsumeBtn = canConsumeCoupon(c);
+        const isPending = c.status === 'pending_slot';
+        const isConsumed = c.status === 'consumed';
+        const cssClass = isConsumed ? 'consumed' : (isPending ? 'pending' : '');
         return `
-          <div class="coupon-item ${c.status === 'consumed' ? 'consumed' : ''}">
-            <span class="coupon-item-name">${escapeHtml(c.name)}</span>
+          <div class="coupon-item ${cssClass}">
+            <span class="coupon-item-name">${escapeHtml(c.name)}${isPending ? ' <span style="font-size:10px;color:var(--terra);font-weight:600;letter-spacing:0.05em">· ESPERA SLOT</span>' : ''}</span>
             ${showConsumeBtn ? `<button class="coupon-consume-btn" onclick="event.stopPropagation();consumeCoupon('${c.id}')">Cobrar</button>` : ''}
           </div>
         `;
@@ -9138,12 +9544,14 @@ function renderMyBalance() {
     return;
   }
   const points = state.scores[state.me] || 0;
-  const myCoupons = Object.values(state.coupons || {}).filter(c => c.ownerKey === state.me && c.status === 'active').length;
+  const myCoupons = countActiveCoupons(state.me);
+  const slotsFull = myCoupons >= COUPON_SLOTS_MAX;
+  const slotsColor = slotsFull ? 'var(--terra)' : (myCoupons >= 5 ? '#c89b3c' : 'var(--leaf)');
   el.innerHTML = `
     <div class="store-mybalance-icon">✦</div>
     <div class="store-mybalance-text">
       <div class="store-mybalance-label">${PEOPLE[state.me].name} tiene</div>
-      <div class="store-mybalance-value"><strong>${points}</strong> punto${points === 1 ? '' : 's'} disponibles${myCoupons > 0 ? ` · <span style="color:var(--leaf);font-size:14px">${myCoupons} cupón${myCoupons === 1 ? '' : 'es'} activo${myCoupons === 1 ? '' : 's'}</span>` : ''}</div>
+      <div class="store-mybalance-value"><strong>${points}</strong> punto${points === 1 ? '' : 's'} disponibles${myCoupons > 0 ? ` · <span style="color:${slotsColor};font-size:14px">${myCoupons}/${COUPON_SLOTS_MAX} slots</span>` : ''}</div>
     </div>
   `;
   // Mostrar botón "Nueva recompensa" solo a papás
@@ -9540,6 +9948,18 @@ async function executeClaimReward(rewardId) {
   const cost = effectiveRewardCost(r);
   const wasDiscounted = cost < (r.cost || 0);
 
+  // VERIFICACIÓN DE SLOTS (sección 4.2.1)
+  // Si ya tengo un cupón pending_slot, no puedo canjear hasta resolverlo
+  const existingPending = getMyPendingCoupon();
+  if (existingPending) {
+    toast('Ya tienes un cupón pendiente — termina ese primero');
+    openSlotExchangeScreen();
+    return;
+  }
+
+  const activeCount = countActiveCoupons(state.me);
+  const slotsFull = activeCount >= COUPON_SLOTS_MAX;
+
   // Mostrar overlay ceremonial inmediatamente
   showRedeemOverlay(r.name);
   const overlayShownAt = Date.now();
@@ -9580,6 +10000,7 @@ async function executeClaimReward(rewardId) {
   }
 
   // Crear cupón en Firebase
+  // Si los slots están llenos, se crea como pending_slot con TTL de 24h
   const couponId = uid('c');
   const coupon = {
     rewardId,
@@ -9591,16 +10012,21 @@ async function executeClaimReward(rewardId) {
     ownerKey: state.me,
     claimedAt: Date.now(),
     claimedBy: state.me,
-    status: 'active'
+    status: slotsFull ? 'pending_slot' : 'active'
   };
+  if (slotsFull) {
+    coupon.pendingExpiresAt = Date.now() + COUPON_PENDING_TTL_MS;
+  }
   dbSet(`coupons/${couponId}`, coupon);
 
-  // Historial
+  // Historial — diferencia entre canje normal y "esperando slot"
   pushHistory({
     ts: Date.now(),
     by: state.me,
     taskName: r.name,
-    action: wasDiscounted ? `canjeó (promo ${state.promo?.percentOff}% off)` : 'canjeó'
+    action: slotsFull
+      ? 'canjeó (esperando slot)'
+      : (wasDiscounted ? `canjeó (promo ${state.promo?.percentOff}% off)` : 'canjeó')
   });
 
   // Respeta tiempo mínimo del spinner antes de mostrar palomita
@@ -9616,6 +10042,10 @@ async function executeClaimReward(rewardId) {
       // — si no, el backdrop-filter:blur del overlay esconde el confeti
       setTimeout(() => {
         confettiBurst(window.innerWidth / 2, window.innerHeight / 2);
+        // Si fue pending_slot, después del confeti abrir pantalla de intercambio
+        if (slotsFull) {
+          setTimeout(() => openSlotExchangeScreen(), 800);
+        }
       }, REDEEM_FADE_OUT_MS + 50);
     }, REDEEM_HOLD_AFTER_MS);
   }, wait);
@@ -9623,13 +10053,20 @@ async function executeClaimReward(rewardId) {
 
 /* Marcar cupón como consumido (verbal, solo papás) */
 async function consumeCoupon(couponId) {
-  if (!isParent()) { toast('Solo los papás pueden marcar cupones como usados'); return; }
   const c = state.coupons[couponId];
   if (!c) return;
   if (c.status === 'consumed') return;
+  if (!canConsumeCoupon(c)) {
+    toast('Solo puedes cobrar tus propios cupones (o ser papá/mamá)');
+    return;
+  }
+  // Diferencia el mensaje según si es propio o de otra persona
+  const isMine = c.ownerKey === state.me;
   const ok = await casitaConfirm({
     title: `¿Marcar como cobrado?`,
-    message: `"${c.name}" — de ${PEOPLE[c.ownerKey].name}`,
+    message: isMine
+      ? `"${c.name}"`
+      : `"${c.name}" — de ${PEOPLE[c.ownerKey].name}`,
     confirmText: 'Sí, cobrado'
   });
   if (!ok) return;
