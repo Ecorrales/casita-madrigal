@@ -9959,16 +9959,24 @@ async function executeClaimReward(rewardId) {
   const wasDiscounted = cost < (r.cost || 0);
 
   // VERIFICACIÓN DE SLOTS (sección 4.2.1)
-  // Si ya tengo un cupón pending_slot, no puedo canjear hasta resolverlo
+  // Si ya tengo un cupón pending_slot (vendrá de drops de bosses futuros),
+  // debo resolverlo antes de canjear cualquier cosa
   const existingPending = getMyPendingCoupon();
   if (existingPending) {
-    toast('Ya tienes un cupón pendiente — termina ese primero');
+    toast('Tienes un cupón pendiente de slot — resuélvelo primero');
     openSlotExchangeScreen();
     return;
   }
 
+  // BLOQUEO POR SLOTS LLENOS
+  // Si ya tengo 6/6 cupones activos, no puedo canjear hasta cobrar alguno.
+  // El sistema pending_slot existe pero solo se dispara por drops de bosses
+  // (mecánica futura — los canjes normales son bloqueo seco).
   const activeCount = countActiveCoupons(state.me);
-  const slotsFull = activeCount >= COUPON_SLOTS_MAX;
+  if (activeCount >= COUPON_SLOTS_MAX) {
+    toast('Epale ricachón, primero gasta los que tienes y luego compras más');
+    return;
+  }
 
   // Mostrar overlay ceremonial inmediatamente
   showRedeemOverlay(r.name);
@@ -10009,8 +10017,8 @@ async function executeClaimReward(rewardId) {
     }, null, false);
   }
 
-  // Crear cupón en Firebase
-  // Si los slots están llenos, se crea como pending_slot con TTL de 24h
+  // Crear cupón en Firebase como activo
+  // (si los slots estuvieran llenos, ya habríamos bloqueado al inicio de la función)
   const couponId = uid('c');
   const coupon = {
     rewardId,
@@ -10022,21 +10030,16 @@ async function executeClaimReward(rewardId) {
     ownerKey: state.me,
     claimedAt: Date.now(),
     claimedBy: state.me,
-    status: slotsFull ? 'pending_slot' : 'active'
+    status: 'active'
   };
-  if (slotsFull) {
-    coupon.pendingExpiresAt = Date.now() + COUPON_PENDING_TTL_MS;
-  }
   dbSet(`coupons/${couponId}`, coupon);
 
-  // Historial — diferencia entre canje normal y "esperando slot"
+  // Historial
   pushHistory({
     ts: Date.now(),
     by: state.me,
     taskName: r.name,
-    action: slotsFull
-      ? 'canjeó (esperando slot)'
-      : (wasDiscounted ? `canjeó (promo ${state.promo?.percentOff}% off)` : 'canjeó')
+    action: wasDiscounted ? `canjeó (promo ${state.promo?.percentOff}% off)` : 'canjeó'
   });
 
   // Respeta tiempo mínimo del spinner antes de mostrar palomita
@@ -10052,10 +10055,6 @@ async function executeClaimReward(rewardId) {
       // — si no, el backdrop-filter:blur del overlay esconde el confeti
       setTimeout(() => {
         confettiBurst(window.innerWidth / 2, window.innerHeight / 2);
-        // Si fue pending_slot, después del confeti abrir pantalla de intercambio
-        if (slotsFull) {
-          setTimeout(() => openSlotExchangeScreen(), 800);
-        }
       }, REDEEM_FADE_OUT_MS + 50);
     }, REDEEM_HOLD_AFTER_MS);
   }, wait);
