@@ -3217,7 +3217,7 @@ body::before {
   background: var(--ink);
   color: var(--bg);
   padding: 12px 22px;
-  border-radius: 999px;
+  border-radius: 20px;
   font-family: 'Fraunces', serif;
   font-size: 15px;
   font-style: italic;
@@ -3226,7 +3226,11 @@ body::before {
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
   box-shadow: var(--shadow-lift);
-  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  line-height: 1.35;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
 .toast.show {
@@ -5927,39 +5931,12 @@ function handleConnectionChange(connected) {
   }
 }
 
-/* ===========================================================
-   ===  LEGACY: sistema de protección del listener obsoleto         ===
-   ===  Razón: con listener Firebase-céntrico, el snapshot SIEMPRE  ===
-   ===  es fuente de verdad. No hay race contra "datos viejos"      ===
-   ===  porque las escrituras esperan eco antes de declarar éxito.  ===
-   ===  Ver REQUIREMENTS.md sección 7.5 (anti-patrones)             ===
-   =========================================================== */
-let protectedPaths = {};  // Mantenido vacío por compatibilidad
-
-/*
-function protectFromListener(path, expectedValue) {
-  protectedPaths[path] = {
-    expectedJson: JSON.stringify(expectedValue),
-    lockedUntil: Date.now() + 10000
-  };
-}
-
-function isProtected(path, remoteValue) {
-  const protection = protectedPaths[path];
-  if (!protection) return false;
-  if (Date.now() > protection.lockedUntil) {
-    delete protectedPaths[path];
-    return false;
-  }
-  if (JSON.stringify(remoteValue) === protection.expectedJson) {
-    delete protectedPaths[path];
-    return false;
-  }
-  return true;
-}
-*/
-/* === FIN LEGACY protect === */
-// Stubs para que el código viejo que aún las llama no truene
+/* Stubs de protección del listener (vacíos en era Fogata).
+   Razón: el listener Firebase-céntrico no necesita protección — el snapshot
+   es la fuente de verdad. Se mantienen como no-ops para que cualquier
+   llamada residual en código viejo no truene.
+   Ver REQUIREMENTS.md sección 7.5 (anti-patrones). */
+let protectedPaths = {};
 function protectFromListener() { /* no-op */ }
 function isProtected() { return false; }
 
@@ -6598,28 +6575,11 @@ function confettiBurst(x, y, container) {
    - saveLocal()/save(): STUB no-op (eliminado en refactor Firebase-céntrico)
    =================================================================== */
 
-/* ===========================================================
-   ===  LEGACY: saveLocal y save obsoletos                          ===
-   ===  Razón: el state local ya no se persiste en localStorage.    ===
-   ===  Firebase es la única fuente de verdad. Al recargar, el      ===
-   ===  listener hidrata el state desde Firebase.                   ===
-   ===  Se mantienen como no-op para que código viejo no truene.    ===
-   =========================================================== */
+/* Stubs no-op: la era Fogata ya no persiste state en localStorage.
+   Firebase es la única fuente de verdad. Estos se mantienen porque
+   el código viejo todavía llama saveLocal() en algunos lugares. */
 function saveLocal() { /* no-op */ }
 function save()      { /* no-op */ }
-
-/*
-function saveLocal() {
-  try {
-    localStorage.setItem('casita_state', JSON.stringify(state));
-  } catch(e) { console.warn('localStorage error', e); }
-}
-
-function save() {
-  saveLocal();
-}
-*/
-/* === FIN LEGACY saveLocal/save === */
 
 /* ===========================================================
    ===  dbSet / dbRemove / dbBatch — REFACTOR FIREBASE-CÉNTRICO     ===
@@ -6652,46 +6612,6 @@ function dbBatch(updates) {
     console.warn('dbBatch error:', e);
   });
 }
-
-/* ===========================================================
-   ===  LEGACY: versiones viejas de dbSet/Remove/Batch              ===
-   ===  con sistema de pendingMutations + saveLocal.                ===
-   ===  Comentadas durante refactor Firebase-céntrico.              ===
-   =========================================================== */
-/*
-function dbSet(path, value) {
-  saveLocal();
-  if (!useFirebase || !db) return;
-  if (!firebaseHydrated) {
-    pendingMutations.push({ kind: 'set', path, value });
-    return;
-  }
-  db.ref('casita/' + path).set(value).catch(e => console.warn('dbSet error:', path, e));
-}
-
-function dbRemove(path) {
-  saveLocal();
-  if (!useFirebase || !db) return;
-  if (!firebaseHydrated) {
-    pendingMutations.push({ kind: 'remove', path });
-    return;
-  }
-  db.ref('casita/' + path).remove().catch(e => console.warn('dbRemove error:', path, e));
-}
-
-function dbBatch(updates) {
-  saveLocal();
-  if (!useFirebase || !db) return;
-  if (!firebaseHydrated) {
-    pendingMutations.push({ kind: 'batch', updates });
-    return;
-  }
-  const prefixed = {};
-  Object.entries(updates).forEach(([k, v]) => { prefixed['casita/' + k] = v; });
-  db.ref().update(prefixed).catch(e => console.warn('dbBatch error:', e));
-}
-*/
-/* === FIN LEGACY db functions === */
 
 
 /* =====================================================================
@@ -6815,29 +6735,9 @@ async function rolloverWithLeaderElection() {
   return true;
 }
 
-/* Aplica mutaciones que quedaron encoladas mientras esperábamos hidratación */
-/* ===========================================================
-   ===  LEGACY: flushPendingMutations obsoleto                      ===
-   ===  Razón: con listener Firebase-céntrico no encolamos escrituras  ===
-   ===  Stub no-op para que código viejo no truene si la llama.    ===
-   =========================================================== */
+/* Stub no-op de flushPendingMutations — la era Fogata no encola escrituras,
+   pero el código viejo todavía la llama en algunos lugares. */
 function flushPendingMutations() { /* no-op */ }
-/*
-function flushPendingMutations() {
-  if (!pendingMutations.length) return;
-  const queue = pendingMutations.slice();
-  pendingMutations = [];
-  queue.forEach(m => {
-    if (m.kind === 'set') dbSet(m.path, m.value);
-    else if (m.kind === 'remove') dbRemove(m.path);
-    else if (m.kind === 'batch') dbBatch(m.updates);
-    else if (m.kind === 'historyPush') {
-      if (useFirebase && db) db.ref('casita/history').push(m.entry).catch(e => console.warn('history push', e));
-    }
-  });
-}
-*/
-/* === FIN LEGACY flushPendingMutations === */
 
 /* Normaliza el history: Firebase puede devolverlo como objeto (cuando se usa push)
    o como array (legado). Esta función lo convierte siempre a array ordenado por ts. */
@@ -6855,52 +6755,6 @@ function normalizeHistory(raw) {
    servidor. Las bajas (canjeos, desmarcar) sí se aplican porque vienen como
    updates explícitos que ya están reflejados localmente — el `Math.max` mantiene
    ambos lados sincronizados al valor más actual. */
-/* Para hidratación INICIAL: tomar el máximo entre local y remoto.
-   Esto protege puntos ganados offline que aún no se han sincronizado.
-   USAR SOLO en el primer snapshot del listener. */
-/* ===========================================================
-   ===  LEGACY: funciones de merge/adopt obsoletas tras refactor    ===
-   ===  Razón: el listener Firebase-céntrico asigna directo del     ===
-   ===  snapshot, sin merge ni Math.max. Estas funciones quedaron   ===
-   ===  sin uso.                                                    ===
-   ===  Ver REQUIREMENTS.md sección 7.5 (anti-patrones)             ===
-   =========================================================== */
-/*
-function mergeScoresMax(remote) {
-  const out = {};
-  Object.keys(activePeople()).forEach(k => {
-    const local = state.scores?.[k] || 0;
-    const r = remote?.[k] || 0;
-    out[k] = Math.max(local, r);
-  });
-  return out;
-}
-function mergeLifetimeMax(remote) {
-  const out = {};
-  Object.keys(activePeople()).forEach(k => {
-    const local = state.lifetimeScores?.[k] || 0;
-    const r = remote?.[k] || 0;
-    out[k] = Math.max(local, r);
-  });
-  return out;
-}
-
-function adoptScoresFromRemote(remote) {
-  const out = {};
-  Object.keys(activePeople()).forEach(k => {
-    out[k] = remote?.[k] || 0;
-  });
-  return out;
-}
-function adoptLifetimeFromRemote(remote) {
-  const out = {};
-  Object.keys(activePeople()).forEach(k => {
-    out[k] = remote?.[k] || 0;
-  });
-  return out;
-}
-*/
-/* === FIN LEGACY merge/adopt === */
 
 
 /* Helper para añadir una entrada al history.
@@ -6910,7 +6764,6 @@ function pushHistory(entry) {
   state.history.push(entry);
   // Mantener máximo 200 entradas en memoria
   if (state.history.length > 200) state.history = state.history.slice(-200);
-  // saveLocal(); // legacy: no se necesita con Firebase-céntrico
   if (useFirebase && db) {
     // Usar push() de Firebase: genera una key única ordenada por tiempo
     db.ref('casita/history').push(entry).catch(e => console.warn('history push error', e));
@@ -8924,16 +8777,14 @@ function renderFamily() {
       `;
     }
 
-    // Cupones de esta persona (excluye descartados, pero muestra pending_slot con etiqueta)
+    // Cupones de esta persona — solo activos y pending_slot.
+    // Consumed y discarded se ocultan (idea futura: tab de "Cobrados" como historia).
     const myCoupons = Object.entries(state.coupons || {})
-      .filter(([_, c]) => c.ownerKey === key && c.status !== 'discarded')
+      .filter(([_, c]) => c.ownerKey === key && (c.status === 'active' || c.status === 'pending_slot'))
       .map(([id, c]) => ({ id, ...c }))
       .sort((a, b) => {
-        // pending_slot primero, luego active, luego consumed; por fecha más reciente
-        const order = { 'pending_slot': 0, 'active': 1, 'consumed': 2 };
-        const ao = order[a.status] ?? 3;
-        const bo = order[b.status] ?? 3;
-        if (ao !== bo) return ao - bo;
+        // pending_slot primero, luego active; por fecha más reciente
+        if (a.status !== b.status) return a.status === 'pending_slot' ? -1 : 1;
         return (b.claimedAt || 0) - (a.claimedAt || 0);
       });
 
@@ -8949,13 +8800,12 @@ function renderFamily() {
 
     let couponsHtml;
     if (!myCoupons.length) {
-      couponsHtml = `<div class="coupon-empty">Aún no hay cupones canjeados</div>`;
+      couponsHtml = `<div class="coupon-empty">Sin cupones por cobrar</div>`;
     } else {
       couponsHtml = myCoupons.map(c => {
         const showConsumeBtn = canConsumeCoupon(c);
         const isPending = c.status === 'pending_slot';
-        const isConsumed = c.status === 'consumed';
-        const cssClass = isConsumed ? 'consumed' : (isPending ? 'pending' : '');
+        const cssClass = isPending ? 'pending' : '';
         return `
           <div class="coupon-item ${cssClass}">
             <span class="coupon-item-name">${escapeHtml(c.name)}${isPending ? ' <span style="font-size:10px;color:var(--terra);font-weight:600;letter-spacing:0.05em">· ESPERA SLOT</span>' : ''}</span>
@@ -10069,7 +9919,7 @@ async function executeClaimReward(rewardId) {
   // (mecánica futura — los canjes normales son bloqueo seco).
   const activeCount = countActiveCoupons(state.me);
   if (activeCount >= COUPON_SLOTS_MAX) {
-    toast('Epale ricachón, primero gasta los que tienes y luego compras más');
+    toast('Epale ricachón, gasta los que tienes primero');
     return;
   }
 
