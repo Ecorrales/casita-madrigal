@@ -8890,6 +8890,14 @@ function renderFamily() {
       });
 
     const activeCount = myCoupons.filter(c => c.status === 'active').length;
+    const pendingCount = myCoupons.filter(c => c.status === 'pending_slot').length;
+    // Indicador de slots — solo para miembros activos (no Matías)
+    const isActiveMember = PEOPLE[key]?.passive !== true;
+    const slotsFull = activeCount >= COUPON_SLOTS_MAX;
+    const slotsColor = slotsFull ? 'var(--terra)' : (activeCount >= 5 ? '#c89b3c' : 'var(--leaf)');
+    const slotsLabel = isActiveMember
+      ? `<span style="color:${slotsColor};font-weight:600">${activeCount}/${COUPON_SLOTS_MAX}</span> slots`
+      : '';
 
     let couponsHtml;
     if (!myCoupons.length) {
@@ -8943,6 +8951,7 @@ function renderFamily() {
             </div>
           </div>
           ${badges.length ? `<div class="family-badges">${badges.map(b => `<span class="badge-pill">${b.icon} ${b.label}</span>`).join('')}</div>` : ''}
+          ${slotsLabel ? `<div class="family-slots-indicator" style="font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:0.04em">${slotsLabel}</div>` : ''}
           <div class="family-flip-row">
             <button class="family-flip-btn" onclick="event.stopPropagation();flipFamilyCard('${key}')" title="Ver cupones">
               ${activeCount > 0 ? `✦ Ver ${activeCount} cupón${activeCount === 1 ? '' : 'es'}` : 'Ver cupones'}
@@ -8952,6 +8961,7 @@ function renderFamily() {
         <div class="family-card-face back">
           <div class="back-title">Cupones de</div>
           <div class="back-name">${p.name}</div>
+          ${slotsLabel ? `<div class="family-slots-indicator" style="font-family:'Inter',sans-serif;font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;letter-spacing:0.04em">${slotsLabel}${pendingCount > 0 ? ` <span style="color:var(--terra);font-weight:600;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">· +${pendingCount} esperando</span>` : ''}</div>` : ''}
           <div class="coupons-list">${couponsHtml}</div>
           <div class="family-flip-row">
             <button class="family-flip-btn" onclick="event.stopPropagation();flipFamilyCard('${key}')" title="Volver">
