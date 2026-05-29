@@ -282,6 +282,51 @@ h1 em {
     font-size: 18px;
   }
 }
+
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 8px;
+  padding: 12px 22px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.refresh-btn:hover,
+.refresh-btn:active {
+  background: var(--bg-soft);
+  border-color: var(--terra);
+  color: var(--terra);
+}
+
+.refresh-btn.spinning {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.refresh-icon {
+  font-size: 16px;
+  display: inline-block;
+  transition: transform 250ms ease;
+}
+
+.refresh-btn.spinning .refresh-icon {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>
 </head>
 <body>
@@ -337,6 +382,11 @@ h1 em {
     <br>Los puntos acumulados, los cupones y todo lo importante <strong>está seguro</strong>.
   </p>
 
+  <button class="refresh-btn" id="refresh-btn" type="button">
+    <span class="refresh-icon">↻</span>
+    <span class="refresh-text">Buscar actualización</span>
+  </button>
+
   <div class="signature">
     Con cariño,<br>
     <strong>La dirección</strong>
@@ -381,6 +431,34 @@ updateCountdown();
 const tickInterval = setInterval(() => {
   if (!updateCountdown()) clearInterval(tickInterval);
 }, 1000);
+
+/* ===================================================================
+   BOTÓN "BUSCAR ACTUALIZACIÓN" — Destrabar PWA en iOS
+   
+   El problema: el service worker en iOS sirve la versión cacheada y
+   no ve cambios nuevos automáticamente.
+   
+   La solución: cuando el usuario toca el botón, recargamos la página
+   con un parámetro de URL nuevo (?v=timestamp). El SW trata esa URL
+   como distinta y va al servidor por la versión fresca. Si encuentra
+   una versión nueva del HTML — sea con cambios al maintenance o ya
+   con el index.html del release — la trae.
+   =================================================================== */
+const refreshBtn = document.getElementById('refresh-btn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', () => {
+    refreshBtn.classList.add('spinning');
+    refreshBtn.querySelector('.refresh-text').textContent = 'Buscando…';
+
+    // Pequeño delay para que el usuario vea el spinner antes del reload
+    setTimeout(() => {
+      const url = new URL(window.location.href);
+      // Limpiamos cualquier ?v= viejo y ponemos uno nuevo
+      url.searchParams.set('v', Date.now().toString());
+      window.location.replace(url.toString());
+    }, 400);
+  });
+}
 </script>
 
 </body>
