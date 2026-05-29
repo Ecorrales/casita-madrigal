@@ -2390,6 +2390,48 @@ body::before {
 /* === HISTORIAL === */
 .history-list { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
 
+/* =================================================
+   FILTRO DE HISTORIAL — dropdown por persona
+   ================================================= */
+.history-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  max-width: 720px;
+}
+.history-filter-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.history-filter-select {
+  flex: 0 1 auto;
+  padding: 8px 32px 8px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  /* flechita custom para que combine con la estética */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23867566' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color 150ms ease;
+}
+.history-filter-select:focus,
+.history-filter-select:hover {
+  border-color: var(--terra);
+}
+
 .history-row {
   display: flex;
   align-items: center;
@@ -4763,6 +4805,12 @@ body::before {
           <h1 class="panel-title">El <em>historial</em></h1>
           <p class="panel-sub">Lo que hicimos, quién lo hizo, cuándo</p>
         </div>
+      </div>
+      <div class="history-filter-bar">
+        <label class="history-filter-label" for="history-filter">Mostrar</label>
+        <select class="history-filter-select" id="history-filter" onchange="setHistoryFilter(this.value)">
+          <option value="all">Toda la familia</option>
+        </select>
       </div>
       <div class="history-list" id="history-list"></div>
     </section>
@@ -9072,15 +9120,62 @@ function isSignificantHistoryEntry(h) {
   return HISTORY_SIGNIFICANT_ACTIONS.includes(h.action);
 }
 
+/* =================================================
+   FILTRO DE HISTORIAL (sección 2.7.1)
+   Estado solo en UI, no persiste. Default 'all'.
+   ================================================= */
+let historyFilter = 'all';
+const HISTORY_LIMIT = 10;
+
+/* Llena el dropdown con los miembros activos (no Matías) */
+function populateHistoryFilterOptions() {
+  const sel = document.getElementById('history-filter');
+  if (!sel) return;
+  // Conservar el "Toda la familia" como primera opción
+  sel.innerHTML = '<option value="all">Toda la familia</option>';
+  Object.entries(PEOPLE).forEach(([key, p]) => {
+    if (p.passive) return; // Matías no aparece (no genera eventos)
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  sel.value = historyFilter;
+}
+
+/* Cambia el filtro y re-renderiza */
+function setHistoryFilter(value) {
+  historyFilter = value;
+  renderHistory();
+}
+
 function renderHistory() {
   const el = document.getElementById('history-list');
+  if (!el) return;
   el.innerHTML = '';
-  const significant = state.history.filter(isSignificantHistoryEntry);
+
+  // Asegurarnos que el dropdown está poblado (idempotente)
+  populateHistoryFilterOptions();
+
+  // Filtrar
+  let significant = state.history.filter(isSignificantHistoryEntry);
+  if (historyFilter !== 'all') {
+    significant = significant.filter(h => h.by === historyFilter);
+  }
+
+  // Caso vacío — mensaje según contexto del filtro
   if (!significant.length) {
-    el.innerHTML = '<div class="empty">Aún no hay logros registrados.<br>Completa una tarea y aparecerá aquí.</div>';
+    if (historyFilter === 'all') {
+      el.innerHTML = '<div class="empty">Aún no hay logros registrados.<br>Completa una tarea y aparecerá aquí.</div>';
+    } else {
+      const name = PEOPLE[historyFilter]?.name || 'esa persona';
+      el.innerHTML = `<div class="empty">Aún no hay registros de ${name}.</div>`;
+    }
     return;
   }
-  const recent = [...significant].reverse().slice(0, 50);
+
+  // Últimos 10, más reciente primero
+  const recent = [...significant].reverse().slice(0, HISTORY_LIMIT);
   recent.forEach(h => {
     const row = document.createElement('div');
     row.className = 'history-row';
