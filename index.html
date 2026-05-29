@@ -395,9 +395,40 @@ h1 em {
 </div>
 
 <script>
-/* Cuenta regresiva al sábado 30 de mayo 2026, 00:00 hora Monterrey (UTC-6).
-   En UTC eso es 2026-05-30T06:00:00Z */
+/* ===================================================================
+   AUTO-REDIRECT A FOGATA
+   
+   Cuando llega el sábado 30 de mayo de 2026 a las 00:00 hora de Monterrey
+   (UTC-6), esta página redirige automáticamente a la nueva versión que
+   vive en /fogata/index.html
+   
+   Verificación en dos momentos:
+   1. Onload — si ya pasó la hora, redirige inmediatamente
+   2. Cada segundo dentro del tick del contador — al llegar a 0, redirige
+   
+   El redirect lleva un parámetro ?_v={timestamp} para forzar al service
+   worker a traer la versión fresca (cache-busting).
+   =================================================================== */
+
+/* Sábado 30 de mayo 2026, 00:00 hora Monterrey (UTC-6) = 06:00 UTC */
 const RELEASE_TIME = new Date('2026-05-30T06:00:00Z').getTime();
+const FOGATA_URL   = './fogata/index.html';
+
+let _redirectFired = false;
+
+function redirectToFogata() {
+  if (_redirectFired) return;
+  _redirectFired = true;
+  // Cache-busting fuerte: el SW trata la URL como nueva
+  const url = FOGATA_URL + '?_v=' + Date.now();
+  window.location.replace(url);
+}
+
+/* Check al cargar la página: si ya pasó la hora, redirige inmediatamente
+   (esto cubre el caso de que la PWA se abra después de las 00:00) */
+if (Date.now() >= RELEASE_TIME) {
+  redirectToFogata();
+}
 
 function updateCountdown() {
   const now = Date.now();
@@ -405,12 +436,15 @@ function updateCountdown() {
   const cd = document.getElementById('countdown');
 
   if (diff <= 0) {
-    // Ya llegó la fecha — mostrar ceros y marcar como terminado
+    // Ya llegó la fecha — ceros + estado finished + REDIRECT AUTOMÁTICO
     document.getElementById('cd-days').textContent    = '0';
     document.getElementById('cd-hours').textContent   = '00';
     document.getElementById('cd-minutes').textContent = '00';
     document.getElementById('cd-seconds').textContent = '00';
     cd.classList.add('finished');
+    // Pequeño delay para que el usuario alcance a ver el contador en ceros
+    // (si tenía la página abierta durante el cambio)
+    setTimeout(redirectToFogata, 800);
     return false; // detener el tick
   }
 
@@ -452,6 +486,12 @@ if (refreshBtn) {
 
     // Pequeño delay para que el usuario vea el spinner antes del reload
     setTimeout(() => {
+      // Si ya pasó la hora del release, redirige directo a Fogata
+      // (en lugar de recargar el maintenance)
+      if (Date.now() >= RELEASE_TIME) {
+        redirectToFogata();
+        return;
+      }
       const url = new URL(window.location.href);
       // Limpiamos cualquier ?v= viejo y ponemos uno nuevo
       url.searchParams.set('v', Date.now().toString());
