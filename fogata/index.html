@@ -8743,6 +8743,7 @@ function renderFamily() {
     if (today >= 3) badges.push({ icon: '✿', label: 'En racha' });
     if (total >= 50) badges.push({ icon: '◈', label: 'Pilar de la casa' });
     if (total >= 20) badges.push({ icon: '☼', label: 'Constante' });
+    if (total >= 200) badges.push({ icon: '⛃', label: 'Smaug el acumulador' });
 
     const subtitle = state.subtitles?.[key] || '';
     const bday = state.birthdays?.[key];
