@@ -254,7 +254,7 @@
     box-shadow: 0 1px 2px var(--shadow);
     transition: transform 120ms, box-shadow 120ms;
     user-select: none;
-    touch-action: manipulation;
+    touch-action: none;
   }
   .dish-card:active { cursor: grabbing; }
   .dish-card.dragging { opacity: 0.4; }
@@ -513,31 +513,95 @@
     dishList.querySelectorAll('.dish-card').forEach(card => {
       const dishId = card.dataset.id;
 
-      // --- MODO TAP-TAP (para táctil) ---
-      card.addEventListener('click', e => {
-        if (draggingNow) return; // si venía de un drag, ignorar el click
-        const dish = DISHES.find(d => d.id === dishId);
-        if (tapSelectedDish === dishId) {
-          // deseleccionar
-          tapSelectedDish = null;
-          card.classList.remove('tap-selected');
-          clearTapTargets();
-          hideHint();
-        } else {
-          tapSelectedDish = dishId;
-          document.querySelectorAll('.dish-card').forEach(c => c.classList.remove('tap-selected'));
-          card.classList.add('tap-selected');
-          markTapTargets();
-          showHint(`Ahora toca un tiempo para poner <b>${dish.nombre}</b>`);
-        }
-      });
-
-      // --- MODO DRAG (desktop, pointer) ---
+      // Un solo pointerdown maneja AMBOS: tap (seleccionar) y drag (arrastrar).
+      // Se distingue por el movimiento: si el dedo/cursor se mueve más del
+      // umbral, es drag; si no se mueve y suelta, es tap.
       card.addEventListener('pointerdown', e => {
-        if (e.pointerType === 'touch') return; // en táctil usamos tap-tap
-        startDrag(e, dishId, card);
+        startPointer(e, dishId, card);
       });
     });
+  }
+
+  const DRAG_THRESHOLD = 8; // px de movimiento para considerar "drag" y no "tap"
+
+  function startPointer(e, dishId, card) {
+    const dish = DISHES.find(d => d.id === dishId);
+    const startX = e.clientX, startY = e.clientY;
+    let dragStarted = false;
+    let ghost = null;
+
+    // Capturar el puntero para seguir recibiendo eventos aunque el dedo salga de la tarjeta
+    try { card.setPointerCapture(e.pointerId); } catch(_) {}
+
+    const onMove = ev => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const dist = Math.hypot(dx, dy);
+
+      if (!dragStarted && dist > DRAG_THRESHOLD) {
+        // Se convirtió en drag
+        dragStarted = true;
+        draggingNow = true;
+        card.classList.add('dragging');
+        // Cancelar cualquier selección tap-tap previa
+        tapSelectedDish = null;
+        document.querySelectorAll('.dish-card').forEach(c => c.classList.remove('tap-selected'));
+        clearTapTargets();
+        hideHint();
+        // Crear ghost
+        ghost = document.createElement('div');
+        ghost.className = 'drag-ghost';
+        ghost.style.setProperty('--dish-color', PROTEIN_COLORS[dish.proteina]);
+        ghost.textContent = dish.nombre;
+        document.body.appendChild(ghost);
+      }
+
+      if (dragStarted) {
+        ev.preventDefault();
+        if (ghost) { ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; }
+        const slot = slotAtPoint(ev.clientX, ev.clientY);
+        weekCol.querySelectorAll('.meal-slot').forEach(s => s.classList.remove('drop-hover'));
+        if (slot) slot.classList.add('drop-hover');
+      }
+    };
+
+    const onUp = ev => {
+      card.removeEventListener('pointermove', onMove);
+      card.removeEventListener('pointerup', onUp);
+      card.removeEventListener('pointercancel', onUp);
+
+      if (dragStarted) {
+        // Fue un DRAG: soltar en el slot bajo el punto
+        const slot = slotAtPoint(ev.clientX, ev.clientY);
+        if (slot) assignDish(dishId, slot.dataset.key);
+        card.classList.remove('dragging');
+        weekCol.querySelectorAll('.meal-slot').forEach(s => s.classList.remove('drop-hover'));
+        if (ghost) { ghost.remove(); ghost = null; }
+        setTimeout(() => { draggingNow = false; }, 50);
+      } else {
+        // Fue un TAP: seleccionar/deseleccionar (modo tocar-y-tocar)
+        handleTapSelect(dishId, card, dish);
+      }
+    };
+
+    card.addEventListener('pointermove', onMove);
+    card.addEventListener('pointerup', onUp);
+    card.addEventListener('pointercancel', onUp);
+  }
+
+  function handleTapSelect(dishId, card, dish) {
+    if (tapSelectedDish === dishId) {
+      tapSelectedDish = null;
+      card.classList.remove('tap-selected');
+      clearTapTargets();
+      hideHint();
+    } else {
+      tapSelectedDish = dishId;
+      document.querySelectorAll('.dish-card').forEach(c => c.classList.remove('tap-selected'));
+      card.classList.add('tap-selected');
+      markTapTargets();
+      showHint(`Ahora toca un tiempo para poner <b>${dish.nombre}</b>`);
+    }
   }
 
   function markTapTargets() {
@@ -560,47 +624,8 @@
     });
   }
 
-  // --- Drag real con pointer events ---
+  // --- Estado global de drag y helper de posición ---
   let draggingNow = false;
-  let ghost = null;
-  function startDrag(e, dishId, card) {
-    e.preventDefault();
-    const dish = DISHES.find(d => d.id === dishId);
-    draggingNow = true;
-    card.classList.add('dragging');
-
-    ghost = document.createElement('div');
-    ghost.className = 'drag-ghost';
-    ghost.style.setProperty('--dish-color', PROTEIN_COLORS[dish.proteina]);
-    ghost.textContent = dish.nombre;
-    document.body.appendChild(ghost);
-    moveGhost(e.clientX, e.clientY);
-
-    const onMove = ev => {
-      moveGhost(ev.clientX, ev.clientY);
-      const slot = slotAtPoint(ev.clientX, ev.clientY);
-      weekCol.querySelectorAll('.meal-slot').forEach(s => s.classList.remove('drop-hover'));
-      if (slot) slot.classList.add('drop-hover');
-    };
-    const onUp = ev => {
-      const slot = slotAtPoint(ev.clientX, ev.clientY);
-      if (slot) assignDish(dishId, slot.dataset.key);
-      cleanup();
-    };
-    function cleanup() {
-      card.classList.remove('dragging');
-      weekCol.querySelectorAll('.meal-slot').forEach(s => s.classList.remove('drop-hover'));
-      if (ghost) { ghost.remove(); ghost = null; }
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      setTimeout(() => { draggingNow = false; }, 50);
-    }
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }
-  function moveGhost(x, y) {
-    if (ghost) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; }
-  }
   function slotAtPoint(x, y) {
     const el = document.elementFromPoint(x, y);
     return el ? el.closest('.meal-slot') : null;
@@ -613,8 +638,8 @@
   // Hint inicial según dispositivo
   if (isTouch) {
     setTimeout(() => {
-      showHint('Toca un platillo, luego toca dónde ponerlo');
-      setTimeout(hideHint, 3500);
+      showHint('Arrastra un platillo, o tócalo y luego toca dónde ponerlo');
+      setTimeout(hideHint, 3800);
     }, 800);
   }
 </script>
