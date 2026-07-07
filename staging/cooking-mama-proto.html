@@ -28,6 +28,37 @@
     --p-pescado: #5b8ca8;
     --p-res: #b5563f;
     --p-detox: #7a8c4e;
+
+    /* Acento estacional (default otoño, se sobreescribe por JS) */
+    --season-accent: var(--terra);
+    --season-soft: color-mix(in srgb, var(--terra) 14%, transparent);
+    --season-band: #f3e4d2;
+  }
+
+  /* ===== TEMAS ESTACIONALES ===== */
+  /* Invierno: verde pino, rojo, dorado */
+  body[data-season="invierno"] {
+    --season-accent: #2f6b4f;
+    --season-soft: color-mix(in srgb, #2f6b4f 12%, transparent);
+    --season-band: #e8f0ea;
+  }
+  /* Primavera: rosa, verde tierno, amarillo */
+  body[data-season="primavera"] {
+    --season-accent: #d16b93;
+    --season-soft: color-mix(in srgb, #d16b93 12%, transparent);
+    --season-band: #fbeef3;
+  }
+  /* Verano: turquesa, arena, coral */
+  body[data-season="verano"] {
+    --season-accent: #2d9db3;
+    --season-soft: color-mix(in srgb, #2d9db3 12%, transparent);
+    --season-band: #e3f3f5;
+  }
+  /* Otoño (su favorita): naranja quemado, ocre, café */
+  body[data-season="otono"] {
+    --season-accent: #c26a2b;
+    --season-soft: color-mix(in srgb, #c26a2b 13%, transparent);
+    --season-band: #f6e7d4;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -541,6 +572,69 @@
     padding: 6px 12px;
     font-weight: 600;
   }
+
+  /* ===== FRANJA DECORATIVA ESTACIONAL ===== */
+  .season-band {
+    background: var(--season-band);
+    padding: 7px 16px;
+    text-align: center;
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--season-accent);
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid color-mix(in srgb, var(--season-accent) 15%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 400ms, color 400ms;
+  }
+  .season-band .motifs {
+    display: inline-flex;
+    gap: 6px;
+    font-size: 15px;
+    font-style: normal;
+  }
+  /* Header y acentos usan el color estacional */
+  .cm-title .pan { transition: transform 400ms; }
+  .month-arrow { color: var(--season-accent) !important; }
+  .month-arrow:hover { border-color: var(--season-accent) !important; }
+  .week-card.is-current { border-color: var(--season-accent) !important; }
+  .week-card:hover { border-color: var(--season-accent) !important; }
+  .back-to-month { color: var(--season-accent) !important; }
+  .month-title::after {
+    content: '';
+    display: block;
+    width: 40px; height: 3px;
+    background: var(--season-accent);
+    border-radius: 2px;
+    margin: 6px auto 0;
+    opacity: 0.5;
+    transition: background 400ms;
+  }
+  /* Guirnalda superior en invierno (esferas colgando) */
+  .season-garland {
+    height: 0;
+    overflow: visible;
+    position: relative;
+    display: none;
+  }
+  body[data-season="invierno"] .season-garland { display: block; }
+  .season-garland .ball {
+    position: absolute;
+    top: 0;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    transform: translateY(-2px);
+  }
+  .season-garland .ball::before {
+    content: '';
+    position: absolute;
+    top: -6px; left: 50%;
+    width: 1px; height: 6px;
+    background: color-mix(in srgb, #2f6b4f 50%, transparent);
+  }
 </style>
 </head>
 <body>
@@ -551,6 +645,12 @@
   <div class="cm-title"><span class="pan">🍳</span> Cooking Mama</div>
   <div class="cm-sub" id="cm-sub">Elige una semana para planear</div>
 </div>
+
+<div class="season-band" id="season-band">
+  <span class="motifs" id="season-motifs"></span>
+  <span id="season-text"></span>
+</div>
+<div class="season-garland" id="season-garland"></div>
 
 <!-- ===== NIVEL MES ===== -->
 <div class="month-view" id="month-view">
@@ -680,6 +780,48 @@
     return n;
   }
 
+  // ===== TEMAS ESTACIONALES (hemisferio norte) =====
+  // Sigue la estación del MES que se está viendo.
+  const SEASONS = {
+    invierno: { meses: [11, 0, 1], motifs: ['🎄','🔴','✨'], text: 'Invierno · temporada de guirnaldas y esferas' },
+    primavera: { meses: [2, 3, 4], motifs: ['🌸','🌷','🌼'], text: 'Primavera · todo florece' },
+    verano:   { meses: [5, 6, 7], motifs: ['🌊','☀️','🐚'], text: 'Verano · sol, playa y frescura' },
+    otono:    { meses: [8, 9, 10], motifs: ['🎃','🍂','☕'], text: 'Otoño · temporada de calabaza y pumpkin spice' }
+  };
+  function seasonForMonth(month) {
+    for (const key in SEASONS) {
+      if (SEASONS[key].meses.includes(month)) return key;
+    }
+    return 'otono';
+  }
+  function applySeason(month) {
+    const key = seasonForMonth(month);
+    const s = SEASONS[key];
+    document.body.dataset.season = key;
+    const motifsEl = document.getElementById('season-motifs');
+    const textEl = document.getElementById('season-text');
+    if (motifsEl) motifsEl.innerHTML = s.motifs.map(m => `<span>${m}</span>`).join('');
+    if (textEl) textEl.textContent = s.text;
+    renderGarland(key);
+  }
+  // Guirnalda de esferas colgando (solo invierno)
+  function renderGarland(key) {
+    let g = document.getElementById('season-garland');
+    if (!g) return;
+    g.innerHTML = '';
+    if (key !== 'invierno') return;
+    const colors = ['#b5563f', '#2f6b4f', '#d9a441', '#c26a2b'];
+    const n = 24;
+    for (let i = 0; i < n; i++) {
+      const ball = document.createElement('span');
+      ball.className = 'ball';
+      ball.style.left = (i / (n - 1) * 100) + '%';
+      ball.style.background = colors[i % colors.length];
+      ball.style.top = (Math.sin(i * 0.9) * 3 + 3) + 'px';
+      g.appendChild(ball);
+    }
+  }
+
   // ===== NIVEL MES =====
   const monthView = document.getElementById('month-view');
   const weekView = document.getElementById('week-view');
@@ -689,6 +831,7 @@
 
   function renderMonth() {
     monthTitleEl.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+    applySeason(viewMonth);
     weekCardsEl.innerHTML = '';
     const weeks = weeksIntersectingMonth(viewYear, viewMonth);
     const todayMonday = mondayOf(new Date()).getTime();
@@ -714,6 +857,9 @@
 
   function openWeek(weekStart) {
     selectedWeekStart = new Date(weekStart);
+    // La estación de la semana: usar el jueves (día central, criterio ISO)
+    const jueves = addDays(weekStart, 3);
+    applySeason(jueves.getMonth());
     // Construir los 7 días reales de la semana
     DAYS = [];
     for (let i = 0; i < 7; i++) {
