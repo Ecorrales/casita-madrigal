@@ -5374,13 +5374,14 @@ document.addEventListener('visibilitychange', () => {
    2. Crea un proyecto gratis
    3. Activa Realtime Database (modo de prueba)
    4. Pega tu configuración aquí abajo */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCd-HtCZAAaCKAJAJGZ8yxfQgyeC7AQudk",
-  authDomain: "casita-test-8e857.firebaseapp.com",
-  projectId: "casita-test-8e857",
-  storageBucket: "casita-test-8e857.firebasestorage.app",
-  messagingSenderId: "813605958461",
-  appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
+const FIREBASE_CONFIG =  {
+  apiKey: "AIzaSyD5gwu0f79Y3rD-kTXMc6xkdikPKiDkL54",
+  authDomain: "casita-madrigal.firebaseapp.com",
+  databaseURL: "https://casita-madrigal-default-rtdb.firebaseio.com",
+  projectId: "casita-madrigal",
+  storageBucket: "casita-madrigal.firebasestorage.app",
+  messagingSenderId: "681740870700",
+  appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
 
 /* ===== DATOS BASE ===== */
@@ -11110,12 +11111,19 @@ function claimTask(t, store, kind, who, scope) {
     return;
   }
   scope = scope || 'day';
+  const prev = store[t.id] || {};
   const entry = {
     takenBy: who,
     takenAt: Date.now(),
     scope: scope,
     weekKey: scope === 'week' ? weekKey() : null
   };
+  // Preservar el progreso de slots de repetición (esporádicas 2×+)
+  // Sin esto, tomar la tarea para el 2º slot borraría el 1/2 ya hecho.
+  if (prev.slotsHechos) {
+    entry.slotsHechos = prev.slotsHechos;
+    entry.at = prev.at || null;   // conservar el timestamp del último slot para el cálculo de periodo
+  }
   store[t.id] = entry;
   const scopeLabel = scope === 'week' ? 'toda la semana' : 'hoy';
   pushHistory({ ts: Date.now(), by: who, taskName: t.name, action: `tomó por ${scopeLabel}` });
