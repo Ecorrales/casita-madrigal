@@ -686,6 +686,31 @@ body::before {
   border: 1px solid var(--freq-border, color-mix(in srgb, var(--gold) 30%, transparent));
 }
 
+/* Indicadores de slots de repetición para esporádicas 2×+ */
+.slot-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.slot-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--sky) 55%, transparent);
+  background: transparent;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.slot-dot.filled {
+  background: var(--sky);
+  border-color: var(--sky);
+}
+.task-row.done .slot-dot.filled {
+  background: var(--leaf);
+  border-color: var(--leaf);
+}
+
 /* Codificación por frecuencia: más frecuente = más cálido, menos frecuente = más frío */
 .freq-chip[data-freq="daily"] {
   --freq-bg: color-mix(in srgb, var(--terra) 14%, transparent);
@@ -3736,8 +3761,120 @@ body::before {
 }
 
 /* =================================================
-   MODAL GENÉRICO — reemplazo de prompt/confirm nativos
+   OVERLAY DE CUMPLEAÑOS — cálido, dulce, festivo
    ================================================= */
+.birthday-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99760;          /* Encima del jamboree */
+  background: radial-gradient(ellipse at center,
+    rgba(255, 228, 200, 0.94) 0%,
+    rgba(248, 200, 210, 0.90) 45%,
+    rgba(200, 150, 180, 0.86) 100%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: birthday-burst 400ms cubic-bezier(0.2, 0.8, 0.2, 1.3);
+}
+.birthday-overlay.visible { display: flex; }
+.birthday-overlay.fading-out { animation: birthday-fade-out 400ms ease-in forwards; }
+@keyframes birthday-burst {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes birthday-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.birthday-stage {
+  text-align: center;
+  max-width: 480px;
+  position: relative;
+  z-index: 3;
+}
+
+.birthday-cake {
+  font-size: 96px;
+  line-height: 1;
+  margin-bottom: 12px;
+  animation: birthday-cake-pop 700ms cubic-bezier(0.2, 0.8, 0.2, 1.5);
+}
+@keyframes birthday-cake-pop {
+  0%   { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(4deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+}
+
+.birthday-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 40px;
+  color: #7a3352;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  line-height: 1.05;
+  animation: birthday-text-bounce 700ms cubic-bezier(0.2, 0.8, 0.2, 1.5) 120ms backwards;
+}
+@keyframes birthday-text-bounce {
+  0%   { transform: translateY(20px); opacity: 0; }
+  60%  { transform: translateY(-4px); opacity: 1; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+.birthday-subtitle {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: #7a3352;
+  opacity: 0.85;
+  margin-bottom: 16px;
+  animation: birthday-subtitle-fade 600ms ease-out 400ms backwards;
+}
+@keyframes birthday-subtitle-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 0.85; transform: translateY(0); }
+}
+
+.birthday-bono {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 26px;
+  color: var(--terra);
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.5);
+  animation: birthday-bono-pop 800ms cubic-bezier(0.2, 0.8, 0.2, 1.6) 550ms backwards;
+}
+@keyframes birthday-bono-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.birthday-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #7a3352;
+  opacity: 0;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 24px;
+  animation: birthday-hint-appear 800ms ease-out 1600ms forwards;
+}
+@keyframes birthday-hint-appear {
+  from { opacity: 0; }
+  to   { opacity: 0.55; }
+}
+
+.birthday-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
 .casita-modal {
   position: fixed;
   inset: 0;
@@ -4939,6 +5076,14 @@ body::before {
         <option value="biweekly">Quincenal · día 1 y día 15</option>
         <option value="monthly">Mensual · día 1 de cada mes</option>
       </select>
+      <label class="form-label" style="margin-top:12px">Veces por periodo</label>
+      <p class="form-hint" style="margin:0 0 6px;display:block">Cuántas veces se puede completar dentro de cada periodo. Cada quien gana su punto.</p>
+      <select id="edit-repeticiones" class="form-input">
+        <option value="1">1 vez</option>
+        <option value="2">2 veces</option>
+        <option value="3">3 veces</option>
+        <option value="4">4 veces</option>
+      </select>
     </div>
 
     <!-- BOUNTY: solo Emmanuel ve esta sección -->
@@ -5199,6 +5344,22 @@ body::before {
 </div>
 
 <!-- =================================================
+     OVERLAY DE CUMPLEAÑOS
+     Aparece al primer login del cumpleañero en su día.
+     Entrega el bono (edad = puntos) al cerrarse.
+     ================================================= -->
+<div class="birthday-overlay" id="birthday-overlay" aria-hidden="true">
+  <div class="birthday-stage">
+    <div class="birthday-cake" aria-hidden="true">🎂</div>
+    <div class="birthday-title" id="birthday-title">¡Feliz cumpleaños!</div>
+    <div class="birthday-subtitle" id="birthday-subtitle">De parte de toda la casita</div>
+    <div class="birthday-bono" id="birthday-bono">+0 puntos de regalo</div>
+    <div class="birthday-hint">Toca para recibir tu regalo</div>
+  </div>
+  <div class="birthday-confetti" id="birthday-confetti" aria-hidden="true"></div>
+</div>
+
+<!-- =================================================
      MODAL GENÉRICO para prompts y confirmaciones
      Reemplaza los alert/confirm/prompt nativos del navegador.
      Funciones expuestas: casitaPrompt() y casitaConfirm()
@@ -5350,6 +5511,7 @@ const FIREBASE_CONFIG =  {
   messagingSenderId: "681740870700",
   appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
+
 
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
@@ -5641,7 +5803,7 @@ const SEED_DAILY = [
 ];
 
 const SEED_SPORADIC = [
-  { id: 's01', name: 'Regar las flores', meta: '2× semana' },
+  { id: 's01', name: 'Regar las flores', meta: '2× semana', repeticiones: 2 },
   { id: 's02', name: 'Barrer frente de la casa', meta: 'Semanal' },
   { id: 's03', name: 'Aspirar las escaleras', meta: 'Semanal' },
   { id: 's04', name: 'Ventanas planta baja', meta: 'Mensual' },
@@ -5752,6 +5914,15 @@ function ensureCatalogs() {
       }
       migrated = true;
     }
+    // MIGRACIÓN repeticiones: default 1. Detecta "2× semana" del meta como caso especial.
+    if (t.repeticiones == null) {
+      if (t.frequency === 'twice-week' || /2\s*[×x]\s*semana/i.test(t.meta || '')) {
+        t.repeticiones = 2;
+      } else {
+        t.repeticiones = 1;
+      }
+      migrated = true;
+    }
   });
   if (migrated) {
     // Solo persistir si Firebase ya hidrató; de lo contrario se perderá al hidratarse
@@ -5781,6 +5952,7 @@ function ensureCatalogs() {
   Object.keys(PEOPLE).forEach(k => {
     if (!(k in state.birthdays)) state.birthdays[k] = null;
   });
+  if (!state.birthdayShown) state.birthdayShown = {};
 
   // MENÚ SEMANAL
   if (!state.menu) state.menu = {};
@@ -6420,6 +6592,50 @@ function playPopSound() {
   }
 }
 
+/* ===== SONIDO — Melodía dulce de cumpleaños (tara-ra-rán ascendente) ===== */
+function playBirthdaySound() {
+  if (state.muted) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+
+  const now = ctx.currentTime;
+  // 4 notas ascendentes, cálidas: Sol4, Do5, Mi5, Sol5 (un arpegio alegre que "sube")
+  const notes = [
+    { freq: 392.00, delay: 0.00, dur: 0.35, vol: 0.16 },  // Sol4
+    { freq: 523.25, delay: 0.14, dur: 0.35, vol: 0.16 },  // Do5
+    { freq: 659.25, delay: 0.28, dur: 0.40, vol: 0.16 },  // Mi5
+    { freq: 783.99, delay: 0.42, dur: 0.70, vol: 0.18 }   // Sol5 (nota final sostenida)
+  ];
+  notes.forEach(n => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';  // triangle = más dulce que sine, menos áspero que square
+    osc.frequency.value = n.freq;
+    const start = now + n.delay;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(n.vol, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + n.dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + n.dur);
+  });
+  // Brillo suave sobre la última nota (octava arriba)
+  const shimmer = ctx.createOscillator();
+  const shimmerGain = ctx.createGain();
+  shimmer.type = 'sine';
+  shimmer.frequency.value = 1567.98; // Sol6
+  const sStart = now + 0.42;
+  shimmerGain.gain.setValueAtTime(0, sStart);
+  shimmerGain.gain.linearRampToValueAtTime(0.05, sStart + 0.03);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.0001, sStart + 0.6);
+  shimmer.connect(shimmerGain);
+  shimmerGain.connect(ctx.destination);
+  shimmer.start(sStart);
+  shimmer.stop(sStart + 0.65);
+}
+
 /* =================================================
    MODAL GENÉRICO — casitaPrompt() y casitaConfirm()
    Reemplazan a los prompt/confirm/alert nativos del navegador.
@@ -6888,14 +7104,25 @@ function dailyRollover() {
       const catalogItem = state.catalogSporadic?.find(t => t.id === id);
 
       // CASO 1: Tarea esporádica con frequency (semanal/quincenal/mensual)
-      // Si está completada y aún dentro de su periodo, CONSERVAR como completada.
-      // Si su periodo ya terminó, liberar.
-      if (catalogItem?.frequency && catalogItem.frequency !== 'daily' && entry.done) {
-        if (isPeriodicallyLocked(catalogItem, entry)) {
-          // Aún en periodo: conservar tal cual (no se libera al rollover diario)
+      // Si tiene progreso (slots hechos) y aún dentro de su periodo, CONSERVAR.
+      // Si su periodo ya terminó, liberar (reset de slots).
+      const tieneProgreso = entry.done || (entry.slotsHechos || 0) > 0;
+      if (catalogItem?.frequency && catalogItem.frequency !== 'daily' && tieneProgreso) {
+        const period = (function() {
+          const freq = catalogItem.frequency;
+          const periodFreq = freq === 'twice-week' ? 'weekly'
+                           : freq === 'quarterly' ? 'monthly'
+                           : freq === 'yearly' ? 'monthly'
+                           : freq;
+          return currentPeriod(periodFreq);
+        })();
+        const completedAt = entry.at || 0;
+        const dentroDelPeriodo = completedAt >= period.start && completedAt <= period.end;
+        if (dentroDelPeriodo) {
+          // Aún en periodo: conservar el progreso de slots (no se libera al rollover diario)
           // No hacemos nada — la entrada permanece como está
         } else {
-          // Periodo terminó: liberar
+          // Periodo terminó: liberar y resetear slots
           delete sporadicStore[id];
           fbChanges[`sporadic/${id}`] = null;
         }
@@ -7077,6 +7304,7 @@ async function initFirebase() {
         state.scores = mergeScoresMax(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
+        if (data.birthdayShown) state.birthdayShown = data.birthdayShown;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
@@ -7161,6 +7389,7 @@ async function initFirebase() {
         state.scores = adoptScoresFromRemote(data.scores);
         if (data.subtitles) state.subtitles = data.subtitles;
         if (data.birthdays) state.birthdays = data.birthdays;
+        if (data.birthdayShown) state.birthdayShown = data.birthdayShown;
         if (data.menu) state.menu = data.menu;
         if (data.grams) state.grams = data.grams;
         state.rewards = data.rewards || {};
@@ -7233,6 +7462,7 @@ async function initFirebase() {
       state.history         = normalizeHistory(data.history);
       state.subtitles       = data.subtitles       || state.subtitles;
       state.birthdays       = data.birthdays       || {};
+      state.birthdayShown       = data.birthdayShown       || {};
       state.menu            = data.menu            || {};
       state.grams           = data.grams           || {};
       state.tz              = data.tz              || {};
@@ -7630,6 +7860,7 @@ async function performRefresh() {
         state.history         = normalizeHistory(data.history);
         state.subtitles       = data.subtitles       || state.subtitles;
         state.birthdays       = data.birthdays       || {};
+        state.birthdayShown       = data.birthdayShown       || {};
         state.menu            = data.menu            || {};
         state.grams           = data.grams           || {};
         state.tz              = data.tz              || {};
@@ -7860,6 +8091,141 @@ function closeJamboreeOverlay() {
   }, JAMBOREE_FADE_MS);
 }
 
+/* =================================================
+   CEREMONIA DE CUMPLEAÑOS
+   Al primer login del cumpleañero en su día, muestra un overlay
+   festivo. Al cerrarlo, entrega el bono (edad = puntos) al saldo
+   y al acumulado histórico. Flag por año en Firebase para no repetir.
+   ================================================= */
+const BIRTHDAY_LOCK_MS = 1000;   // grace period antes de permitir cerrar
+let _birthdayCloseHandler = null;
+let _birthdayPendingBono = null; // { personKey, amount } — se entrega al cerrar
+
+/* Verifica si el usuario actual cumple años hoy y no ha visto su overlay este año.
+   Si aplica, dispara la ceremonia. Se llama desde showApp(). */
+function checkBirthdayCeremony() {
+  const me = state.me;
+  if (!me || !PEOPLE[me]) return;
+  const bday = state.birthdays?.[me];
+  if (!bday) return;
+
+  // ¿Es su cumpleaños hoy?
+  if (daysUntilBirthday(bday) !== 0) return;
+
+  // ¿Ya vio su overlay este año?
+  const year = new Date().getFullYear();
+  if (state.birthdayShown && state.birthdayShown[`${me}_${year}`]) return;
+
+  // Calcular el bono: edad recién cumplida
+  const edad = calcAge(bday);
+  if (edad == null || edad <= 0) return;
+
+  // Disparar ceremonia (con pequeño delay para no chocar con el render inicial)
+  setTimeout(() => showBirthdayOverlay(me, edad, year), 700);
+}
+
+function showBirthdayOverlay(personKey, edad, year) {
+  const overlay = document.getElementById('birthday-overlay');
+  const titleEl = document.getElementById('birthday-title');
+  const subEl   = document.getElementById('birthday-subtitle');
+  const bonoEl  = document.getElementById('birthday-bono');
+  const confettiEl = document.getElementById('birthday-confetti');
+  if (!overlay || !titleEl || !bonoEl) return;
+
+  // Evitar doble apertura
+  if (overlay.classList.contains('visible')) return;
+
+  const nombre = PEOPLE[personKey]?.name || '';
+  titleEl.textContent = `¡Feliz cumpleaños, ${nombre}!`;
+  subEl.textContent = 'De parte de toda la casita';
+  bonoEl.textContent = `+${edad} ${edad === 1 ? 'punto' : 'puntos'} de regalo`;
+
+  // Guardar el bono pendiente — se entrega al cerrar
+  _birthdayPendingBono = { personKey, amount: edad, year };
+
+  // Mostrar
+  overlay.classList.remove('fading-out');
+  overlay.classList.add('visible');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  // Sonido dulce + confetti dentro del overlay
+  playBirthdaySound();
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  confettiBurst(cx, cy, confettiEl);
+  setTimeout(() => confettiBurst(cx - window.innerWidth / 6, cy - 40, confettiEl), 120);
+  setTimeout(() => confettiBurst(cx + window.innerWidth / 6, cy - 40, confettiEl), 240);
+
+  // Cierre al tocar (con grace period)
+  const shownAt = Date.now();
+  _birthdayCloseHandler = () => {
+    if (Date.now() - shownAt < BIRTHDAY_LOCK_MS) return;
+    closeBirthdayOverlay();
+  };
+  overlay.removeEventListener('click', _birthdayCloseHandler);
+  overlay.addEventListener('click', _birthdayCloseHandler);
+}
+
+function closeBirthdayOverlay() {
+  const overlay = document.getElementById('birthday-overlay');
+  const confettiEl = document.getElementById('birthday-confetti');
+  if (!overlay || !overlay.classList.contains('visible')) return;
+
+  if (_birthdayCloseHandler) {
+    overlay.removeEventListener('click', _birthdayCloseHandler);
+    _birthdayCloseHandler = null;
+  }
+
+  // Entregar el bono ANTES de cerrar (para que el usuario vea el efecto al volver)
+  if (_birthdayPendingBono) {
+    deliverBirthdayBono(_birthdayPendingBono);
+    _birthdayPendingBono = null;
+  }
+
+  overlay.classList.add('fading-out');
+  setTimeout(() => {
+    overlay.classList.remove('visible', 'fading-out');
+    overlay.setAttribute('aria-hidden', 'true');
+    if (confettiEl) confettiEl.innerHTML = '';
+  }, 400);
+}
+
+/* Entrega el bono de cumpleaños: suma a scores y lifetimeScores,
+   marca el flag del año, registra en historial.
+   Patrón Honest UI: transaction atómica en Firebase. */
+function deliverBirthdayBono({ personKey, amount, year }) {
+  const flagField = `${personKey}_${year}`;
+
+  // Transacciones atómicas (como el bono Fogata)
+  if (useFirebase && db) {
+    db.ref(`casita/scores/${personKey}`).transaction(cur => {
+      return (typeof cur === 'number' ? cur : 0) + amount;
+    }, null, false);
+    db.ref(`casita/lifetimeScores/${personKey}`).transaction(cur => {
+      return (typeof cur === 'number' ? cur : 0) + amount;
+    }, null, false);
+    // Marcar flag del año para no repetir
+    db.ref(`casita/birthdayShown/${flagField}`).set(Date.now());
+  }
+
+  // Historial
+  pushHistory({
+    ts: Date.now(),
+    by: personKey,
+    taskName: 'era Fogata',
+    action: `cumplió años · +${amount} pts de regalo`
+  });
+
+  toast(`🎂 ¡Feliz cumpleaños! +${amount} puntos de regalo`);
+}
+
+/* DEBUG: dispara la ceremonia de cumpleaños manualmente.
+   Uso: testBirthday(31) → overlay con bono de 31 pts (NO entrega real si cancelas) */
+window.testBirthday = (edad = 25) => {
+  showBirthdayOverlay(state.me, edad, new Date().getFullYear());
+};
+
+
 /* Muestra el overlay del Jamboree.
    @param finisherKey: clave del descubridor (solo para subtítulo, no afecta imagen)
    @param multiplier: multiplicador del Jamboree (×2 a ×10)
@@ -8054,6 +8420,8 @@ function showApp() {
   }
   // Aviso de promo activa (una vez por sesión, no en cada renderAll)
   showPromoToastIfActive();
+  // Ceremonia de cumpleaños (si aplica al usuario actual, una vez al año)
+  checkBirthdayCeremony();
 }
 
 /* Muestra un toast al usuario cuando hay una promo activa, una sola vez
@@ -8438,7 +8806,7 @@ function currentPeriod(frequencyKey, refDate) {
 /* True si la tarea esporádica ya fue completada en su periodo actual y por
    tanto NO está disponible para tomar/hacer hasta el siguiente periodo. */
 function isPeriodicallyLocked(catalogItem, entry) {
-  if (!catalogItem || !entry || !entry.done) return false;
+  if (!catalogItem || !entry) return false;
   const freq = catalogItem.frequency || detectFrequency(catalogItem.meta)?.key || null;
   // Sin frecuencia: comportamiento viejo (se libera con rollover diario)
   if (!freq || freq === 'daily') return false;
@@ -8449,8 +8817,15 @@ function isPeriodicallyLocked(catalogItem, entry) {
                    : freq;
   const period = currentPeriod(periodFreq);
   const completedAt = entry.at || 0;
-  // Si fue completada dentro del periodo actual, está bloqueada
-  return completedAt >= period.start && completedAt <= period.end;
+  // Solo cuenta si la última actividad fue dentro del periodo actual
+  const dentroDelPeriodo = completedAt >= period.start && completedAt <= period.end;
+  if (!dentroDelPeriodo) return false;
+
+  // MODELO DE SLOTS: la tarea se bloquea solo cuando se completaron
+  // todas las repeticiones permitidas en el periodo.
+  const repeticiones = catalogItem.repeticiones || 1;
+  const slotsHechos = entry.slotsHechos || (entry.done ? 1 : 0);
+  return slotsHechos >= repeticiones;
 }
 
 /* Formatea el inicio del próximo periodo en texto legible */
@@ -8529,6 +8904,20 @@ function buildTaskRow(t, store, kind) {
       chip.dataset.freq = freq.key;
       chip.textContent = freq.label;
       name.appendChild(chip);
+    }
+    // Indicadores de slots de repetición (solo si repeticiones > 1)
+    const reps = t.repeticiones || 1;
+    if (reps > 1) {
+      const hechos = entry.slotsHechos || (entry.done ? reps : 0);
+      const slotsWrap = document.createElement('span');
+      slotsWrap.className = 'slot-dots';
+      slotsWrap.title = `${hechos} de ${reps} esta semana`;
+      for (let i = 0; i < reps; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'slot-dot' + (i < hechos ? ' filled' : '');
+        slotsWrap.appendChild(dot);
+      }
+      name.appendChild(slotsWrap);
     }
   }
   // Botón de editar (aparece al hover)
@@ -10542,6 +10931,7 @@ function approveProposal(id) {
     const newId = uid('s');
     newItem = {
       id: newId, name: p.name, meta: p.meta || '',
+      frequency: 'weekly', repeticiones: 1,
       addedBy: p.proposedBy, addedAt: Date.now()
     };
     catalogPath = 'catalogSporadic';
@@ -10870,6 +11260,8 @@ function openEditTask(kind, id) {
     if (kind === 'sporadic') {
       freqSection.style.display = '';
       freqSelect.value = item.frequency || 'weekly';
+      const repSelect = document.getElementById('edit-repeticiones');
+      if (repSelect) repSelect.value = String(item.repeticiones || 1);
     } else {
       freqSection.style.display = 'none';
     }
@@ -10958,6 +11350,8 @@ function saveEditTask() {
   if (kind === 'sporadic') {
     const freqSelect = document.getElementById('edit-frequency');
     if (freqSelect) item.frequency = freqSelect.value;
+    const repSelect = document.getElementById('edit-repeticiones');
+    if (repSelect) item.repeticiones = parseInt(repSelect.value, 10) || 1;
   }
   ensureCatalogs();
   closeEditForm();
@@ -11032,12 +11426,19 @@ function claimTask(t, store, kind, who, scope) {
     return;
   }
   scope = scope || 'day';
+  const prev = store[t.id] || {};
   const entry = {
     takenBy: who,
     takenAt: Date.now(),
     scope: scope,
     weekKey: scope === 'week' ? weekKey() : null
   };
+  // Preservar el progreso de slots de repetición (esporádicas 2×+)
+  // Sin esto, tomar la tarea para el 2º slot borraría el 1/2 ya hecho.
+  if (prev.slotsHechos) {
+    entry.slotsHechos = prev.slotsHechos;
+    entry.at = prev.at || null;   // conservar el timestamp del último slot para el cálculo de periodo
+  }
   store[t.id] = entry;
   const scopeLabel = scope === 'week' ? 'toda la semana' : 'hoy';
   pushHistory({ ts: Date.now(), by: who, taskName: t.name, action: `tomó por ${scopeLabel}` });
@@ -11072,14 +11473,24 @@ function markDone(t, store, kind, evt) {
 
   const entry = store[t.id] || {};
   const finisher = entry.takenBy || state.me;
+
+  // MODELO DE SLOTS (solo esporádicas con repeticiones > 1)
+  // Cada marca incrementa slotsHechos y entrega su punto. La tarea solo
+  // queda "done" (bloqueada) cuando se completan todas las repeticiones.
+  const repeticiones = (kind === 'sporadic' && t.repeticiones) ? t.repeticiones : 1;
+  const slotsPrevios = entry.slotsHechos || 0;
+  const slotsNuevos = slotsPrevios + 1;
+  const alcanzaTope = slotsNuevos >= repeticiones;
+
   const newEntry = {
-    done: true,
+    done: alcanzaTope,
     by: finisher,
     at: Date.now(),
-    takenBy: entry.takenBy || null,
-    takenAt: entry.takenAt || null,
+    takenBy: null,               // se libera el "tomado" para que otro pueda tomar el siguiente slot
+    takenAt: null,
     scope: entry.scope || null,
-    weekKey: entry.weekKey || null
+    weekKey: entry.weekKey || null,
+    slotsHechos: slotsNuevos
   };
 
   // Calcular bonus (bounty manual de Emmanuel o loot crítico oculto)
@@ -11103,7 +11514,11 @@ function markDone(t, store, kind, evt) {
     toast(`✦ ¡Bounty cobrado! ×${bonus.multiplier} = ${pointsEarned} pts`);
     setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
   } else {
-    toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+    if (repeticiones > 1 && !alcanzaTope) {
+      toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"! (${slotsNuevos}/${repeticiones})`);
+    } else {
+      toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+    }
   }
 
   // Armar el batch de Firebase
