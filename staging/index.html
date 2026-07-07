@@ -5128,8 +5128,7 @@ body::before {
     <label class="form-label">Ingredientes principales <span class="form-hint">(opcional)</span></label>
     <textarea class="form-input form-textarea" id="meal-ingredients" placeholder="Ej: Pechuga de pollo, limón, ajo, arroz, ejotes" maxlength="200"></textarea>
 
-    <div class="modal-actions" style="justify-content:space-between">
-      <button class="claim-btn ghost" style="color:var(--terra-deep)" onclick="deleteMeal()">Borrar plato</button>
+    <div class="modal-actions" style="justify-content:flex-end">
       <div style="display:flex;gap:8px">
         <button class="claim-btn primary" onclick="saveMeal()">Guardar</button>
         <button class="modal-cancel" onclick="closeMealForm()">Cancelar</button>
@@ -5414,7 +5413,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.05.22.38';
+const APP_VERSION = '2026.07.07.1';
 
 async function checkForUpdate(opts = {}) {
   const { silent = true } = opts;
@@ -5502,14 +5501,16 @@ document.addEventListener('visibilitychange', () => {
    2. Crea un proyecto gratis
    3. Activa Realtime Database (modo de prueba)
    4. Pega tu configuración aquí abajo */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCd-HtCZAAaCKAJAJGZ8yxfQgyeC7AQudk",
-  authDomain: "casita-test-8e857.firebaseapp.com",
-  projectId: "casita-test-8e857",
-  storageBucket: "casita-test-8e857.firebasestorage.app",
-  messagingSenderId: "813605958461",
-  appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
+const FIREBASE_CONFIG =  {
+  apiKey: "AIzaSyD5gwu0f79Y3rD-kTXMc6xkdikPKiDkL54",
+  authDomain: "casita-madrigal.firebaseapp.com",
+  databaseURL: "https://casita-madrigal-default-rtdb.firebaseio.com",
+  projectId: "casita-madrigal",
+  storageBucket: "casita-madrigal.firebasestorage.app",
+  messagingSenderId: "681740870700",
+  appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
+
 
 /* ===== DATOS BASE ===== */
 const PEOPLE = {
@@ -9609,6 +9610,9 @@ function saveMeal() {
   toast('✦ Plato guardado');
 }
 
+// NOTA: deleteMeal quedó desactivada. La administración del menú (crear/editar/borrar)
+// ahora vive únicamente en Cooking Mama. Casita solo visualiza y edita, no borra platos.
+// Se conserva la función por si se necesitara reactivar el botón en el futuro.
 function deleteMeal() {
   if (!editingMeal) return;
   const { weekKey: wKey, day, meal } = editingMeal;
