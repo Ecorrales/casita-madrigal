@@ -248,15 +248,14 @@
     border: 1px solid var(--line);
     border-left: 4px solid var(--dish-color, var(--terra));
     border-radius: 11px;
-    padding: 10px 12px;
+    padding: 0;
     margin-bottom: 8px;
-    cursor: grab;
     box-shadow: 0 1px 2px var(--shadow);
     transition: transform 120ms, box-shadow 120ms;
-    user-select: none;
-    touch-action: none;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
   }
-  .dish-card:active { cursor: grabbing; }
   .dish-card.dragging { opacity: 0.4; }
   .dish-card.tap-selected {
     transform: scale(1.02);
@@ -264,6 +263,39 @@
     border-color: var(--terra);
   }
   .dish-card.hidden { display: none; }
+
+  /* Asa de arrastre — puntos en retícula (solo esta zona arrastra) */
+  .dish-handle {
+    width: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: color-mix(in srgb, var(--ink-soft) 50%, transparent);
+    touch-action: none;   /* solo el asa bloquea el scroll para permitir drag */
+    -webkit-user-select: none;
+    user-select: none;
+    border-right: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    background: color-mix(in srgb, var(--cream-2) 40%, transparent);
+  }
+  .dish-handle:active { cursor: grabbing; }
+  .dish-handle .dotgrid {
+    display: grid;
+    grid-template-columns: repeat(2, 3px);
+    gap: 3px;
+  }
+  .dish-handle .dotgrid i {
+    width: 3px; height: 3px; border-radius: 50%;
+    background: currentColor;
+  }
+
+  .dish-body {
+    flex: 1;
+    padding: 10px 12px;
+    cursor: pointer;
+    min-width: 0;
+  }
   .dish-name {
     font-family: 'Fraunces', serif;
     font-weight: 600;
@@ -457,8 +489,13 @@
       card.dataset.id = dish.id;
       card.style.setProperty('--dish-color', PROTEIN_COLORS[dish.proteina]);
       card.innerHTML = `
-        <div class="dish-name">${dish.nombre}<span class="dish-protein-dot"></span></div>
-        <div class="dish-ingredients">${dish.ing.join(' · ')}</div>`;
+        <div class="dish-handle" data-handle="${dish.id}" aria-label="Arrastrar ${dish.nombre}">
+          <div class="dotgrid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="dish-body" data-body="${dish.id}">
+          <div class="dish-name">${dish.nombre}<span class="dish-protein-dot"></span></div>
+          <div class="dish-ingredients">${dish.ing.join(' · ')}</div>
+        </div>`;
       dishList.appendChild(card);
     });
     bindDishCards();
@@ -512,50 +549,54 @@
   function bindDishCards() {
     dishList.querySelectorAll('.dish-card').forEach(card => {
       const dishId = card.dataset.id;
+      const handle = card.querySelector('.dish-handle');
+      const body = card.querySelector('.dish-body');
+      const dish = DISHES.find(d => d.id === dishId);
 
-      // Un solo pointerdown maneja AMBOS: tap (seleccionar) y drag (arrastrar).
-      // Se distingue por el movimiento: si el dedo/cursor se mueve más del
-      // umbral, es drag; si no se mueve y suelta, es tap.
-      card.addEventListener('pointerdown', e => {
-        startPointer(e, dishId, card);
+      // ARRASTRE: solo desde el asa (los puntos). Como el asa tiene
+      // touch-action:none, el gesto de arrastre no dispara el scroll.
+      handle.addEventListener('pointerdown', e => {
+        startDragFromHandle(e, dishId, card);
+      });
+
+      // TAP-SELECT: desde el cuerpo de la tarjeta (tocar y luego tocar slot).
+      // El cuerpo mantiene touch-action normal → el scroll de la lista fluye.
+      body.addEventListener('click', e => {
+        if (draggingNow) return;
+        handleTapSelect(dishId, card, dish);
       });
     });
   }
 
-  const DRAG_THRESHOLD = 8; // px de movimiento para considerar "drag" y no "tap"
+  const DRAG_THRESHOLD = 6; // px de movimiento para arrancar el arrastre
 
-  function startPointer(e, dishId, card) {
+  function startDragFromHandle(e, dishId, card) {
+    e.preventDefault();
     const dish = DISHES.find(d => d.id === dishId);
+    const handle = card.querySelector('.dish-handle');
     const startX = e.clientX, startY = e.clientY;
     let dragStarted = false;
     let ghost = null;
 
-    // Capturar el puntero para seguir recibiendo eventos aunque el dedo salga de la tarjeta
-    try { card.setPointerCapture(e.pointerId); } catch(_) {}
+    try { handle.setPointerCapture(e.pointerId); } catch(_) {}
 
     const onMove = ev => {
-      const dx = ev.clientX - startX;
-      const dy = ev.clientY - startY;
-      const dist = Math.hypot(dx, dy);
-
+      const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
       if (!dragStarted && dist > DRAG_THRESHOLD) {
-        // Se convirtió en drag
         dragStarted = true;
         draggingNow = true;
         card.classList.add('dragging');
-        // Cancelar cualquier selección tap-tap previa
+        // Cancelar selección tap-tap si había
         tapSelectedDish = null;
         document.querySelectorAll('.dish-card').forEach(c => c.classList.remove('tap-selected'));
         clearTapTargets();
         hideHint();
-        // Crear ghost
         ghost = document.createElement('div');
         ghost.className = 'drag-ghost';
         ghost.style.setProperty('--dish-color', PROTEIN_COLORS[dish.proteina]);
         ghost.textContent = dish.nombre;
         document.body.appendChild(ghost);
       }
-
       if (dragStarted) {
         ev.preventDefault();
         if (ghost) { ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; }
@@ -566,27 +607,22 @@
     };
 
     const onUp = ev => {
-      card.removeEventListener('pointermove', onMove);
-      card.removeEventListener('pointerup', onUp);
-      card.removeEventListener('pointercancel', onUp);
-
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
       if (dragStarted) {
-        // Fue un DRAG: soltar en el slot bajo el punto
         const slot = slotAtPoint(ev.clientX, ev.clientY);
         if (slot) assignDish(dishId, slot.dataset.key);
         card.classList.remove('dragging');
         weekCol.querySelectorAll('.meal-slot').forEach(s => s.classList.remove('drop-hover'));
         if (ghost) { ghost.remove(); ghost = null; }
         setTimeout(() => { draggingNow = false; }, 50);
-      } else {
-        // Fue un TAP: seleccionar/deseleccionar (modo tocar-y-tocar)
-        handleTapSelect(dishId, card, dish);
       }
     };
 
-    card.addEventListener('pointermove', onMove);
-    card.addEventListener('pointerup', onUp);
-    card.addEventListener('pointercancel', onUp);
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
   }
 
   function handleTapSelect(dishId, card, dish) {
@@ -638,8 +674,8 @@
   // Hint inicial según dispositivo
   if (isTouch) {
     setTimeout(() => {
-      showHint('Arrastra un platillo, o tócalo y luego toca dónde ponerlo');
-      setTimeout(hideHint, 3800);
+      showHint('Arrastra desde los ⣿ puntos, o toca el platillo y luego el tiempo');
+      setTimeout(hideHint, 4000);
     }, 800);
   }
 </script>
