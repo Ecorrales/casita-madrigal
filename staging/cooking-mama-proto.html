@@ -68,12 +68,139 @@
     font-family: 'Fraunces', serif;
   }
 
+  /* ===== NIVEL MES ===== */
+  .month-view { padding: 16px 16px 40px; max-width: 620px; margin: 0 auto; }
+  .month-view[hidden] { display: none; }
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .month-arrow {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    color: var(--terra);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 140ms, border-color 140ms;
+  }
+  .month-arrow:hover { background: var(--cream-2); border-color: var(--terra); }
+  .month-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    min-width: 160px;
+    text-align: center;
+  }
+  .week-cards { display: flex; flex-direction: column; gap: 12px; }
+  .week-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 18px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px var(--shadow);
+    transition: transform 130ms, box-shadow 130ms, border-color 130ms;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .week-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px var(--shadow);
+    border-color: var(--terra);
+  }
+  .week-card.is-current {
+    border-color: var(--gold);
+    border-width: 2px;
+  }
+  .week-card-main { min-width: 0; }
+  .week-card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .week-card-range {
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .week-card-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8a6410;
+    background: color-mix(in srgb, var(--gold) 22%, transparent);
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .week-card-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: right;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .week-card-count .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--leaf);
+    display: inline-block;
+  }
+  .week-card-count.empty .dot { background: var(--line); }
+
+  /* ===== TOPBAR DE SEMANA ===== */
+  .week-view[hidden] { display: none; }
+  .week-topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .back-to-month {
+    border: 1.5px solid var(--line);
+    background: var(--cream);
+    color: var(--terra);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 140ms;
+    white-space: nowrap;
+  }
+  .back-to-month:hover { background: var(--cream-2); }
+  .week-range {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--ink);
+  }
+
   /* ===== LAYOUT DE DOS COLUMNAS ===== */
   .cm-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0;
-    height: calc(100vh - 74px);
+    height: calc(100vh - 74px - 53px);
   }
   @media (max-width: 720px) {
     .cm-layout { grid-template-columns: 1fr; height: auto; }
@@ -422,19 +549,35 @@
 
 <div class="cm-header">
   <div class="cm-title"><span class="pan">🍳</span> Cooking Mama</div>
-  <div class="cm-sub">Arrastra un platillo al día y tiempo que quieras</div>
+  <div class="cm-sub" id="cm-sub">Elige una semana para planear</div>
 </div>
 
-<div class="cm-layout">
-  <!-- IZQUIERDA: LA SEMANA -->
-  <div class="cm-week" id="week-col">
-    <div class="cm-col-label">La semana</div>
-    <!-- días generados por JS -->
+<!-- ===== NIVEL MES ===== -->
+<div class="month-view" id="month-view">
+  <div class="month-nav">
+    <button class="month-arrow" id="prev-month" aria-label="Mes anterior">‹</button>
+    <div class="month-title" id="month-title">Julio 2026</div>
+    <button class="month-arrow" id="next-month" aria-label="Mes siguiente">›</button>
   </div>
+  <div class="week-cards" id="week-cards"><!-- generado por JS --></div>
+</div>
 
-  <!-- DERECHA: LOS PLATILLOS -->
-  <div class="cm-catalog">
-    <div class="cm-col-label">Los platillos</div>
+<!-- ===== NIVEL SEMANA ===== -->
+<div class="week-view" id="week-view" hidden>
+  <div class="week-topbar">
+    <button class="back-to-month" id="back-to-month">‹ Volver al mes</button>
+    <div class="week-range" id="week-range">Semana 1 · 6–12 jul</div>
+  </div>
+  <div class="cm-layout">
+    <!-- IZQUIERDA: LA SEMANA -->
+    <div class="cm-week" id="week-col">
+      <div class="cm-col-label">La semana</div>
+      <!-- días generados por JS -->
+    </div>
+
+    <!-- DERECHA: LOS PLATILLOS -->
+    <div class="cm-catalog">
+      <div class="cm-col-label">Los platillos</div>
     <div class="catalog-sticky">
       <div class="protein-tabs" id="protein-tabs">
         <button class="protein-tab active" data-p="todos">Todos</button>
@@ -450,6 +593,7 @@
       </div>
     </div>
     <div id="dish-list"><!-- tarjetas generadas por JS --></div>
+    </div>
   </div>
 </div>
 
@@ -477,19 +621,142 @@
     { id: 'd12', nombre: 'Lentejas', proteina: 'detox', usual: ['Comida'], ing: ['Lentejas 1 taza', 'Zanahoria', 'Papa'] }
   ];
 
-  const DAYS = [
-    { name: 'Lunes', num: '6 jul' },
-    { name: 'Martes', num: '7 jul' },
-    { name: 'Miércoles', num: '8 jul' },
-    { name: 'Jueves', num: '9 jul' },
-    { name: 'Viernes', num: '10 jul' },
-    { name: 'Sábado', num: '11 jul' },
-    { name: 'Domingo', num: '12 jul' }
-  ];
   const MEALS = ['Desayuno', 'Comida', 'Cena'];
+  const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const MONTH_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 
-  // Estado del menú: { "0-Comida": {dishId} }
+  // Estado del menú: { "YYYY-MM-DD-Comida": dishId }  (clave por fecha real)
   const menu = {};
+
+  // Estado de navegación temporal
+  let viewMonth = new Date().getMonth();   // 0-11
+  let viewYear = new Date().getFullYear();
+  let selectedWeekStart = null;            // Date del lunes de la semana elegida
+  let DAYS = [];                           // se llena al entrar a una semana
+
+  // --- Helpers de fecha (semana ISO, lunes a domingo) ---
+  function mondayOf(date) {
+    const d = new Date(date);
+    const day = (d.getDay() + 6) % 7; // 0 = lunes
+    d.setDate(d.getDate() - day);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  function addDays(date, n) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+  function ymd(date) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+  function fmtDay(date) {
+    return `${date.getDate()} ${MONTH_ABBR[date.getMonth()]}`;
+  }
+
+  // Semanas ISO que INTERSECTAN el mes (aunque empiecen antes o terminen después)
+  function weeksIntersectingMonth(year, month) {
+    const firstOfMonth = new Date(year, month, 1);
+    const lastOfMonth = new Date(year, month + 1, 0);
+    let cursor = mondayOf(firstOfMonth);
+    const weeks = [];
+    while (cursor <= lastOfMonth) {
+      const start = new Date(cursor);
+      const end = addDays(start, 6);
+      weeks.push({ start, end });
+      cursor = addDays(cursor, 7);
+    }
+    return weeks;
+  }
+
+  // Cuántos platillos hay asignados en una semana (para el contador de la tarjeta)
+  function countPlacedInWeek(weekStart) {
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const dayKey = ymd(addDays(weekStart, i));
+      MEALS.forEach(m => { if (menu[`${dayKey}-${m}`]) n++; });
+    }
+    return n;
+  }
+
+  // ===== NIVEL MES =====
+  const monthView = document.getElementById('month-view');
+  const weekView = document.getElementById('week-view');
+  const weekCardsEl = document.getElementById('week-cards');
+  const monthTitleEl = document.getElementById('month-title');
+  const cmSub = document.getElementById('cm-sub');
+
+  function renderMonth() {
+    monthTitleEl.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+    weekCardsEl.innerHTML = '';
+    const weeks = weeksIntersectingMonth(viewYear, viewMonth);
+    const todayMonday = mondayOf(new Date()).getTime();
+    weeks.forEach((wk, i) => {
+      const isCurrent = mondayOf(wk.start).getTime() === todayMonday;
+      const count = countPlacedInWeek(wk.start);
+      const card = document.createElement('div');
+      card.className = 'week-card' + (isCurrent ? ' is-current' : '');
+      card.innerHTML = `
+        <div class="week-card-main">
+          <div class="week-card-title">Semana ${i+1}
+            ${isCurrent ? '<span class="week-card-badge">Esta semana</span>' : ''}
+          </div>
+          <div class="week-card-range">${fmtDay(wk.start)} – ${fmtDay(wk.end)}</div>
+        </div>
+        <div class="week-card-count ${count ? '' : 'empty'}">
+          <span class="dot"></span>${count ? count + ' planeados' : 'sin planear'}
+        </div>`;
+      card.addEventListener('click', () => openWeek(wk.start));
+      weekCardsEl.appendChild(card);
+    });
+  }
+
+  function openWeek(weekStart) {
+    selectedWeekStart = new Date(weekStart);
+    // Construir los 7 días reales de la semana
+    DAYS = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(weekStart, i);
+      DAYS.push({ name: DAY_NAMES[i], num: fmtDay(d), dateKey: ymd(d) });
+    }
+    // Actualizar topbar
+    const wkEnd = addDays(weekStart, 6);
+    document.getElementById('week-range').textContent = `${fmtDay(weekStart)} – ${fmtDay(wkEnd)}`;
+    // Cambiar de vista
+    monthView.hidden = true;
+    weekView.hidden = false;
+    cmSub.textContent = 'Arrastra un platillo al día y tiempo que quieras';
+    renderWeek();
+    renderDishes();
+    window.scrollTo(0, 0);
+    // Hint en táctil, una vez por sesión
+    if (isTouch && !window._hintShown) {
+      window._hintShown = true;
+      setTimeout(() => {
+        showHint('Arrastra desde los ⣿ puntos, o toca el platillo y luego el tiempo');
+        setTimeout(hideHint, 4000);
+      }, 600);
+    }
+  }
+
+  function backToMonth() {
+    weekView.hidden = true;
+    monthView.hidden = false;
+    cmSub.textContent = 'Elige una semana para planear';
+    renderMonth(); // refresca contadores
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderMonth();
+  });
+  document.getElementById('next-month').addEventListener('click', () => {
+    viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderMonth();
+  });
+  document.getElementById('back-to-month').addEventListener('click', backToMonth);
 
   // ===== RENDER SEMANA =====
   const weekCol = document.getElementById('week-col');
@@ -501,7 +768,7 @@
       card.className = 'day-card';
       card.innerHTML = `<div class="day-name">${day.name} <span class="day-num">${day.num}</span></div>`;
       MEALS.forEach(meal => {
-        const key = `${di}-${meal}`;
+        const key = `${day.dateKey}-${meal}`;
         const slot = document.createElement('div');
         slot.className = 'meal-slot';
         slot.dataset.key = key;
@@ -731,16 +998,8 @@
   }
 
   // ===== INIT =====
-  renderWeek();
-  renderDishes();
+  renderMonth();  // arranca en el nivel mes
 
-  // Hint inicial según dispositivo
-  if (isTouch) {
-    setTimeout(() => {
-      showHint('Arrastra desde los ⣿ puntos, o toca el platillo y luego el tiempo');
-      setTimeout(hideHint, 4000);
-    }, 800);
-  }
 </script>
 </body>
 </html>
