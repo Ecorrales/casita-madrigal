@@ -604,6 +604,230 @@
     font-weight: 600;
   }
 
+  /* ===== BOTÓN VAMOS A COCINAR ===== */
+  .cook-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 2px dashed color-mix(in srgb, var(--season-accent) 45%, transparent);
+    background: var(--season-soft);
+    color: var(--season-accent);
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 140ms, transform 130ms;
+  }
+  .cook-btn:hover { transform: translateY(-2px); background: color-mix(in srgb, var(--season-accent) 16%, transparent); }
+
+  /* ===== NIVEL CREAR PLATILLO ===== */
+  .cook-view[hidden] { display: none; }
+  .cook-form { padding: 16px 14px 40px; }
+  .cook-field { margin-bottom: 16px; }
+  .cook-label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 7px;
+  }
+  .cook-hint {
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    font-style: italic;
+    font-family: 'Fraunces', serif;
+    color: color-mix(in srgb, var(--ink-soft) 70%, transparent);
+    margin-left: 6px;
+  }
+  .cook-input {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .cook-input:focus { outline: none; border-color: var(--season-accent); }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toggle-chip {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 130ms;
+  }
+  .toggle-chip.on {
+    background: var(--season-accent);
+    color: #fff;
+    border-color: var(--season-accent);
+  }
+  .ingredients-drop {
+    min-height: 120px;
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    transition: border-color 160ms, background 160ms;
+  }
+  .ingredients-drop.drop-hover {
+    border-color: var(--season-accent);
+    background: var(--season-soft);
+  }
+  .drop-empty {
+    color: color-mix(in srgb, var(--ink-soft) 55%, transparent);
+    font-style: italic;
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    text-align: center;
+    padding: 34px 10px;
+  }
+  .ing-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--cream-2);
+    border-radius: 9px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
+  .ing-row .ing-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 0; }
+  .ing-row .ing-qty { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+  .ing-row .ing-x { cursor: pointer; color: var(--ink-soft); font-size: 16px; opacity: 0.5; padding: 0 2px; }
+  .ing-row .ing-x:hover { opacity: 1; color: var(--terra); }
+  .finish-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--leaf);
+    color: #fff;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 130ms, background 140ms;
+  }
+  .finish-btn:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--leaf) 88%, #000); }
+  .finish-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .add-supply-btn {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 9px;
+    border-radius: 10px;
+    border: 1.5px solid color-mix(in srgb, var(--season-accent) 40%, transparent);
+    background: var(--white);
+    color: var(--season-accent);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 140ms;
+  }
+  .add-supply-btn:hover { background: var(--season-soft); }
+
+  /* Popups mini */
+  .mini-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(42, 31, 26, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .mini-modal[hidden] { display: none; }
+  .mini-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  }
+  .mini-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  .qty-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .qty-input { flex: 1; }
+  .qty-unit { flex-shrink: 0; width: 120px; }
+  .mini-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .mini-btn {
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid var(--line);
+  }
+  .mini-btn.cancel { background: var(--white); color: var(--ink-soft); }
+  .mini-btn.ok { background: var(--season-accent); color: #fff; border-color: var(--season-accent); }
+  .mini-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .mini-msg { font-size: 12px; margin-bottom: 10px; min-height: 16px; }
+  .mini-msg.err { color: #b5563f; }
+  .mini-msg.ok { color: var(--leaf); }
+
+  /* Overlay platillo listo */
+  .dish-done-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: radial-gradient(ellipse at center, rgba(122,140,78,0.94), rgba(90,110,60,0.9));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: dish-done-in 300ms ease-out;
+  }
+  .dish-done-overlay[hidden] { display: none; }
+  @keyframes dish-done-in { from { opacity: 0; } to { opacity: 1; } }
+  .dish-done-card { text-align: center; }
+  .dish-done-icon { font-size: 72px; animation: dish-done-pop 600ms cubic-bezier(0.2,0.8,0.2,1.5); }
+  @keyframes dish-done-pop { 0%{transform:scale(0.4);opacity:0} 60%{transform:scale(1.15);opacity:1} 100%{transform:scale(1)} }
+  .dish-done-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 32px;
+    color: #fff;
+    margin-top: 8px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .dish-done-sub {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: rgba(255,255,255,0.9);
+    margin-top: 4px;
+  }
+  .dish-done-hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    margin-top: 22px;
+    opacity: 0;
+    animation: dish-hint-in 500ms ease-out 900ms forwards;
+  }
+  @keyframes dish-hint-in { from { opacity: 0; } to { opacity: 0.7; } }
+
   /* ===== ACENTOS ESTACIONALES ===== */
   .month-arrow { color: var(--season-accent) !important; }
   .month-arrow:hover { border-color: var(--season-accent) !important; }
@@ -640,6 +864,7 @@
     <button class="month-arrow" id="next-month" aria-label="Mes siguiente">›</button>
   </div>
   <div class="week-cards" id="week-cards"><!-- generado por JS --></div>
+  <button class="cook-btn" id="cook-btn">🍳 Vamos a cocinar · crear un platillo</button>
 </div>
 
 <!-- ===== NIVEL SEMANA ===== -->
@@ -679,6 +904,112 @@
 
 <div class="tap-hint" id="tap-hint"></div>
 
+<!-- ===== NIVEL CREAR PLATILLO ===== -->
+<div class="cook-view" id="cook-view" hidden>
+  <div class="week-topbar">
+    <button class="back-to-month" id="back-from-cook">‹ Volver al mes</button>
+    <div class="week-range">Vamos a cocinar</div>
+  </div>
+  <div class="cm-layout">
+    <!-- IZQUIERDA: el platillo en construcción -->
+    <div class="cm-week cook-form">
+      <div class="cm-col-label">El platillo</div>
+      <div class="cook-field">
+        <label class="cook-label">Nombre</label>
+        <input type="text" class="cook-input" id="new-dish-name" placeholder="Ej. Fajitas de cerdo" maxlength="50">
+      </div>
+      <div class="cook-field">
+        <label class="cook-label">Uso común</label>
+        <div class="chip-row" id="usual-chips">
+          <button class="toggle-chip" data-usual="Desayuno">Desayuno</button>
+          <button class="toggle-chip" data-usual="Comida">Comida</button>
+          <button class="toggle-chip" data-usual="Cena">Cena</button>
+        </div>
+      </div>
+      <div class="cook-field">
+        <label class="cook-label">Tipo</label>
+        <div class="chip-row" id="type-chips">
+          <button class="toggle-chip type-chip" data-type="detox">Detox</button>
+          <button class="toggle-chip type-chip" data-type="pollo">Pollo</button>
+          <button class="toggle-chip type-chip" data-type="res">Res</button>
+          <button class="toggle-chip type-chip" data-type="cerdo">Cerdo</button>
+          <button class="toggle-chip type-chip" data-type="pescado">Pescado</button>
+          <button class="toggle-chip type-chip" data-type="mixto">Mixto</button>
+        </div>
+      </div>
+      <div class="cook-field">
+        <label class="cook-label">Insumos <span class="cook-hint">arrastra desde la derecha</span></label>
+        <div class="ingredients-drop" id="ingredients-drop">
+          <div class="drop-empty" id="drop-empty">Suelta aquí los insumos del platillo</div>
+        </div>
+      </div>
+      <button class="finish-btn" id="finish-dish">Platillo terminado ✓</button>
+    </div>
+
+    <!-- DERECHA: los insumos -->
+    <div class="cm-catalog">
+      <div class="cm-col-label">Los insumos</div>
+      <div class="catalog-sticky">
+        <button class="add-supply-btn" id="add-supply-btn">+ Agregar insumo</button>
+        <div class="protein-tabs" id="supply-cats"></div>
+        <div class="search-wrap">
+          <input type="text" class="cm-search" id="supply-search" placeholder="Buscar insumo…">
+          <button class="search-clear" id="supply-clear" aria-label="Limpiar" hidden>×</button>
+        </div>
+      </div>
+      <div id="supply-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: cantidad + unidad al soltar insumo -->
+<div class="mini-modal" id="qty-modal" hidden>
+  <div class="mini-card">
+    <div class="mini-title" id="qty-title">Cantidad</div>
+    <div class="qty-row">
+      <input type="text" class="cook-input qty-input" id="qty-value" placeholder="1  ·  1/4  ·  0.5">
+      <select class="cook-input qty-unit" id="qty-unit">
+        <option value="pieza">pieza</option>
+        <option value="g">g</option>
+        <option value="kg">kg</option>
+        <option value="taza">taza</option>
+        <option value="cucharada">cucharada</option>
+        <option value="ml">ml</option>
+        <option value="litro">litro</option>
+        <option value="al gusto">al gusto</option>
+      </select>
+    </div>
+    <div class="mini-actions">
+      <button class="mini-btn cancel" id="qty-cancel">Cancelar</button>
+      <button class="mini-btn ok" id="qty-ok">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: agregar insumo nuevo -->
+<div class="mini-modal" id="supply-modal" hidden>
+  <div class="mini-card">
+    <div class="mini-title">Nuevo insumo</div>
+    <input type="text" class="cook-input" id="supply-name" placeholder="Nombre del insumo" maxlength="40" style="margin-bottom:10px">
+    <select class="cook-input" id="supply-cat" style="margin-bottom:14px"></select>
+    <div class="mini-msg" id="supply-msg"></div>
+    <div class="mini-actions">
+      <button class="mini-btn cancel" id="supply-cancel">Cancelar</button>
+      <button class="mini-btn ok" id="supply-save">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay ceremonia platillo listo -->
+<div class="dish-done-overlay" id="dish-done-overlay" hidden>
+  <div class="dish-done-card">
+    <div class="dish-done-icon">🍽️</div>
+    <div class="dish-done-title">¡Platillo listo!</div>
+    <div class="dish-done-sub" id="dish-done-sub"></div>
+    <div class="dish-done-hint">Toca para continuar</div>
+  </div>
+</div>
+
 <script>
   // ===== DATOS DE EJEMPLO (de la libreta de Mariel) =====
   const PROTEIN_COLORS = {
@@ -705,6 +1036,46 @@
   const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const MONTH_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  // ===== CATÁLOGO DE INSUMOS =====
+  const SUPPLY_CATS = ['Proteínas','Carbohidratos','Verduras','Frutas','Congelados','Lácteos','Abarrotes'];
+  let SUPPLIES = [
+    { id:'i1', nombre:'Pechuga de pollo', cat:'Proteínas' },
+    { id:'i2', nombre:'Lomo de res', cat:'Proteínas' },
+    { id:'i3', nombre:'Lomo de cerdo', cat:'Proteínas' },
+    { id:'i4', nombre:'Huevo', cat:'Proteínas' },
+    { id:'i5', nombre:'Salchicha', cat:'Proteínas' },
+    { id:'i6', nombre:'Filete de pescado', cat:'Proteínas' },
+    { id:'i7', nombre:'Atún', cat:'Proteínas' },
+    { id:'i8', nombre:'Arroz', cat:'Carbohidratos' },
+    { id:'i9', nombre:'Tortilla', cat:'Carbohidratos' },
+    { id:'i10', nombre:'Harina de trigo', cat:'Carbohidratos' },
+    { id:'i11', nombre:'Harina de maíz', cat:'Carbohidratos' },
+    { id:'i12', nombre:'Pan', cat:'Carbohidratos' },
+    { id:'i13', nombre:'Papa', cat:'Verduras' },
+    { id:'i14', nombre:'Tomate', cat:'Verduras' },
+    { id:'i15', nombre:'Cebolla', cat:'Verduras' },
+    { id:'i16', nombre:'Pimiento', cat:'Verduras' },
+    { id:'i17', nombre:'Zanahoria', cat:'Verduras' },
+    { id:'i18', nombre:'Lechuga romana', cat:'Verduras' },
+    { id:'i19', nombre:'Lechuga orejona', cat:'Verduras' },
+    { id:'i20', nombre:'Frijol', cat:'Abarrotes' },
+    { id:'i21', nombre:'Lentejas', cat:'Abarrotes' },
+    { id:'i22', nombre:'Aceite', cat:'Abarrotes' },
+    { id:'i23', nombre:'Limón', cat:'Frutas' },
+    { id:'i24', nombre:'Piña', cat:'Frutas' },
+    { id:'i25', nombre:'Queso fresco', cat:'Lácteos' },
+    { id:'i26', nombre:'Leche', cat:'Lácteos' },
+    { id:'i27', nombre:'Mantequilla', cat:'Lácteos' },
+    { id:'i28', nombre:'Mix de verduras congelado', cat:'Congelados' }
+  ];
+
+  // Estado del platillo en construcción
+  let draftDish = { nombre:'', usual:[], tipo:null, ingredientes:[] };
+  let supplyCat = 'todas';
+  let supplySearch = '';
+  let pendingSupply = null; // insumo esperando cantidad+unidad
+
 
   // Estado del menú: { "YYYY-MM-DD-Comida": dishId }  (clave por fecha real)
   const menu = {};
@@ -1243,6 +1614,292 @@
   function slotAtPoint(x, y) {
     const el = document.elementFromPoint(x, y);
     return el ? el.closest('.meal-slot') : null;
+  }
+
+  // ===== NIVEL CREAR PLATILLO =====
+  const cookView = document.getElementById('cook-view');
+
+  function openCook() {
+    draftDish = { nombre:'', usual:[], tipo:null, ingredientes:[] };
+    document.getElementById('new-dish-name').value = '';
+    document.querySelectorAll('#usual-chips .toggle-chip').forEach(c => c.classList.remove('on'));
+    document.querySelectorAll('#type-chips .toggle-chip').forEach(c => c.classList.remove('on'));
+    supplyCat = 'todas'; supplySearch = '';
+    document.getElementById('supply-search').value = '';
+    document.getElementById('supply-clear').hidden = true;
+    monthView.hidden = true;
+    weekView.hidden = true;
+    cookView.hidden = false;
+    cmSub.textContent = 'Crea un platillo para tu recetario';
+    renderSupplyCats();
+    renderSupplies();
+    renderDraftIngredients();
+    updateFinishBtn();
+    window.scrollTo(0, 0);
+  }
+  function closeCook() {
+    cookView.hidden = true;
+    monthView.hidden = false;
+    renderMonth();
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('cook-btn').addEventListener('click', openCook);
+  document.getElementById('back-from-cook').addEventListener('click', closeCook);
+
+  document.getElementById('new-dish-name').addEventListener('input', e => {
+    draftDish.nombre = e.target.value.trim();
+    updateFinishBtn();
+  });
+
+  document.getElementById('usual-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.toggle-chip');
+    if (!chip) return;
+    chip.classList.toggle('on');
+    const val = chip.dataset.usual;
+    if (chip.classList.contains('on')) { if (!draftDish.usual.includes(val)) draftDish.usual.push(val); }
+    else { draftDish.usual = draftDish.usual.filter(u => u !== val); }
+  });
+
+  document.getElementById('type-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.toggle-chip');
+    if (!chip) return;
+    document.querySelectorAll('#type-chips .toggle-chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    draftDish.tipo = chip.dataset.type;
+    updateFinishBtn();
+  });
+
+  function updateFinishBtn() {
+    const ok = draftDish.nombre && draftDish.tipo && draftDish.ingredientes.length > 0;
+    document.getElementById('finish-dish').disabled = !ok;
+  }
+
+  function renderSupplyCats() {
+    const wrap = document.getElementById('supply-cats');
+    wrap.innerHTML = '';
+    const cats = ['todas', ...SUPPLY_CATS];
+    cats.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'protein-tab' + (c === supplyCat ? ' active' : '');
+      btn.textContent = c === 'todas' ? 'Todas' : c;
+      btn.addEventListener('click', () => { supplyCat = c; renderSupplyCats(); renderSupplies(); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderSupplies() {
+    const list = document.getElementById('supply-list');
+    list.innerHTML = '';
+    SUPPLIES.forEach(sup => {
+      const matchCat = supplyCat === 'todas' || sup.cat === supplyCat;
+      const matchSearch = !supplySearch || sup.nombre.toLowerCase().includes(supplySearch.toLowerCase());
+      if (!matchCat || !matchSearch) return;
+      const card = document.createElement('div');
+      card.className = 'dish-card';
+      card.style.setProperty('--dish-color', 'var(--leaf)');
+      card.innerHTML = `
+        <div class="dish-handle" aria-label="Arrastrar ${sup.nombre}">
+          <div class="dotgrid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="dish-body">
+          <div class="dish-name"><span class="dish-name-txt">${sup.nombre}</span></div>
+          <div class="dish-ingredients">${sup.cat}</div>
+        </div>`;
+      const handle = card.querySelector('.dish-handle');
+      const body = card.querySelector('.dish-body');
+      handle.addEventListener('pointerdown', e => startSupplyDrag(e, sup, card));
+      body.addEventListener('click', () => { if (!draggingNow) askQtyFor(sup); });
+      list.appendChild(card);
+    });
+  }
+
+  const supplySearchEl = document.getElementById('supply-search');
+  const supplyClearEl = document.getElementById('supply-clear');
+  supplySearchEl.addEventListener('input', e => {
+    supplySearch = e.target.value;
+    supplyClearEl.hidden = !supplySearch;
+    renderSupplies();
+  });
+  supplyClearEl.addEventListener('click', () => {
+    supplySearchEl.value = ''; supplySearch = ''; supplyClearEl.hidden = true;
+    renderSupplies(); supplySearchEl.focus();
+  });
+
+  function startSupplyDrag(e, sup, card) {
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    let dragStarted = false, ghost = null;
+    const handle = card.querySelector('.dish-handle');
+    try { handle.setPointerCapture(e.pointerId); } catch(_) {}
+    const drop = document.getElementById('ingredients-drop');
+
+    const onMove = ev => {
+      const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+      if (!dragStarted && dist > 6) {
+        dragStarted = true; draggingNow = true; card.classList.add('dragging');
+        ghost = document.createElement('div');
+        ghost.className = 'drag-ghost';
+        ghost.style.setProperty('--dish-color', 'var(--leaf)');
+        ghost.textContent = sup.nombre;
+        document.body.appendChild(ghost);
+      }
+      if (dragStarted) {
+        ev.preventDefault();
+        ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+        const overDrop = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#ingredients-drop');
+        drop.classList.toggle('drop-hover', !!overDrop);
+      }
+    };
+    const onUp = ev => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      if (dragStarted) {
+        const overDrop = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('#ingredients-drop');
+        card.classList.remove('dragging');
+        drop.classList.remove('drop-hover');
+        if (ghost) { ghost.remove(); ghost = null; }
+        setTimeout(() => { draggingNow = false; }, 50);
+        if (overDrop) askQtyFor(sup);
+      }
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  }
+
+  const qtyModal = document.getElementById('qty-modal');
+  function askQtyFor(sup) {
+    pendingSupply = sup;
+    document.getElementById('qty-title').textContent = sup.nombre;
+    document.getElementById('qty-value').value = '';
+    document.getElementById('qty-unit').value = 'pieza';
+    qtyModal.hidden = false;
+    setTimeout(() => document.getElementById('qty-value').focus(), 50);
+  }
+  document.getElementById('qty-cancel').addEventListener('click', () => { qtyModal.hidden = true; pendingSupply = null; });
+  document.getElementById('qty-ok').addEventListener('click', () => {
+    if (!pendingSupply) return;
+    const val = document.getElementById('qty-value').value.trim() || '1';
+    const unit = document.getElementById('qty-unit').value;
+    draftDish.ingredientes.push({ nombre: pendingSupply.nombre, cantidad: val, unidad: unit });
+    qtyModal.hidden = true; pendingSupply = null;
+    renderDraftIngredients();
+    updateFinishBtn();
+  });
+
+  function renderDraftIngredients() {
+    const drop = document.getElementById('ingredients-drop');
+    const empty = document.getElementById('drop-empty');
+    drop.querySelectorAll('.ing-row').forEach(r => r.remove());
+    if (draftDish.ingredientes.length === 0) { empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    draftDish.ingredientes.forEach((ing, idx) => {
+      const row = document.createElement('div');
+      row.className = 'ing-row';
+      const qtyLabel = ing.unidad === 'al gusto' ? 'al gusto' : `${ing.cantidad} ${ing.unidad}`;
+      row.innerHTML = `<span class="ing-name">${ing.nombre}</span>
+        <span class="ing-qty">${qtyLabel}</span>
+        <span class="ing-x">×</span>`;
+      row.querySelector('.ing-x').addEventListener('click', () => {
+        draftDish.ingredientes.splice(idx, 1);
+        renderDraftIngredients(); updateFinishBtn();
+      });
+      drop.appendChild(row);
+    });
+  }
+
+  const supplyModal = document.getElementById('supply-modal');
+  document.getElementById('add-supply-btn').addEventListener('click', () => {
+    document.getElementById('supply-name').value = '';
+    const sel = document.getElementById('supply-cat');
+    sel.innerHTML = SUPPLY_CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('supply-msg').textContent = '';
+    document.getElementById('supply-msg').className = 'mini-msg';
+    document.getElementById('supply-save').disabled = false;
+    supplyModal.hidden = false;
+  });
+  document.getElementById('supply-cancel').addEventListener('click', () => { supplyModal.hidden = true; });
+  document.getElementById('supply-save').addEventListener('click', () => {
+    const name = document.getElementById('supply-name').value.trim();
+    const cat = document.getElementById('supply-cat').value;
+    const msg = document.getElementById('supply-msg');
+    if (!name) { msg.textContent = 'Escribe un nombre'; msg.className = 'mini-msg err'; return; }
+    const exists = SUPPLIES.some(s => s.nombre.toLowerCase() === name.toLowerCase());
+    if (exists) { msg.textContent = 'Ese insumo ya existe'; msg.className = 'mini-msg err'; return; }
+    SUPPLIES.push({ id: 'i' + Date.now(), nombre: name, cat });
+    msg.textContent = 'Agregado ✓'; msg.className = 'mini-msg ok';
+    document.getElementById('supply-save').disabled = true;
+    renderSupplies();
+    setTimeout(() => { supplyModal.hidden = true; }, 700);
+  });
+
+  document.getElementById('finish-dish').addEventListener('click', () => {
+    const nuevo = {
+      id: 'd' + Date.now(),
+      nombre: draftDish.nombre,
+      proteina: draftDish.tipo,
+      usual: [...draftDish.usual],
+      ing: draftDish.ingredientes.map(i => i.unidad === 'al gusto' ? `${i.nombre} al gusto` : `${i.nombre} ${i.cantidad} ${i.unidad}`)
+    };
+    DISHES.push(nuevo);
+    showDishDone(nuevo.nombre);
+  });
+
+  function showDishDone(nombre) {
+    const ov = document.getElementById('dish-done-overlay');
+    document.getElementById('dish-done-sub').textContent = nombre;
+    ov.hidden = false;
+    playDoneChime();
+    burstConfetti(ov);
+    // Segunda ráfaga de confeti para que se sienta la fiesta
+    setTimeout(() => burstConfetti(ov), 350);
+    // Se cierra al tocar (con un pequeño bloqueo inicial para que no se cierre por el mismo tap del botón)
+    const shownAt = Date.now();
+    const closeHandler = () => {
+      if (Date.now() - shownAt < 600) return;
+      ov.removeEventListener('click', closeHandler);
+      ov.hidden = true;
+      closeCook();
+    };
+    ov.addEventListener('click', closeHandler);
+  }
+
+  // Confeti simple para la ceremonia
+  function burstConfetti(container) {
+    const colors = ['#c26a2b', '#d9a441', '#7a8c4e', '#b5563f', '#5b8ca8'];
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElement('span');
+      p.style.cssText = `position:absolute;left:50%;top:45%;width:8px;height:8px;border-radius:2px;
+        background:${colors[i % colors.length]};pointer-events:none;z-index:5;`;
+      container.appendChild(p);
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 180;
+      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist + 100;
+      p.animate([
+        { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+        { transform: `translate(${dx}px,${dy}px) rotate(${Math.random()*720}deg)`, opacity: 0 }
+      ], { duration: 900 + Math.random()*500, easing: 'cubic-bezier(0.2,0.6,0.4,1)' });
+      setTimeout(() => p.remove(), 1500);
+    }
+  }
+
+  function playDoneChime() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        const t = ctx.currentTime + i * 0.1;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.15, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t); o.stop(t + 0.45);
+      });
+    } catch(_) {}
   }
 
   // ===== INIT =====
