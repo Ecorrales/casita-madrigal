@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -683,6 +684,31 @@ body::before {
   background: var(--freq-bg, color-mix(in srgb, var(--gold) 14%, transparent));
   color: var(--freq-color, var(--gold));
   border: 1px solid var(--freq-border, color-mix(in srgb, var(--gold) 30%, transparent));
+}
+
+/* Indicadores de slots de repetición para esporádicas 2×+ */
+.slot-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.slot-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--sky) 55%, transparent);
+  background: transparent;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.slot-dot.filled {
+  background: var(--sky);
+  border-color: var(--sky);
+}
+.task-row.done .slot-dot.filled {
+  background: var(--leaf);
+  border-color: var(--leaf);
 }
 
 /* Codificación por frecuencia: más frecuente = más cálido, menos frecuente = más frío */
@@ -4938,6 +4964,14 @@ body::before {
         <option value="biweekly">Quincenal · día 1 y día 15</option>
         <option value="monthly">Mensual · día 1 de cada mes</option>
       </select>
+      <label class="form-label" style="margin-top:12px">Veces por periodo</label>
+      <p class="form-hint" style="margin:0 0 6px;display:block">Cuántas veces se puede completar dentro de cada periodo. Cada quien gana su punto.</p>
+      <select id="edit-repeticiones" class="form-input">
+        <option value="1">1 vez</option>
+        <option value="2">2 veces</option>
+        <option value="3">3 veces</option>
+        <option value="4">4 veces</option>
+      </select>
     </div>
 
     <!-- BOUNTY: solo Emmanuel ve esta sección -->
@@ -5340,13 +5374,14 @@ document.addEventListener('visibilitychange', () => {
    2. Crea un proyecto gratis
    3. Activa Realtime Database (modo de prueba)
    4. Pega tu configuración aquí abajo */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCd-HtCZAAaCKAJAJGZ8yxfQgyeC7AQudk",
-  authDomain: "casita-test-8e857.firebaseapp.com",
-  projectId: "casita-test-8e857",
-  storageBucket: "casita-test-8e857.firebasestorage.app",
-  messagingSenderId: "813605958461",
-  appId: "1:813605958461:web:39b2abf0e760a3d2ba0b54"
+const FIREBASE_CONFIG =  {
+  apiKey: "AIzaSyD5gwu0f79Y3rD-kTXMc6xkdikPKiDkL54",
+  authDomain: "casita-madrigal.firebaseapp.com",
+  databaseURL: "https://casita-madrigal-default-rtdb.firebaseio.com",
+  projectId: "casita-madrigal",
+  storageBucket: "casita-madrigal.firebasestorage.app",
+  messagingSenderId: "681740870700",
+  appId: "1:681740870700:web:f09a104e9f03ed9f73dd89"
 };
 
 /* ===== DATOS BASE ===== */
@@ -5639,7 +5674,7 @@ const SEED_DAILY = [
 ];
 
 const SEED_SPORADIC = [
-  { id: 's01', name: 'Regar las flores', meta: '2× semana' },
+  { id: 's01', name: 'Regar las flores', meta: '2× semana', repeticiones: 2 },
   { id: 's02', name: 'Barrer frente de la casa', meta: 'Semanal' },
   { id: 's03', name: 'Aspirar las escaleras', meta: 'Semanal' },
   { id: 's04', name: 'Ventanas planta baja', meta: 'Mensual' },
@@ -5747,6 +5782,15 @@ function ensureCatalogs() {
         t.frequency = detected.key;
       } else {
         t.frequency = 'weekly'; // fallback razonable
+      }
+      migrated = true;
+    }
+    // MIGRACIÓN repeticiones: default 1. Detecta "2× semana" del meta como caso especial.
+    if (t.repeticiones == null) {
+      if (t.frequency === 'twice-week' || /2\s*[×x]\s*semana/i.test(t.meta || '')) {
+        t.repeticiones = 2;
+      } else {
+        t.repeticiones = 1;
       }
       migrated = true;
     }
@@ -6886,14 +6930,25 @@ function dailyRollover() {
       const catalogItem = state.catalogSporadic?.find(t => t.id === id);
 
       // CASO 1: Tarea esporádica con frequency (semanal/quincenal/mensual)
-      // Si está completada y aún dentro de su periodo, CONSERVAR como completada.
-      // Si su periodo ya terminó, liberar.
-      if (catalogItem?.frequency && catalogItem.frequency !== 'daily' && entry.done) {
-        if (isPeriodicallyLocked(catalogItem, entry)) {
-          // Aún en periodo: conservar tal cual (no se libera al rollover diario)
+      // Si tiene progreso (slots hechos) y aún dentro de su periodo, CONSERVAR.
+      // Si su periodo ya terminó, liberar (reset de slots).
+      const tieneProgreso = entry.done || (entry.slotsHechos || 0) > 0;
+      if (catalogItem?.frequency && catalogItem.frequency !== 'daily' && tieneProgreso) {
+        const period = (function() {
+          const freq = catalogItem.frequency;
+          const periodFreq = freq === 'twice-week' ? 'weekly'
+                           : freq === 'quarterly' ? 'monthly'
+                           : freq === 'yearly' ? 'monthly'
+                           : freq;
+          return currentPeriod(periodFreq);
+        })();
+        const completedAt = entry.at || 0;
+        const dentroDelPeriodo = completedAt >= period.start && completedAt <= period.end;
+        if (dentroDelPeriodo) {
+          // Aún en periodo: conservar el progreso de slots (no se libera al rollover diario)
           // No hacemos nada — la entrada permanece como está
         } else {
-          // Periodo terminó: liberar
+          // Periodo terminó: liberar y resetear slots
           delete sporadicStore[id];
           fbChanges[`sporadic/${id}`] = null;
         }
@@ -8436,7 +8491,7 @@ function currentPeriod(frequencyKey, refDate) {
 /* True si la tarea esporádica ya fue completada en su periodo actual y por
    tanto NO está disponible para tomar/hacer hasta el siguiente periodo. */
 function isPeriodicallyLocked(catalogItem, entry) {
-  if (!catalogItem || !entry || !entry.done) return false;
+  if (!catalogItem || !entry) return false;
   const freq = catalogItem.frequency || detectFrequency(catalogItem.meta)?.key || null;
   // Sin frecuencia: comportamiento viejo (se libera con rollover diario)
   if (!freq || freq === 'daily') return false;
@@ -8447,8 +8502,15 @@ function isPeriodicallyLocked(catalogItem, entry) {
                    : freq;
   const period = currentPeriod(periodFreq);
   const completedAt = entry.at || 0;
-  // Si fue completada dentro del periodo actual, está bloqueada
-  return completedAt >= period.start && completedAt <= period.end;
+  // Solo cuenta si la última actividad fue dentro del periodo actual
+  const dentroDelPeriodo = completedAt >= period.start && completedAt <= period.end;
+  if (!dentroDelPeriodo) return false;
+
+  // MODELO DE SLOTS: la tarea se bloquea solo cuando se completaron
+  // todas las repeticiones permitidas en el periodo.
+  const repeticiones = catalogItem.repeticiones || 1;
+  const slotsHechos = entry.slotsHechos || (entry.done ? 1 : 0);
+  return slotsHechos >= repeticiones;
 }
 
 /* Formatea el inicio del próximo periodo en texto legible */
@@ -8527,6 +8589,20 @@ function buildTaskRow(t, store, kind) {
       chip.dataset.freq = freq.key;
       chip.textContent = freq.label;
       name.appendChild(chip);
+    }
+    // Indicadores de slots de repetición (solo si repeticiones > 1)
+    const reps = t.repeticiones || 1;
+    if (reps > 1) {
+      const hechos = entry.slotsHechos || (entry.done ? reps : 0);
+      const slotsWrap = document.createElement('span');
+      slotsWrap.className = 'slot-dots';
+      slotsWrap.title = `${hechos} de ${reps} esta semana`;
+      for (let i = 0; i < reps; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'slot-dot' + (i < hechos ? ' filled' : '');
+        slotsWrap.appendChild(dot);
+      }
+      name.appendChild(slotsWrap);
     }
   }
   // Botón de editar (aparece al hover)
@@ -8741,6 +8817,7 @@ function renderFamily() {
     if (today >= 3) badges.push({ icon: '✿', label: 'En racha' });
     if (total >= 50) badges.push({ icon: '◈', label: 'Pilar de la casa' });
     if (total >= 20) badges.push({ icon: '☼', label: 'Constante' });
+    if (total >= 200) badges.push({ icon: '⛃', label: 'Smaug el acumulador' });
 
     const subtitle = state.subtitles?.[key] || '';
     const bday = state.birthdays?.[key];
@@ -10539,6 +10616,7 @@ function approveProposal(id) {
     const newId = uid('s');
     newItem = {
       id: newId, name: p.name, meta: p.meta || '',
+      frequency: 'weekly', repeticiones: 1,
       addedBy: p.proposedBy, addedAt: Date.now()
     };
     catalogPath = 'catalogSporadic';
@@ -10867,6 +10945,8 @@ function openEditTask(kind, id) {
     if (kind === 'sporadic') {
       freqSection.style.display = '';
       freqSelect.value = item.frequency || 'weekly';
+      const repSelect = document.getElementById('edit-repeticiones');
+      if (repSelect) repSelect.value = String(item.repeticiones || 1);
     } else {
       freqSection.style.display = 'none';
     }
@@ -10955,6 +11035,8 @@ function saveEditTask() {
   if (kind === 'sporadic') {
     const freqSelect = document.getElementById('edit-frequency');
     if (freqSelect) item.frequency = freqSelect.value;
+    const repSelect = document.getElementById('edit-repeticiones');
+    if (repSelect) item.repeticiones = parseInt(repSelect.value, 10) || 1;
   }
   ensureCatalogs();
   closeEditForm();
@@ -11069,14 +11151,24 @@ function markDone(t, store, kind, evt) {
 
   const entry = store[t.id] || {};
   const finisher = entry.takenBy || state.me;
+
+  // MODELO DE SLOTS (solo esporádicas con repeticiones > 1)
+  // Cada marca incrementa slotsHechos y entrega su punto. La tarea solo
+  // queda "done" (bloqueada) cuando se completan todas las repeticiones.
+  const repeticiones = (kind === 'sporadic' && t.repeticiones) ? t.repeticiones : 1;
+  const slotsPrevios = entry.slotsHechos || 0;
+  const slotsNuevos = slotsPrevios + 1;
+  const alcanzaTope = slotsNuevos >= repeticiones;
+
   const newEntry = {
-    done: true,
+    done: alcanzaTope,
     by: finisher,
     at: Date.now(),
-    takenBy: entry.takenBy || null,
-    takenAt: entry.takenAt || null,
+    takenBy: null,               // se libera el "tomado" para que otro pueda tomar el siguiente slot
+    takenAt: null,
     scope: entry.scope || null,
-    weekKey: entry.weekKey || null
+    weekKey: entry.weekKey || null,
+    slotsHechos: slotsNuevos
   };
 
   // Calcular bonus (bounty manual de Emmanuel o loot crítico oculto)
@@ -11100,7 +11192,11 @@ function markDone(t, store, kind, evt) {
     toast(`✦ ¡Bounty cobrado! ×${bonus.multiplier} = ${pointsEarned} pts`);
     setTimeout(() => confettiBurst(window.innerWidth/2, window.innerHeight/2), 200);
   } else {
-    toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+    if (repeticiones > 1 && !alcanzaTope) {
+      toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"! (${slotsNuevos}/${repeticiones})`);
+    } else {
+      toast(`✦ ¡${PEOPLE[finisher].name} completó "${t.name}"!`);
+    }
   }
 
   // Armar el batch de Firebase
