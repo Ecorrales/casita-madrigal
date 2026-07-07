@@ -377,6 +377,11 @@
     max-width: 100%;
     border-left: 3px solid var(--slot-color, var(--terra));
   }
+  .placed-dish.placed-ext {
+    border-left-style: dashed;
+    font-style: italic;
+    opacity: 0.85;
+  }
   .placed-dish .dish-x {
     cursor: pointer;
     color: var(--ink-soft);
@@ -1301,6 +1306,47 @@
     return `${date.getDate()} ${MONTH_ABBR[date.getMonth()]}`;
   }
 
+  // --- Formato de menú compatible con Casita: {2026-Wxx}/{día-inglés}/{tiempo-inglés} ---
+  const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];      // índice 0=lunes
+  const MEAL_KEYS = { 'Desayuno':'breakfast', 'Comida':'lunch', 'Cena':'dinner' };
+
+  // Número de semana ISO (1-53). La semana ISO empieza en lunes; la semana 1 contiene el primer jueves.
+  function isoWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = (d.getUTCDay() + 6) % 7; // 0=lunes
+    d.setUTCDate(d.getUTCDate() - dayNum + 3); // jueves de esta semana
+    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+    const week = 1 + Math.round((d - firstThursday) / (7 * 24 * 3600 * 1000));
+    return { year: d.getUTCFullYear(), week };
+  }
+  // Clave de semana tipo "2026-W20"
+  function weekKeyOf(date) {
+    const { year, week } = isoWeek(date);
+    return `${year}-W${String(week).padStart(2,'0')}`;
+  }
+  // De una fecha concreta → {weekKey, dayKey}
+  function menuCoords(date) {
+    return { weekKey: weekKeyOf(date), dayKey: DAY_KEYS[(date.getDay()+6)%7] };
+  }
+  // Inversa: de "2026-W20" + "fri" → Date (lunes de esa semana ISO + offset del día)
+  function dateFromWeekDay(weekKey, dayKey) {
+    const m = weekKey.match(/^(\d{4})-W(\d{1,2})$/);
+    if (!m) return null;
+    const year = Number(m[1]), week = Number(m[2]);
+    const dayIdx = DAY_KEYS.indexOf(dayKey);
+    if (dayIdx < 0) return null;
+    // Lunes de la semana ISO: el 4 de enero siempre está en la semana 1
+    const jan4 = new Date(year, 0, 4);
+    const jan4Day = (jan4.getDay() + 6) % 7; // 0=lunes
+    const week1Monday = new Date(jan4);
+    week1Monday.setDate(jan4.getDate() - jan4Day);
+    const target = new Date(week1Monday);
+    target.setDate(week1Monday.getDate() + (week - 1) * 7 + dayIdx);
+    return target;
+  }
+
   // Semanas ISO que INTERSECTAN el mes (aunque empiecen antes o terminen después)
   function weeksIntersectingMonth(year, month) {
     const firstOfMonth = new Date(year, month, 1);
@@ -1589,12 +1635,21 @@
         const placed = menu[key];
         let contentHtml = `<span class="meal-empty">—</span>`;
         if (placed) {
-          const dish = DISHES.find(d => d.id === placed);
-          if (dish) {
-            contentHtml = `<span class="placed-dish" style="--slot-color:${PROTEIN_COLORS[dish.proteina]}">
-              ${dish.nombre}
+          if (typeof placed === 'string' && placed.startsWith('ext:')) {
+            // Platillo que existe en el menú de Casita pero no en el catálogo de Cooking Mama
+            const extName = placed.slice(4);
+            contentHtml = `<span class="placed-dish placed-ext" style="--slot-color:var(--ink-soft)">
+              ${extName}
               <span class="dish-x" data-remove="${key}">×</span>
             </span>`;
+          } else {
+            const dish = DISHES.find(d => d.id === placed);
+            if (dish) {
+              contentHtml = `<span class="placed-dish" style="--slot-color:${PROTEIN_COLORS[dish.proteina]}">
+                ${dish.nombre}
+                <span class="dish-x" data-remove="${key}">×</span>
+              </span>`;
+            }
           }
         }
         slot.innerHTML = `<span class="meal-label">${meal}</span><div class="meal-content">${contentHtml}</div>`;
@@ -1684,7 +1739,11 @@
         const key = x.dataset.remove;
         delete menu[key];
         renderWeek();
-        if (db) db.ref(`casita/menu/${key}`).remove().catch(err => console.error('menu remove', err));
+        if (db) {
+          const { weekKey, dayKey, mealKey } = slotKeyToFirebase(key);
+          db.ref(`casita/menu/${weekKey}/${dayKey}/${mealKey}`).remove()
+            .catch(err => console.error('menu remove', err));
+        }
       });
     });
   }
@@ -1699,11 +1758,35 @@
   }
   function hideHint() { tapHint.classList.remove('show'); }
 
+  // Convierte la clave interna "2026-07-14-Comida" a coordenadas de Casita
+  function slotKeyToFirebase(slotKey) {
+    // slotKey = "YYYY-MM-DD-Tiempo"
+    const lastDash = slotKey.lastIndexOf('-');
+    const dateStr = slotKey.slice(0, lastDash);   // "2026-07-14"
+    const meal = slotKey.slice(lastDash + 1);      // "Comida"
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const { weekKey, dayKey } = menuCoords(date);
+    const mealKey = MEAL_KEYS[meal] || 'lunch';
+    return { weekKey, dayKey, mealKey };
+  }
+
   function assignDish(dishId, slotKey) {
     menu[slotKey] = dishId;
     renderWeek();
-    // Persistir en Firebase
-    if (db) db.ref(`casita/menu/${slotKey}`).set(dishId).catch(e => console.error('menu set', e));
+    if (!db) return;
+    const dish = DISHES.find(x => x.id === dishId);
+    if (!dish) return;
+    const { weekKey, dayKey, mealKey } = slotKeyToFirebase(slotKey);
+    // Escribir en el formato que Casita ya lee: {name, ingredients, updatedAt, updatedBy}
+    const payload = {
+      name: dish.nombre,
+      ingredients: (dish.ing || []).join(', '),
+      updatedAt: Date.now(),
+      updatedBy: 'mar'
+    };
+    db.ref(`casita/menu/${weekKey}/${dayKey}/${mealKey}`).set(payload)
+      .catch(e => console.error('menu set', e));
   }
 
   // Detectar si es dispositivo táctil
@@ -2450,10 +2533,27 @@
         await db.ref('casita/insumos').set(seedObj);
       }
 
-      // --- Menú ---
+      // --- Menú (formato Casita: week/día-inglés/tiempo-inglés) ---
       const menuVal = menuSnap.val();
       if (menuVal) {
-        Object.entries(menuVal).forEach(([k, v]) => { menu[k] = v; });
+        const MEAL_REV = { breakfast:'Desayuno', lunch:'Comida', dinner:'Cena' };
+        Object.entries(menuVal).forEach(([weekKey, days]) => {
+          if (!days) return;
+          Object.entries(days).forEach(([dayKey, meals]) => {
+            if (!meals) return;
+            const date = dateFromWeekDay(weekKey, dayKey);
+            if (!date) return;
+            Object.entries(meals).forEach(([mealKey, val]) => {
+              const meal = MEAL_REV[mealKey];
+              if (!meal || !val) return;
+              // val = {name, ingredients, ...}. Mapear a un dishId por nombre.
+              const dish = DISHES.find(d => d.nombre === val.name);
+              const slotKey = `${ymd(date)}-${meal}`;
+              // Si existe el platillo lo referenciamos por id; si no, guardamos un pseudo-id con el nombre
+              menu[slotKey] = dish ? dish.id : ('ext:' + (val.name || ''));
+            });
+          });
+        });
       }
 
       banner.textContent = 'Cooking Mama · conectada a la casita 🍳';
