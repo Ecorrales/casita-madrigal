@@ -1310,41 +1310,44 @@
   const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];      // índice 0=lunes
   const MEAL_KEYS = { 'Desayuno':'breakfast', 'Comida':'lunch', 'Cena':'dinner' };
 
-  // Número de semana ISO (1-53). La semana ISO empieza en lunes; la semana 1 contiene el primer jueves.
-  function isoWeek(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = (d.getUTCDay() + 6) % 7; // 0=lunes
-    d.setUTCDate(d.getUTCDate() - dayNum + 3); // jueves de esta semana
-    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-    const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
-    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
-    const week = 1 + Math.round((d - firstThursday) / (7 * 24 * 3600 * 1000));
-    return { year: d.getUTCFullYear(), week };
-  }
-  // Clave de semana tipo "2026-W20"
-  function weekKeyOf(date) {
-    const { year, week } = isoWeek(date);
-    return `${year}-W${String(week).padStart(2,'0')}`;
+  // Número/clave de semana — MÉTODO EXACTO DE CASITA (para que ambas apps coincidan).
+  // Ojo: NO es ISO estándar; Casita cuenta desde el 1 de enero literal.
+  function weekKeyOf(d) {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = date.getUTCDay() || 7;       // domingo=7
+    date.setUTCDate(date.getUTCDate() - day + 1); // ajustar al lunes
+    const year = date.getUTCFullYear();
+    const week = Math.ceil((((date - new Date(Date.UTC(year, 0, 1))) / 86400000) + 1) / 7);
+    return `${year}-W${String(week).padStart(2, '0')}`;
   }
   // De una fecha concreta → {weekKey, dayKey}
   function menuCoords(date) {
     return { weekKey: weekKeyOf(date), dayKey: DAY_KEYS[(date.getDay()+6)%7] };
   }
-  // Inversa: de "2026-W20" + "fri" → Date (lunes de esa semana ISO + offset del día)
+  // Inversa: de "2026-W27" + "fri" → Date. Busca el lunes cuyo weekKeyOf coincide
+  // (usa la propia función de Casita como fuente de verdad, a prueba de años raros).
   function dateFromWeekDay(weekKey, dayKey) {
     const m = weekKey.match(/^(\d{4})-W(\d{1,2})$/);
     if (!m) return null;
     const year = Number(m[1]), week = Number(m[2]);
     const dayIdx = DAY_KEYS.indexOf(dayKey);
     if (dayIdx < 0) return null;
-    // Lunes de la semana ISO: el 4 de enero siempre está en la semana 1
-    const jan4 = new Date(year, 0, 4);
-    const jan4Day = (jan4.getDay() + 6) % 7; // 0=lunes
-    const week1Monday = new Date(jan4);
-    week1Monday.setDate(jan4.getDate() - jan4Day);
-    const target = new Date(week1Monday);
-    target.setDate(week1Monday.getDate() + (week - 1) * 7 + dayIdx);
-    return target;
+    // Estimación inicial del lunes y ajuste al lunes
+    let guess = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+    const gd = guess.getUTCDay() || 7;
+    guess.setUTCDate(guess.getUTCDate() - gd + 1);
+    // Afinar ±2 semanas hasta que el lunes candidato produzca el weekKey buscado
+    for (let off = -14; off <= 14; off++) {
+      const cand = new Date(guess);
+      cand.setUTCDate(guess.getUTCDate() + off);
+      const candLocal = new Date(cand.getUTCFullYear(), cand.getUTCMonth(), cand.getUTCDate());
+      if ((cand.getUTCDay() || 7) === 1 && weekKeyOf(candLocal) === weekKey) {
+        const res = new Date(candLocal);
+        res.setDate(res.getDate() + dayIdx);
+        return res;
+      }
+    }
+    return null;
   }
 
   // Semanas ISO que INTERSECTAN el mes (aunque empiecen antes o terminen después)
