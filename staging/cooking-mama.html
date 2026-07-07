@@ -2509,17 +2509,15 @@
       if (platVal) {
         DISHES = Object.entries(platVal).map(([id, d]) => ({ id, ...d, usual: d.usual || [], ing: d.ing || [] }));
       } else {
-        // Seed la primera vez
+        // Seed la primera vez — escribir hijo por hijo (la regla permite $id, no el padre)
         DISHES = SEED_DISHES.map(d => ({...d}));
-        const seedObj = {};
-        DISHES.forEach(d => {
-          seedObj[d.id] = {
+        await Promise.all(DISHES.map(d =>
+          db.ref(`casita/platillos/${d.id}`).set({
             nombre: d.nombre, proteina: d.proteina, usual: d.usual || [],
             ing: d.ing || [], creadoPor: 'seed', creadoEn: Date.now(),
             vecesUsado: 0, ultimaVez: null
-          };
-        });
-        await db.ref('casita/platillos').set(seedObj);
+          })
+        ));
       }
 
       // --- Insumos ---
@@ -2528,9 +2526,9 @@
         SUPPLIES = Object.entries(insVal).map(([id, s]) => ({ id, ...s }));
       } else {
         SUPPLIES = SEED_SUPPLIES.map(s => ({...s}));
-        const seedObj = {};
-        SUPPLIES.forEach(s => { seedObj[s.id] = { nombre: s.nombre, cat: s.cat }; });
-        await db.ref('casita/insumos').set(seedObj);
+        await Promise.all(SUPPLIES.map(s =>
+          db.ref(`casita/insumos/${s.id}`).set({ nombre: s.nombre, cat: s.cat })
+        ));
       }
 
       // --- Menú (formato Casita: week/día-inglés/tiempo-inglés) ---
