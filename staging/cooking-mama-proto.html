@@ -28,6 +28,16 @@
     --p-pescado: #5b8ca8;
     --p-res: #b5563f;
     --p-detox: #7a8c4e;
+    --p-mixto: #9b6a9e;
+
+    /* Colores por categoría de insumo */
+    --c-proteinas: #b5563f;
+    --c-carbohidratos: #d9a441;
+    --c-verduras: #7a8c4e;
+    --c-frutas: #c77b8b;
+    --c-congelados: #5b8ca8;
+    --c-lacteos: #cbb481;
+    --c-abarrotes: #a9793f;
 
     /* Acento estacional (default otoño, se sobreescribe por JS) */
     --season-accent: var(--terra);
@@ -418,7 +428,34 @@
   .protein-tab[data-p="pescado"].active { background: var(--p-pescado); color: #fff; }
   .protein-tab[data-p="res"].active     { background: var(--p-res); color: #fff; }
   .protein-tab[data-p="detox"].active   { background: var(--p-detox); color: #fff; }
+  .protein-tab[data-p="mixto"].active   { background: var(--p-mixto); color: #fff; }
   .protein-tab.active { border-color: transparent; }
+
+  /* Filtro por tiempo de comida (segunda fila) */
+  .meal-filter {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .meal-filter-tab {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 130ms;
+    white-space: nowrap;
+  }
+  .meal-filter-tab.active {
+    background: var(--season-accent);
+    border-color: var(--season-accent);
+    color: #fff;
+  }
 
   /* Buscador */
   .search-wrap { position: relative; }
@@ -768,6 +805,55 @@
   .qty-row { display: flex; gap: 8px; margin-bottom: 16px; }
   .qty-input { flex: 1; }
   .qty-unit { flex-shrink: 0; width: 120px; }
+
+  /* Stepper táctil para cantidades contables */
+  .stepper-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .stepper-btn {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    border: 1.5px solid var(--line);
+    background: var(--cream-2);
+    color: var(--season-accent);
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 130ms, transform 100ms;
+    -webkit-user-select: none; user-select: none;
+  }
+  .stepper-btn:active { transform: scale(0.92); background: var(--season-soft); }
+  .stepper-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 30px;
+    color: var(--ink);
+    min-width: 72px;
+    text-align: center;
+  }
+  .frac-row { display: flex; gap: 6px; justify-content: center; }
+  .frac-chip {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--white);
+    color: var(--ink-soft);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 130ms;
+  }
+  .frac-chip.on {
+    background: var(--season-accent);
+    color: #fff;
+    border-color: var(--season-accent);
+  }
   .mini-actions { display: flex; gap: 8px; justify-content: flex-end; }
   .mini-btn {
     padding: 9px 16px;
@@ -891,6 +977,13 @@
         <button class="protein-tab" data-p="pescado">Pescado</button>
         <button class="protein-tab" data-p="res">Res</button>
         <button class="protein-tab" data-p="detox">Detox</button>
+        <button class="protein-tab" data-p="mixto">Mixto</button>
+      </div>
+      <div class="meal-filter" id="meal-filter">
+        <button class="meal-filter-tab active" data-meal="todos">Todo el día</button>
+        <button class="meal-filter-tab" data-meal="Desayuno">Desayuno</button>
+        <button class="meal-filter-tab" data-meal="Comida">Comida</button>
+        <button class="meal-filter-tab" data-meal="Cena">Cena</button>
       </div>
       <div class="search-wrap">
         <input type="text" class="cm-search" id="search" placeholder="Buscar platillo por nombre…">
@@ -966,20 +1059,47 @@
 <div class="mini-modal" id="qty-modal" hidden>
   <div class="mini-card">
     <div class="mini-title" id="qty-title">Cantidad</div>
-    <div class="qty-row">
-      <input type="text" class="cook-input qty-input" id="qty-value" placeholder="1  ·  1/4  ·  0.5">
-      <select class="cook-input qty-unit" id="qty-unit">
-        <option value="pieza">pieza</option>
-        <option value="g">g</option>
-        <option value="kg">kg</option>
-        <option value="taza">taza</option>
-        <option value="cucharada">cucharada</option>
-        <option value="ml">ml</option>
-        <option value="litro">litro</option>
-        <option value="al gusto">al gusto</option>
-      </select>
+
+    <label class="cook-label">Unidad</label>
+    <div class="chip-row" id="unit-chips" style="margin-bottom:16px">
+      <button class="toggle-chip unit-chip on" data-unit="pieza">pieza</button>
+      <button class="toggle-chip unit-chip" data-unit="taza">taza</button>
+      <button class="toggle-chip unit-chip" data-unit="cucharada">cucharada</button>
+      <button class="toggle-chip unit-chip" data-unit="g">g</button>
+      <button class="toggle-chip unit-chip" data-unit="kg">kg</button>
+      <button class="toggle-chip unit-chip" data-unit="ml">ml</button>
+      <button class="toggle-chip unit-chip" data-unit="litro">litro</button>
+      <button class="toggle-chip unit-chip" data-unit="al gusto">al gusto</button>
     </div>
-    <div class="mini-actions">
+
+    <!-- Modo stepper (unidades contables) -->
+    <div id="qty-stepper">
+      <label class="cook-label">Cantidad</label>
+      <div class="stepper-row">
+        <button class="stepper-btn" id="step-minus">−</button>
+        <div class="stepper-value" id="stepper-value">1</div>
+        <button class="stepper-btn" id="step-plus">+</button>
+      </div>
+      <div class="frac-row">
+        <button class="frac-chip" data-frac="0">entero</button>
+        <button class="frac-chip" data-frac="0.25">¼</button>
+        <button class="frac-chip" data-frac="0.5">½</button>
+        <button class="frac-chip" data-frac="0.75">¾</button>
+      </div>
+    </div>
+
+    <!-- Modo numérico (unidades medibles) -->
+    <div id="qty-numeric" hidden>
+      <label class="cook-label">Cantidad</label>
+      <input type="text" inputmode="decimal" class="cook-input" id="qty-numeric-input" placeholder="Ej. 500">
+    </div>
+
+    <!-- Modo al gusto -->
+    <div id="qty-algusto" hidden>
+      <p class="cook-hint" style="margin:4px 0 8px">Sin cantidad, se pone al gusto.</p>
+    </div>
+
+    <div class="mini-actions" style="margin-top:16px">
       <button class="mini-btn cancel" id="qty-cancel">Cancelar</button>
       <button class="mini-btn ok" id="qty-ok">Agregar</button>
     </div>
@@ -1014,7 +1134,7 @@
   // ===== DATOS DE EJEMPLO (de la libreta de Mariel) =====
   const PROTEIN_COLORS = {
     pollo: 'var(--p-pollo)', cerdo: 'var(--p-cerdo)', pescado: 'var(--p-pescado)',
-    res: 'var(--p-res)', detox: 'var(--p-detox)'
+    res: 'var(--p-res)', detox: 'var(--p-detox)', mixto: 'var(--p-mixto)'
   };
 
   const DISHES = [
@@ -1039,6 +1159,15 @@
 
   // ===== CATÁLOGO DE INSUMOS =====
   const SUPPLY_CATS = ['Proteínas','Carbohidratos','Verduras','Frutas','Congelados','Lácteos','Abarrotes'];
+  const CAT_COLORS = {
+    'Proteínas': 'var(--c-proteinas)',
+    'Carbohidratos': 'var(--c-carbohidratos)',
+    'Verduras': 'var(--c-verduras)',
+    'Frutas': 'var(--c-frutas)',
+    'Congelados': 'var(--c-congelados)',
+    'Lácteos': 'var(--c-lacteos)',
+    'Abarrotes': 'var(--c-abarrotes)'
+  };
   let SUPPLIES = [
     { id:'i1', nombre:'Pechuga de pollo', cat:'Proteínas' },
     { id:'i2', nombre:'Lomo de res', cat:'Proteínas' },
@@ -1412,6 +1541,7 @@
 
   // ===== RENDER PLATILLOS =====
   let activeProtein = 'todos';
+  let activeMeal = 'todos';
   let searchTerm = '';
   const dishList = document.getElementById('dish-list');
   function renderDishes() {
@@ -1419,7 +1549,12 @@
     DISHES.forEach(dish => {
       const matchProtein = activeProtein === 'todos' || dish.proteina === activeProtein;
       const matchSearch = !searchTerm || dish.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-      if (!matchProtein || !matchSearch) return;
+      // Filtro de tiempo con OR: aparece si su lista de usos incluye el tiempo seleccionado.
+      // Platillos sin uso definido aparecen siempre.
+      const matchMeal = activeMeal === 'todos'
+        || !dish.usual || dish.usual.length === 0
+        || dish.usual.includes(activeMeal);
+      if (!matchProtein || !matchSearch || !matchMeal) return;
       const card = document.createElement('div');
       card.className = 'dish-card';
       card.dataset.id = dish.id;
@@ -1444,9 +1579,18 @@
   document.getElementById('protein-tabs').addEventListener('click', e => {
     const tab = e.target.closest('.protein-tab');
     if (!tab) return;
-    document.querySelectorAll('.protein-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#protein-tabs .protein-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     activeProtein = tab.dataset.p;
+    renderDishes();
+  });
+
+  document.getElementById('meal-filter').addEventListener('click', e => {
+    const tab = e.target.closest('.meal-filter-tab');
+    if (!tab) return;
+    document.querySelectorAll('#meal-filter .meal-filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeMeal = tab.dataset.meal;
     renderDishes();
   });
 
@@ -1681,8 +1825,16 @@
     const cats = ['todas', ...SUPPLY_CATS];
     cats.forEach(c => {
       const btn = document.createElement('button');
-      btn.className = 'protein-tab' + (c === supplyCat ? ' active' : '');
+      const isActive = c === supplyCat;
+      btn.className = 'protein-tab supply-cat-tab' + (isActive ? ' active' : '');
       btn.textContent = c === 'todas' ? 'Todas' : c;
+      // Color activo: el de la categoría (o acento estacional para "todas")
+      if (isActive) {
+        const col = c === 'todas' ? 'var(--season-accent)' : (CAT_COLORS[c] || 'var(--leaf)');
+        btn.style.background = col;
+        btn.style.borderColor = col;
+        btn.style.color = '#fff';
+      }
       btn.addEventListener('click', () => { supplyCat = c; renderSupplyCats(); renderSupplies(); });
       wrap.appendChild(btn);
     });
@@ -1697,7 +1849,7 @@
       if (!matchCat || !matchSearch) return;
       const card = document.createElement('div');
       card.className = 'dish-card';
-      card.style.setProperty('--dish-color', 'var(--leaf)');
+      card.style.setProperty('--dish-color', CAT_COLORS[sup.cat] || 'var(--leaf)');
       card.innerHTML = `
         <div class="dish-handle" aria-label="Arrastrar ${sup.nombre}">
           <div class="dotgrid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -1770,24 +1922,105 @@
   }
 
   const qtyModal = document.getElementById('qty-modal');
+  const COUNTABLE = ['pieza', 'taza', 'cucharada'];  // usan stepper
+  let qtyUnit = 'pieza';
+  let stepInt = 1;      // parte entera del stepper
+  let stepFrac = 0;     // fracción seleccionada (0, .25, .5, .75)
+
   function askQtyFor(sup) {
     pendingSupply = sup;
     document.getElementById('qty-title').textContent = sup.nombre;
-    document.getElementById('qty-value').value = '';
-    document.getElementById('qty-unit').value = 'pieza';
+    // Reset a valores por defecto
+    qtyUnit = 'pieza';
+    stepInt = 1; stepFrac = 0;
+    document.querySelectorAll('#unit-chips .unit-chip').forEach(c => c.classList.toggle('on', c.dataset.unit === 'pieza'));
+    document.getElementById('qty-numeric-input').value = '';
+    updateQtyMode();
+    updateStepperDisplay();
     qtyModal.hidden = false;
-    setTimeout(() => document.getElementById('qty-value').focus(), 50);
   }
+
+  // Muestra el modo correcto según la unidad
+  function updateQtyMode() {
+    const stepper = document.getElementById('qty-stepper');
+    const numeric = document.getElementById('qty-numeric');
+    const algusto = document.getElementById('qty-algusto');
+    stepper.hidden = numeric.hidden = algusto.hidden = true;
+    if (qtyUnit === 'al gusto') { algusto.hidden = false; }
+    else if (COUNTABLE.includes(qtyUnit)) { stepper.hidden = false; }
+    else { numeric.hidden = false; setTimeout(() => document.getElementById('qty-numeric-input').focus(), 50); }
+  }
+
+  function updateStepperDisplay() {
+    const total = stepInt + stepFrac;
+    let label;
+    if (stepFrac === 0) label = String(stepInt);
+    else {
+      const fracTxt = stepFrac === 0.25 ? '¼' : stepFrac === 0.5 ? '½' : '¾';
+      label = stepInt === 0 ? fracTxt : `${stepInt} ${fracTxt}`;
+    }
+    document.getElementById('stepper-value').textContent = label;
+    document.querySelectorAll('#qty-stepper .frac-chip').forEach(c => {
+      c.classList.toggle('on', parseFloat(c.dataset.frac) === stepFrac);
+    });
+  }
+
+  // Selección de unidad
+  document.getElementById('unit-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.unit-chip');
+    if (!chip) return;
+    document.querySelectorAll('#unit-chips .unit-chip').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    qtyUnit = chip.dataset.unit;
+    updateQtyMode();
+  });
+
+  // Stepper
+  document.getElementById('step-minus').addEventListener('click', () => {
+    if (stepInt > 0) stepInt--;
+    // si llega a 0 entero y sin fracción, dejamos en 0 (se validará al agregar)
+    updateStepperDisplay();
+  });
+  document.getElementById('step-plus').addEventListener('click', () => {
+    stepInt++;
+    updateStepperDisplay();
+  });
+  document.getElementById('qty-stepper').addEventListener('click', e => {
+    const frac = e.target.closest('.frac-chip');
+    if (!frac) return;
+    stepFrac = parseFloat(frac.dataset.frac);
+    updateStepperDisplay();
+  });
+
   document.getElementById('qty-cancel').addEventListener('click', () => { qtyModal.hidden = true; pendingSupply = null; });
   document.getElementById('qty-ok').addEventListener('click', () => {
     if (!pendingSupply) return;
-    const val = document.getElementById('qty-value').value.trim() || '1';
-    const unit = document.getElementById('qty-unit').value;
-    draftDish.ingredientes.push({ nombre: pendingSupply.nombre, cantidad: val, unidad: unit });
+    let cantidad, unidad = qtyUnit;
+    if (qtyUnit === 'al gusto') {
+      cantidad = null;
+    } else if (COUNTABLE.includes(qtyUnit)) {
+      const total = stepInt + stepFrac;
+      if (total <= 0) return; // nada seleccionado
+      // Mostrar fracción bonita si aplica
+      cantidad = fmtCountable(stepInt, stepFrac);
+    } else {
+      const raw = document.getElementById('qty-numeric-input').value.trim();
+      if (!raw) return;
+      cantidad = raw;
+    }
+    draftDish.ingredientes.push({ nombre: pendingSupply.nombre, cantidad, unidad });
     qtyModal.hidden = true; pendingSupply = null;
     renderDraftIngredients();
     updateFinishBtn();
   });
+
+  // Formatea "1 ¼" para cantidades contables
+  function fmtCountable(intPart, frac) {
+    const fracTxt = frac === 0.25 ? '¼' : frac === 0.5 ? '½' : frac === 0.75 ? '¾' : '';
+    if (frac === 0) return String(intPart);
+    if (intPart === 0) return fracTxt;
+    return `${intPart} ${fracTxt}`;
+  }
 
   function renderDraftIngredients() {
     const drop = document.getElementById('ingredients-drop');
@@ -1798,7 +2031,7 @@
     draftDish.ingredientes.forEach((ing, idx) => {
       const row = document.createElement('div');
       row.className = 'ing-row';
-      const qtyLabel = ing.unidad === 'al gusto' ? 'al gusto' : `${ing.cantidad} ${ing.unidad}`;
+      const qtyLabel = (ing.unidad === 'al gusto' || ing.cantidad == null) ? 'al gusto' : `${ing.cantidad} ${ing.unidad}`;
       row.innerHTML = `<span class="ing-name">${ing.nombre}</span>
         <span class="ing-qty">${qtyLabel}</span>
         <span class="ing-x">×</span>`;
@@ -1841,7 +2074,7 @@
       nombre: draftDish.nombre,
       proteina: draftDish.tipo,
       usual: [...draftDish.usual],
-      ing: draftDish.ingredientes.map(i => i.unidad === 'al gusto' ? `${i.nombre} al gusto` : `${i.nombre} ${i.cantidad} ${i.unidad}`)
+      ing: draftDish.ingredientes.map(i => (i.unidad === 'al gusto' || i.cantidad == null) ? `${i.nombre} al gusto` : `${i.nombre} ${i.cantidad} ${i.unidad}`)
     };
     DISHES.push(nuevo);
     showDishDone(nuevo.nombre);
