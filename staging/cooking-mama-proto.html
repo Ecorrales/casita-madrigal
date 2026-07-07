@@ -196,16 +196,20 @@
   }
 
   /* Pestañas por proteína */
-  .protein-tabs {
-    display: flex;
-    gap: 5px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+  /* Contenedor fijo: pestañas + buscador quedan arriba al scrollear */
+  .catalog-sticky {
     position: sticky;
     top: 0;
     background: var(--cream-2);
-    padding-bottom: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 2px;
     z-index: 10;
+  }
+  .protein-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
   }
   .protein-tab {
     font-family: 'Inter', sans-serif;
@@ -228,19 +232,41 @@
   .protein-tab.active { border-color: transparent; }
 
   /* Buscador */
+  .search-wrap { position: relative; }
   .cm-search {
     width: 100%;
-    padding: 9px 13px;
+    padding: 9px 34px 9px 13px;
     border-radius: 10px;
     border: 1.5px solid var(--line);
     background: var(--white);
     font-family: 'Inter', sans-serif;
     font-size: 13px;
     color: var(--ink);
-    margin-bottom: 12px;
   }
   .cm-search:focus { outline: none; border-color: var(--terra); }
   .cm-search::placeholder { color: color-mix(in srgb, var(--ink-soft) 55%, transparent); }
+  .search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: var(--cream-2);
+    color: var(--ink-soft);
+    border-radius: 50%;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 140ms, color 140ms;
+  }
+  .search-clear:hover { background: var(--terra); color: #fff; }
+  .search-clear[hidden] { display: none; }
 
   /* Tarjetas de platillo */
   .dish-card {
@@ -305,6 +331,25 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+  }
+  .dish-name-txt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .usual-pill {
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    background: var(--cream-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 7px;
+    white-space: nowrap;
   }
   .dish-protein-dot {
     width: 8px; height: 8px; border-radius: 50%;
@@ -390,15 +435,20 @@
   <!-- DERECHA: LOS PLATILLOS -->
   <div class="cm-catalog">
     <div class="cm-col-label">Los platillos</div>
-    <div class="protein-tabs" id="protein-tabs">
-      <button class="protein-tab active" data-p="todos">Todos</button>
-      <button class="protein-tab" data-p="pollo">Pollo</button>
-      <button class="protein-tab" data-p="cerdo">Cerdo</button>
-      <button class="protein-tab" data-p="pescado">Pescado</button>
-      <button class="protein-tab" data-p="res">Res</button>
-      <button class="protein-tab" data-p="detox">Detox</button>
+    <div class="catalog-sticky">
+      <div class="protein-tabs" id="protein-tabs">
+        <button class="protein-tab active" data-p="todos">Todos</button>
+        <button class="protein-tab" data-p="pollo">Pollo</button>
+        <button class="protein-tab" data-p="cerdo">Cerdo</button>
+        <button class="protein-tab" data-p="pescado">Pescado</button>
+        <button class="protein-tab" data-p="res">Res</button>
+        <button class="protein-tab" data-p="detox">Detox</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" class="cm-search" id="search" placeholder="Buscar platillo por nombre…">
+        <button class="search-clear" id="search-clear" aria-label="Limpiar búsqueda" hidden>×</button>
+      </div>
     </div>
-    <input type="text" class="cm-search" id="search" placeholder="Buscar platillo por nombre…">
     <div id="dish-list"><!-- tarjetas generadas por JS --></div>
   </div>
 </div>
@@ -413,18 +463,18 @@
   };
 
   const DISHES = [
-    { id: 'd1', nombre: 'Pollo a la plancha', proteina: 'pollo', ing: ['Pollo 500g', 'Mix de verduras', 'Arroz 1 taza'] },
-    { id: 'd2', nombre: 'Fajitas de cerdo', proteina: 'cerdo', ing: ['Cerdo 500g', 'Cebolla 1/4', 'Pimiento 1/2', 'Arroz 1 taza'] },
-    { id: 'd3', nombre: 'Pescado a la plancha', proteina: 'pescado', ing: ['Filete 400g', 'Mix', 'Arroz 1 taza'] },
-    { id: 'd4', nombre: 'Enfrijoladas', proteina: 'detox', ing: ['Tortilla 6pz', 'Frijol', 'Queso fresco'] },
-    { id: 'd5', nombre: 'Tacos de pescado', proteina: 'pescado', ing: ['Filete 400g', 'Tortilla 6pz', 'Pico de gallo'] },
-    { id: 'd6', nombre: 'Chuletas de cerdo', proteina: 'cerdo', ing: ['Chuleta 4pz', 'Arroz 1 taza', 'Mix'] },
-    { id: 'd7', nombre: 'Brochetas de carne', proteina: 'res', ing: ['Carne para asar 500g', 'Cebolla 1/2', 'Pimiento 1pz'] },
-    { id: 'd8', nombre: 'Huevos con jamoncillos', proteina: 'detox', ing: ['Huevo 4pz', 'Jamón', 'Pan'] },
-    { id: 'd9', nombre: 'Boneless', proteina: 'pollo', ing: ['Pollo 500g', 'Harina', 'Salsa'] },
-    { id: 'd10', nombre: 'Ceviche de atún', proteina: 'pescado', ing: ['Atún 2 latas', 'Limón 5pz', 'Pepino 1pz'] },
-    { id: 'd11', nombre: 'Carne molida', proteina: 'res', ing: ['Carne molida 500g', 'Papa 2pz', 'Zanahoria'] },
-    { id: 'd12', nombre: 'Lentejas', proteina: 'detox', ing: ['Lentejas 1 taza', 'Zanahoria', 'Papa'] }
+    { id: 'd1', nombre: 'Pollo a la plancha', proteina: 'pollo', usual: ['Comida'], ing: ['Pollo 500g', 'Mix de verduras', 'Arroz 1 taza'] },
+    { id: 'd2', nombre: 'Fajitas de cerdo', proteina: 'cerdo', usual: ['Comida', 'Cena'], ing: ['Cerdo 500g', 'Cebolla 1/4', 'Pimiento 1/2', 'Arroz 1 taza'] },
+    { id: 'd3', nombre: 'Pescado a la plancha', proteina: 'pescado', usual: ['Comida'], ing: ['Filete 400g', 'Mix', 'Arroz 1 taza'] },
+    { id: 'd4', nombre: 'Enfrijoladas', proteina: 'detox', usual: ['Desayuno', 'Cena'], ing: ['Tortilla 6pz', 'Frijol', 'Queso fresco'] },
+    { id: 'd5', nombre: 'Tacos de pescado', proteina: 'pescado', usual: ['Comida'], ing: ['Filete 400g', 'Tortilla 6pz', 'Pico de gallo'] },
+    { id: 'd6', nombre: 'Chuletas de cerdo', proteina: 'cerdo', usual: ['Comida'], ing: ['Chuleta 4pz', 'Arroz 1 taza', 'Mix'] },
+    { id: 'd7', nombre: 'Brochetas de carne', proteina: 'res', usual: ['Cena'], ing: ['Carne para asar 500g', 'Cebolla 1/2', 'Pimiento 1pz'] },
+    { id: 'd8', nombre: 'Huevos con jamoncillos', proteina: 'detox', usual: ['Desayuno'], ing: ['Huevo 4pz', 'Jamón', 'Pan'] },
+    { id: 'd9', nombre: 'Boneless', proteina: 'pollo', usual: ['Cena'], ing: ['Pollo 500g', 'Harina', 'Salsa'] },
+    { id: 'd10', nombre: 'Ceviche de atún', proteina: 'pescado', usual: ['Comida'], ing: ['Atún 2 latas', 'Limón 5pz', 'Pepino 1pz'] },
+    { id: 'd11', nombre: 'Carne molida', proteina: 'res', usual: ['Comida'], ing: ['Carne molida 500g', 'Papa 2pz', 'Zanahoria'] },
+    { id: 'd12', nombre: 'Lentejas', proteina: 'detox', usual: ['Comida'], ing: ['Lentejas 1 taza', 'Zanahoria', 'Papa'] }
   ];
 
   const DAYS = [
@@ -493,7 +543,10 @@
           <div class="dotgrid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <div class="dish-body" data-body="${dish.id}">
-          <div class="dish-name">${dish.nombre}<span class="dish-protein-dot"></span></div>
+          <div class="dish-name">
+            <span class="dish-name-txt">${dish.nombre}<span class="dish-protein-dot"></span></span>
+            ${dish.usual && dish.usual.length ? `<span class="usual-pill">usual: ${dish.usual.join(' / ')}</span>` : ''}
+          </div>
           <div class="dish-ingredients">${dish.ing.join(' · ')}</div>
         </div>`;
       dishList.appendChild(card);
@@ -512,9 +565,19 @@
   });
 
   // ===== BÚSQUEDA =====
-  document.getElementById('search').addEventListener('input', e => {
+  const searchInput = document.getElementById('search');
+  const searchClear = document.getElementById('search-clear');
+  searchInput.addEventListener('input', e => {
     searchTerm = e.target.value;
+    searchClear.hidden = !searchTerm;
     renderDishes();
+  });
+  searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchTerm = '';
+    searchClear.hidden = true;
+    renderDishes();
+    searchInput.focus();
   });
 
   // ===== REMOVER PLATILLO DE UN SLOT =====
