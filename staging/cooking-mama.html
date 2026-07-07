@@ -2496,74 +2496,74 @@
       renderMonth();
       return;
     }
+    // Lectura: cada nodo por separado, con captura individual
+    let platVal = null, insVal = null, menuVal = null;
     try {
-      // Leer los tres nodos en paralelo
-      const [platSnap, insSnap, menuSnap] = await Promise.all([
-        db.ref('casita/platillos').once('value'),
-        db.ref('casita/insumos').once('value'),
-        db.ref('casita/menu').once('value')
-      ]);
+      platVal = (await db.ref('casita/platillos').once('value')).val();
+    } catch (e) { console.error('READ platillos falló:', e.message); }
+    try {
+      insVal = (await db.ref('casita/insumos').once('value')).val();
+    } catch (e) { console.error('READ insumos falló:', e.message); }
+    try {
+      menuVal = (await db.ref('casita/menu').once('value')).val();
+    } catch (e) { console.error('READ menu falló:', e.message); }
 
-      // --- Platillos ---
-      const platVal = platSnap.val();
-      if (platVal) {
-        DISHES = Object.entries(platVal).map(([id, d]) => ({ id, ...d, usual: d.usual || [], ing: d.ing || [] }));
-      } else {
-        // Seed la primera vez — escribir hijo por hijo (la regla permite $id, no el padre)
-        DISHES = SEED_DISHES.map(d => ({...d}));
-        await Promise.all(DISHES.map(d =>
-          db.ref(`casita/platillos/${d.id}`).set({
+    // --- Platillos ---
+    if (platVal) {
+      DISHES = Object.entries(platVal).map(([id, d]) => ({ id, ...d, usual: d.usual || [], ing: d.ing || [] }));
+    } else {
+      DISHES = SEED_DISHES.map(d => ({...d}));
+      try {
+        for (const d of DISHES) {
+          await db.ref(`casita/platillos/${d.id}`).set({
             nombre: d.nombre, proteina: d.proteina, usual: d.usual || [],
             ing: d.ing || [], creadoPor: 'seed', creadoEn: Date.now(),
             vecesUsado: 0, ultimaVez: null
-          })
-        ));
-      }
+          });
+        }
+      } catch (e) { console.error('SEED platillos falló en:', e.message); }
+    }
 
-      // --- Insumos ---
-      const insVal = insSnap.val();
-      if (insVal) {
-        SUPPLIES = Object.entries(insVal).map(([id, s]) => ({ id, ...s }));
-      } else {
-        SUPPLIES = SEED_SUPPLIES.map(s => ({...s}));
-        await Promise.all(SUPPLIES.map(s =>
-          db.ref(`casita/insumos/${s.id}`).set({ nombre: s.nombre, cat: s.cat })
-        ));
-      }
+    // --- Insumos ---
+    if (insVal) {
+      SUPPLIES = Object.entries(insVal).map(([id, s]) => ({ id, ...s }));
+    } else {
+      SUPPLIES = SEED_SUPPLIES.map(s => ({...s}));
+      try {
+        for (const s of SUPPLIES) {
+          await db.ref(`casita/insumos/${s.id}`).set({ nombre: s.nombre, cat: s.cat });
+        }
+      } catch (e) { console.error('SEED insumos falló en:', e.message); }
+    }
 
-      // --- Menú (formato Casita: week/día-inglés/tiempo-inglés) ---
-      const menuVal = menuSnap.val();
-      if (menuVal) {
-        const MEAL_REV = { breakfast:'Desayuno', lunch:'Comida', dinner:'Cena' };
-        Object.entries(menuVal).forEach(([weekKey, days]) => {
-          if (!days) return;
-          Object.entries(days).forEach(([dayKey, meals]) => {
-            if (!meals) return;
-            const date = dateFromWeekDay(weekKey, dayKey);
-            if (!date) return;
-            Object.entries(meals).forEach(([mealKey, val]) => {
-              const meal = MEAL_REV[mealKey];
-              if (!meal || !val) return;
-              // val = {name, ingredients, ...}. Mapear a un dishId por nombre.
-              const dish = DISHES.find(d => d.nombre === val.name);
-              const slotKey = `${ymd(date)}-${meal}`;
-              // Si existe el platillo lo referenciamos por id; si no, guardamos un pseudo-id con el nombre
-              menu[slotKey] = dish ? dish.id : ('ext:' + (val.name || ''));
-            });
+    // --- Menú (formato Casita: week/día-inglés/tiempo-inglés) ---
+    if (menuVal) {
+      const MEAL_REV = { breakfast:'Desayuno', lunch:'Comida', dinner:'Cena' };
+      Object.entries(menuVal).forEach(([weekKey, days]) => {
+        if (!days) return;
+        Object.entries(days).forEach(([dayKey, meals]) => {
+          if (!meals) return;
+          const date = dateFromWeekDay(weekKey, dayKey);
+          if (!date) return;
+          Object.entries(meals).forEach(([mealKey, val]) => {
+            const meal = MEAL_REV[mealKey];
+            if (!meal || !val) return;
+            // val = {name, ingredients, ...}. Mapear a un dishId por nombre.
+            const dish = DISHES.find(d => d.nombre === val.name);
+            const slotKey = `${ymd(date)}-${meal}`;
+            // Si existe el platillo lo referenciamos por id; si no, guardamos un pseudo-id con el nombre
+            menu[slotKey] = dish ? dish.id : ('ext:' + (val.name || ''));
           });
         });
-      }
-
-      banner.textContent = 'Cooking Mama · conectada a la casita 🍳';
-      banner.style.background = 'color-mix(in srgb, var(--leaf) 20%, transparent)';
-      banner.style.color = '#4a5a2a';
-      setTimeout(() => { banner.style.display = 'none'; }, 2500);
-    } catch (e) {
-      console.error('Error cargando datos:', e);
-      banner.textContent = 'Error al cargar — usando datos locales';
-      DISHES = SEED_DISHES.map(d => ({...d}));
-      SUPPLIES = SEED_SUPPLIES.map(s => ({...s}));
+      });
     }
+
+    // Banner de estado: conectado (aunque algún seed parcial haya fallado, ya tenemos datos)
+    banner.textContent = 'Cooking Mama · conectada a la casita 🍳';
+    banner.style.background = 'color-mix(in srgb, var(--leaf) 20%, transparent)';
+    banner.style.color = '#4a5a2a';
+    setTimeout(() => { banner.style.display = 'none'; }, 2500);
+
     renderMonth();
   }
 
