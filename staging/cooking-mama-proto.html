@@ -74,11 +74,15 @@
   /* ===== HEADER ===== */
   .cm-header {
     padding: 18px 20px 14px;
-    background: linear-gradient(180deg, var(--white), var(--cream));
-    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--season-band) 70%, var(--white)),
+      var(--season-band));
+    border-bottom: 1px solid color-mix(in srgb, var(--season-accent) 18%, transparent);
     position: sticky;
     top: 0;
     z-index: 50;
+    overflow: hidden;
+    transition: background 500ms, border-color 500ms;
   }
   .cm-title {
     font-family: 'Fraunces', serif;
@@ -88,16 +92,43 @@
     letter-spacing: -0.01em;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 9px;
+    position: relative;
+    z-index: 2;
+    text-align: center;
   }
   .cm-title .pan { font-size: 24px; }
   .cm-sub {
     font-size: 12.5px;
-    color: var(--ink-soft);
+    color: var(--season-accent);
     margin-top: 2px;
     font-style: italic;
     font-family: 'Fraunces', serif;
+    position: relative;
+    z-index: 2;
+    transition: color 500ms;
+    text-align: center;
   }
+
+  /* Guirnalda SVG estacional — corre a lo ancho del header */
+  .garland-svg {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .garland-svg svg {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: auto;
+  }
+  .garland-svg svg.g-left  { left: 0; }
+  .garland-svg svg.g-right { right: 0; transform: scaleX(-1); }
+  .cm-header { min-height: 78px; }
 
   /* ===== NIVEL MES ===== */
   .month-view { padding: 16px 16px 40px; max-width: 620px; margin: 0 auto; }
@@ -573,31 +604,7 @@
     font-weight: 600;
   }
 
-  /* ===== FRANJA DECORATIVA ESTACIONAL ===== */
-  .season-band {
-    background: var(--season-band);
-    padding: 7px 16px;
-    text-align: center;
-    font-family: 'Fraunces', serif;
-    font-size: 13px;
-    font-style: italic;
-    color: var(--season-accent);
-    letter-spacing: 0.01em;
-    border-bottom: 1px solid color-mix(in srgb, var(--season-accent) 15%, transparent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: background 400ms, color 400ms;
-  }
-  .season-band .motifs {
-    display: inline-flex;
-    gap: 6px;
-    font-size: 15px;
-    font-style: normal;
-  }
-  /* Header y acentos usan el color estacional */
-  .cm-title .pan { transition: transform 400ms; }
+  /* ===== ACENTOS ESTACIONALES ===== */
   .month-arrow { color: var(--season-accent) !important; }
   .month-arrow:hover { border-color: var(--season-accent) !important; }
   .week-card.is-current { border-color: var(--season-accent) !important; }
@@ -613,44 +620,17 @@
     opacity: 0.5;
     transition: background 400ms;
   }
-  /* Guirnalda superior en invierno (esferas colgando) */
-  .season-garland {
-    height: 0;
-    overflow: visible;
-    position: relative;
-    display: none;
-  }
-  body[data-season="invierno"] .season-garland { display: block; }
-  .season-garland .ball {
-    position: absolute;
-    top: 0;
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    transform: translateY(-2px);
-  }
-  .season-garland .ball::before {
-    content: '';
-    position: absolute;
-    top: -6px; left: 50%;
-    width: 1px; height: 6px;
-    background: color-mix(in srgb, #2f6b4f 50%, transparent);
-  }
 </style>
 </head>
 <body>
 
 <div class="proto-banner">PROTOTIPO · datos de ejemplo, nada se guarda todavía</div>
 
-<div class="cm-header">
+<div class="cm-header" id="cm-header">
+  <div class="garland-svg" id="garland-svg" aria-hidden="true"></div>
   <div class="cm-title"><span class="pan">🍳</span> Cooking Mama</div>
   <div class="cm-sub" id="cm-sub">Elige una semana para planear</div>
 </div>
-
-<div class="season-band" id="season-band">
-  <span class="motifs" id="season-motifs"></span>
-  <span id="season-text"></span>
-</div>
-<div class="season-garland" id="season-garland"></div>
 
 <!-- ===== NIVEL MES ===== -->
 <div class="month-view" id="month-view">
@@ -781,45 +761,167 @@
   }
 
   // ===== TEMAS ESTACIONALES (hemisferio norte) =====
-  // Sigue la estación del MES que se está viendo.
   const SEASONS = {
-    invierno: { meses: [11, 0, 1], motifs: ['🎄','🔴','✨'], text: 'Invierno · temporada de guirnaldas y esferas' },
-    primavera: { meses: [2, 3, 4], motifs: ['🌸','🌷','🌼'], text: 'Primavera · todo florece' },
-    verano:   { meses: [5, 6, 7], motifs: ['🌊','☀️','🐚'], text: 'Verano · sol, playa y frescura' },
-    otono:    { meses: [8, 9, 10], motifs: ['🎃','🍂','☕'], text: 'Otoño · temporada de calabaza y pumpkin spice' }
+    invierno:  { meses: [11, 0, 1], text: 'Invierno · guirnaldas y esferas' },
+    primavera: { meses: [2, 3, 4],  text: 'Primavera · todo florece' },
+    verano:    { meses: [5, 6, 7],  text: 'Verano · sol, playa y frescura' },
+    otono:     { meses: [8, 9, 10], text: 'Otoño · calabaza y pumpkin spice' }
   };
+  let currentSeason = null;
   function seasonForMonth(month) {
     for (const key in SEASONS) {
       if (SEASONS[key].meses.includes(month)) return key;
     }
     return 'otono';
   }
+
+  // --- Piezas SVG dibujadas a mano ---
+  function hojaArce(x, y, s, rot, fill) {
+    return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+      <path d="M0,-11 L2.5,-4 L9,-6 L4,0 L10,4 L3,4 L4,11 L0,6 L-4,11 L-3,4 L-10,4 L-4,0 L-9,-6 L-2.5,-4 Z"
+        fill="${fill}"/>
+      <path d="M0,7 L0,13" stroke="${fill}" stroke-width="1"/>
+    </g>`;
+  }
+  function hojaSimple(x, y, s, rot, fill) {
+    return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+      <path d="M0,-10 C6,-6 6,6 0,11 C-6,6 -6,-6 0,-10 Z" fill="${fill}"/>
+      <path d="M0,-8 L0,10" stroke="rgba(90,50,10,0.35)" stroke-width="0.8"/>
+    </g>`;
+  }
+  function calabaza(x, y, s, fill, stem) {
+    return `<g transform="translate(${x},${y}) scale(${s})">
+      <ellipse cx="-6" cy="1" rx="6" ry="8" fill="${fill}" opacity="0.85"/>
+      <ellipse cx="6" cy="1" rx="6" ry="8" fill="${fill}" opacity="0.85"/>
+      <ellipse cx="0" cy="1" rx="8" ry="9" fill="${fill}"/>
+      <path d="M0,-8 Q2,-12 5,-12" stroke="${stem}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>`;
+  }
+  function trigo(x, y, s, rot, fill) {
+    let grains = '';
+    for (let i = 0; i < 5; i++) {
+      const gy = -8 + i * 3.5;
+      grains += `<ellipse cx="-3" cy="${gy}" rx="2" ry="3.2" fill="${fill}" transform="rotate(-25 -3 ${gy})"/>
+                 <ellipse cx="3" cy="${gy}" rx="2" ry="3.2" fill="${fill}" transform="rotate(25 3 ${gy})"/>`;
+    }
+    return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+      <path d="M0,12 L0,-9" stroke="${fill}" stroke-width="1.4"/>
+      ${grains}
+      <path d="M0,-9 L0,-13" stroke="${fill}" stroke-width="1"/>
+    </g>`;
+  }
+  function bellota(x, y, s, fill) {
+    return `<g transform="translate(${x},${y}) scale(${s})">
+      <ellipse cx="0" cy="3" rx="4" ry="5.5" fill="${fill}"/>
+      <path d="M-4.5,-1 Q0,-5 4.5,-1 Z" fill="#6b4423"/>
+      <path d="M0,-4 L0,-7" stroke="#6b4423" stroke-width="1.2"/>
+    </g>`;
+  }
+  function esfera(x, y, s, fill) {
+    return `<g transform="translate(${x},${y}) scale(${s})">
+      <path d="M0,-13 L0,-9" stroke="#2f6b4f" stroke-width="1"/>
+      <circle cx="0" cy="0" r="8" fill="${fill}"/>
+      <ellipse cx="-2.5" cy="-2.5" rx="2.5" ry="3.5" fill="rgba(255,255,255,0.3)"/>
+      <rect x="-2.5" y="-11" width="5" height="3" rx="1" fill="#d9a441"/>
+    </g>`;
+  }
+  function ramaPino(x, y, s, rot) {
+    return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+      <path d="M0,12 L0,-12" stroke="#2f6b4f" stroke-width="1.6"/>
+      ${[...Array(6)].map((_,i)=>{const py=-10+i*4;return `<path d="M0,${py} L-7,${py+3} M0,${py} L7,${py+3}" stroke="#3a7d5c" stroke-width="1.4"/>`;}).join('')}
+    </g>`;
+  }
+  function flor(x, y, s, fill, centro) {
+    let petalos = '';
+    for (let i = 0; i < 6; i++) {
+      petalos += `<ellipse cx="0" cy="-7" rx="3.5" ry="6" fill="${fill}" transform="rotate(${i*60} 0 0)"/>`;
+    }
+    return `<g transform="translate(${x},${y}) scale(${s})">${petalos}<circle cx="0" cy="0" r="4" fill="${centro}"/></g>`;
+  }
+  function hojaTierna(x, y, s, rot) {
+    return `<g transform="translate(${x},${y}) rotate(${rot}) scale(${s})">
+      <path d="M0,0 C8,-3 12,-10 8,-14 C4,-10 2,-4 0,0 Z" fill="#8bbf5a"/>
+    </g>`;
+  }
+  function concha(x, y, s, fill) {
+    return `<g transform="translate(${x},${y}) scale(${s})">
+      <path d="M0,8 C-9,8 -10,-4 0,-8 C10,-4 9,8 0,8 Z" fill="${fill}"/>
+      ${[...Array(5)].map((_,i)=>`<path d="M0,7 L${-8+i*4},-6" stroke="rgba(150,90,50,0.4)" stroke-width="0.8"/>`).join('')}
+    </g>`;
+  }
+  function estrellaMar(x, y, s, fill) {
+    let pts = '';
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 72 - 90) * Math.PI / 180;
+      const ai = ((i * 72 + 36) - 90) * Math.PI / 180;
+      pts += `${Math.cos(a)*10},${Math.sin(a)*10} ${Math.cos(ai)*4},${Math.sin(ai)*4} `;
+    }
+    return `<g transform="translate(${x},${y}) scale(${s})"><polygon points="${pts}" fill="${fill}"/></g>`;
+  }
+  function ola(x, y, s, fill) {
+    return `<g transform="translate(${x},${y}) scale(${s})">
+      <path d="M-14,0 Q-10,-6 -6,0 T2,0 T10,0 T18,0" stroke="${fill}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    </g>`;
+  }
+
+  // Ensambla el cúmulo de motivos de una estación (un lado; se refleja para el otro)
+  function garlandCluster(season) {
+    if (season === 'otono') {
+      return hojaArce(18,20,1.1,-15,'#c26a2b')
+        + hojaArce(46,14,0.9,25,'#b5563f')
+        + calabaza(38,42,1.15,'#d97a2b','#7a8c4e')
+        + calabaza(68,40,0.9,'#e8e0d0','#7a8c4e')
+        + calabaza(92,44,1.0,'#8a9b52','#6b7742')
+        + hojaArce(78,18,1.0,10,'#d9a441')
+        + trigo(108,32,1.0,-18,'#c9a24a')
+        + trigo(116,36,0.9,-8,'#d9b25a')
+        + bellota(60,64,0.9,'#b07a3a')
+        + hojaSimple(100,58,0.9,-20,'#c26a2b');
+    }
+    if (season === 'invierno') {
+      return ramaPino(20,30,1.1,-20)
+        + ramaPino(48,26,1.0,10)
+        + esfera(40,50,1.0,'#b5563f')
+        + esfera(64,54,0.9,'#2f6b4f')
+        + esfera(86,50,1.0,'#d9a441')
+        + ramaPino(80,28,1.0,25)
+        + esfera(106,52,0.85,'#b5563f')
+        + ramaPino(108,30,0.9,-12);
+    }
+    if (season === 'primavera') {
+      return hojaTierna(20,40,1.2,-30)
+        + flor(36,34,1.1,'#e79ac0','#f2d04a')
+        + flor(62,42,1.0,'#f2b6d0','#f2d04a')
+        + flor(88,36,1.15,'#e79ac0','#f2d04a')
+        + hojaTierna(74,52,1.0,20)
+        + flor(110,44,0.9,'#f2b6d0','#f2d04a')
+        + hojaTierna(100,30,1.0,-15);
+    }
+    if (season === 'verano') {
+      return ola(30,22,1.2,'#2d9db3')
+        + ola(80,20,1.1,'#4bb8cc')
+        + concha(38,46,1.1,'#e8c89a')
+        + estrellaMar(66,50,0.95,'#e88d5a')
+        + concha(94,48,1.0,'#dbb98a')
+        + estrellaMar(110,40,0.8,'#e88d5a');
+    }
+    return '';
+  }
+
   function applySeason(month) {
     const key = seasonForMonth(month);
-    const s = SEASONS[key];
+    currentSeason = key;
     document.body.dataset.season = key;
-    const motifsEl = document.getElementById('season-motifs');
-    const textEl = document.getElementById('season-text');
-    if (motifsEl) motifsEl.innerHTML = s.motifs.map(m => `<span>${m}</span>`).join('');
-    if (textEl) textEl.textContent = s.text;
-    renderGarland(key);
-  }
-  // Guirnalda de esferas colgando (solo invierno)
-  function renderGarland(key) {
-    let g = document.getElementById('season-garland');
-    if (!g) return;
-    g.innerHTML = '';
-    if (key !== 'invierno') return;
-    const colors = ['#b5563f', '#2f6b4f', '#d9a441', '#c26a2b'];
-    const n = 24;
-    for (let i = 0; i < n; i++) {
-      const ball = document.createElement('span');
-      ball.className = 'ball';
-      ball.style.left = (i / (n - 1) * 100) + '%';
-      ball.style.background = colors[i % colors.length];
-      ball.style.top = (Math.sin(i * 0.9) * 3 + 3) + 'px';
-      g.appendChild(ball);
+    const wrap = document.getElementById('garland-svg');
+    if (wrap) {
+      const cluster = garlandCluster(key);
+      const svg = `<svg viewBox="0 0 135 78" class="g-left" xmlns="http://www.w3.org/2000/svg">${cluster}</svg>`
+                + `<svg viewBox="0 0 135 78" class="g-right" xmlns="http://www.w3.org/2000/svg">${cluster}</svg>`;
+      wrap.innerHTML = svg;
     }
+  }
+  function seasonText() {
+    return SEASONS[currentSeason]?.text || '';
   }
 
   // ===== NIVEL MES =====
@@ -832,6 +934,7 @@
   function renderMonth() {
     monthTitleEl.textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
     applySeason(viewMonth);
+    cmSub.textContent = seasonText();
     weekCardsEl.innerHTML = '';
     const weeks = weeksIntersectingMonth(viewYear, viewMonth);
     const todayMonday = mondayOf(new Date()).getTime();
@@ -889,8 +992,7 @@
   function backToMonth() {
     weekView.hidden = true;
     monthView.hidden = false;
-    cmSub.textContent = 'Elige una semana para planear';
-    renderMonth(); // refresca contadores
+    renderMonth(); // refresca contadores y subtítulo estacional
     window.scrollTo(0, 0);
   }
 
