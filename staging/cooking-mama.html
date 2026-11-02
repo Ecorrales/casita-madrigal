@@ -970,6 +970,51 @@
     opacity: 0.5;
     transition: background 400ms;
   }
+
+  /* ===== LISTA DEL SUPER ===== */
+  .super-btn { margin-top: 10px; border-style: solid; }
+  .super-view[hidden] { display: none; }
+  .super-wrap { max-width: 620px; margin: 0 auto; padding: 16px 16px 60px; }
+  .super-range { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .super-range .cook-field { margin-bottom: 10px; }
+  .super-preview { font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 4px; }
+  .super-preview b { color: var(--ink); }
+  .super-preview .err { color: #b5563f; font-weight: 600; }
+  .super-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 24px 0 6px; }
+  .super-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+  .super-progress { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+  .super-bar { height: 6px; border-radius: 3px; background: var(--cream-2); overflow: hidden; margin-bottom: 6px; }
+  .super-bar i { display: block; height: 100%; background: var(--leaf); transition: width 250ms; }
+  .super-cat { margin-top: 16px; }
+  .super-cat-label {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-soft); margin-bottom: 6px;
+  }
+  .super-cat-label::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--cat-color, var(--ink-soft)); }
+  .super-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 12px; margin-bottom: 6px;
+    background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+    cursor: pointer; user-select: none; transition: opacity 200ms;
+  }
+  .super-item input { width: 20px; height: 20px; accent-color: var(--leaf); margin-top: 1px; flex-shrink: 0; cursor: pointer; }
+  .super-item-main { flex: 1; min-width: 0; }
+  .super-item-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .super-item-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  .super-item-qty { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: var(--season-accent); white-space: nowrap; }
+  .super-item-from { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+  .super-item.done { opacity: 0.5; }
+  .super-item.done .super-item-name { text-decoration: line-through; }
+  .super-aprox {
+    display: inline-block; font-size: 10px; font-weight: 700; color: #a9793f;
+    border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; margin-left: 4px; vertical-align: 1px;
+  }
+  .super-note {
+    margin-top: 16px; padding: 10px 12px; border-radius: 10px;
+    background: var(--season-soft); font-size: 12.5px; color: var(--ink-soft); line-height: 1.5;
+  }
+  .super-empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 30px 10px; font-style: italic; font-family: 'Fraunces', serif; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -993,6 +1038,30 @@
   </div>
   <div class="week-cards" id="week-cards"><!-- generado por JS --></div>
   <button class="cook-btn" id="cook-btn">🍳 Vamos a cocinar · crear un platillo</button>
+  <button class="cook-btn super-btn" id="super-btn">🛒 Lista del super</button>
+</div>
+
+<!-- ===== NIVEL LISTA DEL SUPER ===== -->
+<div class="super-view" id="super-view" hidden>
+  <div class="week-topbar">
+    <button class="back-to-month" id="back-from-super">‹ Volver al mes</button>
+    <div class="week-range">Lista del super</div>
+  </div>
+  <div class="super-wrap">
+    <div class="super-range">
+      <div class="cook-field">
+        <label class="cook-label" for="super-from">Desde</label>
+        <input type="date" class="cook-input" id="super-from">
+      </div>
+      <div class="cook-field">
+        <label class="cook-label" for="super-to">Hasta</label>
+        <input type="date" class="cook-input" id="super-to">
+      </div>
+    </div>
+    <div class="super-preview" id="super-preview"></div>
+    <button class="finish-btn" id="super-generate">Generar lista 🛒</button>
+    <div id="super-list"></div>
+  </div>
 </div>
 
 <!-- ===== NIVEL SEMANA ===== -->
@@ -2496,6 +2565,318 @@
     } catch(_) {}
   }
 
+  // ===== LISTA DEL SUPER =====
+  // Proyecta los platillos del menú en un rango de fechas y suma sus insumos.
+  // Se guarda en casita/super/actual para tacharla en el súper desde cualquier celular.
+  const superView = document.getElementById('super-view');
+  const superFrom = document.getElementById('super-from');
+  const superTo = document.getElementById('super-to');
+  const superPreview = document.getElementById('super-preview');
+  const superListEl = document.getElementById('super-list');
+  let superList = null;      // lista actual (de Firebase, o local si no hay conexión)
+  let superSaveError = '';
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+  function parseYmd(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+  // Clave para comparar nombres: minúsculas, sin acentos, sin plural final en cada palabra
+  function normName(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .trim().split(/\s+/).map(w => w.length > 3 ? w.replace(/s$/, '') : w).join(' ');
+  }
+
+  // "2 ½" | "½" | "1/4" | "1 1/2" | "1.5" | "1,5" | "520" → número (o null)
+  const FRAC_CHARS = { '¼': 0.25, '½': 0.5, '¾': 0.75 };
+  function parseQty(raw) {
+    if (raw == null) return null;
+    let s = String(raw).trim().replace(',', '.');
+    let total = 0, any = false;
+    s = s.replace(/[¼½¾]/g, c => { total += FRAC_CHARS[c]; any = true; return ' '; });
+    s = s.replace(/(\d+)\s*\/\s*(\d+)/g, (_, a, b) => { if (+b) { total += a / b; any = true; } return ' '; });
+    (s.match(/\d+(?:\.\d+)?/g) || []).forEach(n => { total += parseFloat(n); any = true; });
+    return any && total > 0 ? total : null;
+  }
+
+  const UNIT_ALIASES = [
+    [/^(kg|kgs|kilos?|kilogramos?)$/, 'kg'], [/^(g|gr|grs|gramos?)$/, 'g'],
+    [/^(ml|mililitros?)$/, 'ml'], [/^(l|lt|lts|litros?)$/, 'litro'],
+    [/^(pz|pzs|pza|pzas|piezas?)$/, 'pieza'], [/^tazas?$/, 'taza'],
+    [/^(cda|cdas|cucharadas?)$/, 'cucharada'], [/^(cdita|cditas|cucharaditas?)$/, 'cucharadita'],
+    [/^latas?$/, 'lata'], [/^paquetes?$/, 'paquete'], [/^bolsas?$/, 'bolsa'], [/^frascos?$/, 'frasco']
+  ];
+  function canonUnit(u) {
+    const s = String(u || '').toLowerCase().trim();
+    if (!s) return 'pieza';                       // "Cebolla 1/4" → ¼ pieza
+    for (const [re, c] of UNIT_ALIASES) if (re.test(s)) return c;
+    return s;
+  }
+
+  // Interpreta texto libre de los platillos viejos: "Tortilla 6pz", "Atún 2 latas", "Cebolla 1/4"
+  const ING_TEXT_RE = new RegExp(
+    '^(.*?)\\s*(\\d+(?:[.,]\\d+)?(?:\\s+\\d+\\/\\d+)?(?:\\s*[¼½¾])?|\\d+\\/\\d+|[¼½¾])\\s*' +
+    '(kg|kgs|kilos?|g|gr|grs|gramos?|ml|l|lt|lts|litros?|pz|pzs|pzas?|piezas?|tazas?|cdas?|cucharadas?|' +
+    'cditas?|cucharaditas?|latas?|paquetes?|bolsas?|frascos?)?\\.?$', 'i');
+  function parseIngLoose(str) {
+    const s = String(str || '').trim();
+    if (/al gusto/i.test(s)) return { nombre: s.replace(/al gusto/i, '').trim(), cant: null, unidad: 'al gusto' };
+    const m = s.match(ING_TEXT_RE);
+    if (m && m[1].trim()) return { nombre: m[1].trim(), cant: parseQty(m[2]), unidad: canonUnit(m[3]) };
+    return { nombre: s, cant: null, unidad: 'al gusto' };
+  }
+
+  // Insumos de un platillo normalizados a {nombre, cant, unidad, aprox}
+  function dishIngredients(dish) {
+    if (Array.isArray(dish.ingredientes) && dish.ingredientes.length) {
+      return dish.ingredientes.map(i => {
+        const cant = i.unidad === 'al gusto' ? null : parseQty(i.cantidad);
+        return { nombre: i.nombre, cant, unidad: cant == null ? 'al gusto' : canonUnit(i.unidad), aprox: false };
+      });
+    }
+    // Platillo viejo sin cantidades estructuradas: interpretar su texto
+    return (dish.ing || []).map(str => ({ ...parseIngLoose(str), aprox: true }));
+  }
+
+  // g/kg y ml/litro se suman en la unidad base
+  function toBase(cant, unidad) {
+    if (unidad === 'kg') return { fam: 'g', n: cant * 1000 };
+    if (unidad === 'litro') return { fam: 'ml', n: cant * 1000 };
+    return { fam: unidad, n: cant };
+  }
+  function fmtNum(n, fractions) {
+    const r = Math.round(n * 100) / 100;
+    const int = Math.floor(r), frac = Math.round((r - int) * 100) / 100;
+    const F = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+    if (fractions && F[frac]) return int ? `${int} ${F[frac]}` : F[frac];
+    return String(r);
+  }
+  const PLURAL = { pieza:'piezas', taza:'tazas', cucharada:'cucharadas', cucharadita:'cucharaditas',
+                   lata:'latas', paquete:'paquetes', bolsa:'bolsas', frasco:'frascos' };
+  function fmtAmount(fam, n) {
+    if (fam === 'g')  return n >= 1000 ? `${fmtNum(n / 1000)} kg` : `${fmtNum(n)} g`;
+    if (fam === 'ml') return n >= 1000 ? `${fmtNum(n / 1000)} ${n === 1000 ? 'litro' : 'litros'}` : `${fmtNum(n)} ml`;
+    return `${fmtNum(n, true)} ${n > 1 ? (PLURAL[fam] || fam) : fam}`;
+  }
+
+  // Categoría desde el catálogo de insumos ("Pollo" → la de "Pechuga de pollo")
+  function catFor(nombre) {
+    const k = normName(nombre);
+    let s = SUPPLIES.find(x => normName(x.nombre) === k);
+    if (!s && k.length > 2) {
+      s = SUPPLIES.find(x => {
+        const sk = normName(x.nombre);
+        return ` ${sk} `.includes(` ${k} `) || ` ${k} `.includes(` ${sk} `);
+      });
+    }
+    return s && SUPPLY_CATS.includes(s.cat) ? s.cat : 'Otros';
+  }
+  // Clave válida para Firebase (sin . # $ [ ] /)
+  function superKey(nombre, fam) {
+    return (normName(nombre).replace(/[.#$\[\]\/]/g, '').replace(/\s+/g, '_') || 'x') + '__' + fam.replace(/\s+/g, '_');
+  }
+
+  // Recorre el menú día por día en el rango
+  function projectMeals(from, to) {
+    const meals = [], sinReceta = {};
+    let vacios = 0;
+    for (let d = new Date(from); d <= to; d = addDays(d, 1)) {
+      MEALS.forEach(meal => {
+        const v = menu[`${ymd(d)}-${meal}`];
+        if (!v) { vacios++; return; }
+        if (typeof v === 'string' && v.startsWith('ext:')) {
+          const n = v.slice(4) || 'Sin nombre';
+          sinReceta[n] = (sinReceta[n] || 0) + 1;
+          return;
+        }
+        const dish = DISHES.find(x => x.id === v);
+        if (dish) meals.push(dish);
+      });
+    }
+    return { meals, sinReceta, vacios };
+  }
+
+  function buildShoppingList(from, to) {
+    const { meals, sinReceta, vacios } = projectMeals(from, to);
+    const acc = {};
+    meals.forEach(dish => {
+      dishIngredients(dish).forEach(ing => {
+        if (!ing.nombre) return;
+        const alGusto = ing.unidad === 'al gusto' || ing.cant == null;
+        const b = alGusto ? null : toBase(ing.cant, ing.unidad);
+        const fam = alGusto ? 'al gusto' : b.fam;
+        const key = superKey(ing.nombre, fam);
+        const it = acc[key] || (acc[key] = { nombre: ing.nombre, fam, n: 0, de: {}, aprox: false });
+        if (!alGusto) it.n += b.n;
+        if (ing.aprox) it.aprox = true;
+        it.de[dish.nombre] = (it.de[dish.nombre] || 0) + 1;
+      });
+    });
+    // Si un insumo "al gusto" también tiene cantidad en otra receta, fusionarlo en esa línea
+    Object.keys(acc).filter(k => acc[k].fam === 'al gusto').forEach(k => {
+      const base = k.replace(/__al_gusto$/, '__');
+      const other = Object.keys(acc).find(o => o !== k && o.startsWith(base));
+      if (!other) return;
+      for (const [n, c] of Object.entries(acc[k].de)) acc[other].de[n] = (acc[other].de[n] || 0) + c;
+      acc[other].masGusto = true;
+      delete acc[k];
+    });
+    const items = {};
+    for (const [k, it] of Object.entries(acc)) {
+      items[k] = {
+        nombre: it.nombre,
+        cat: catFor(it.nombre),
+        cant: it.fam === 'al gusto' ? 'al gusto' : fmtAmount(it.fam, it.n) + (it.masGusto ? ' + al gusto' : ''),
+        de: Object.entries(it.de).map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · '),
+        aprox: it.aprox,
+        hecho: false
+      };
+    }
+    return {
+      desde: ymd(from), hasta: ymd(to), creadoEn: Date.now(),
+      platillos: meals.length, vacios,
+      sinReceta: Object.entries(sinReceta).map(([n, c]) => c > 1 ? `${n} ×${c}` : n),
+      items
+    };
+  }
+
+  function fmtYmd(s) { const d = parseYmd(s); return `${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`; }
+
+  function readRange() {
+    if (!superFrom.value || !superTo.value) return null;
+    const from = parseYmd(superFrom.value), to = parseYmd(superTo.value);
+    return from <= to ? { from, to } : null;
+  }
+
+  function renderSuperPreview() {
+    const r = readRange();
+    const btn = document.getElementById('super-generate');
+    if (!r) {
+      superPreview.innerHTML = '<span class="err">Elige un rango válido (la fecha "hasta" no puede ser antes de "desde").</span>';
+      btn.disabled = true;
+      return;
+    }
+    const dias = Math.round((r.to - r.from) / 86400000) + 1;
+    const { meals, sinReceta, vacios } = projectMeals(r.from, r.to);
+    const ext = Object.keys(sinReceta).length;
+    superPreview.innerHTML =
+      `<b>${dias} ${dias === 1 ? 'día' : 'días'}</b> · <b>${meals.length}</b> ${meals.length === 1 ? 'platillo planeado' : 'platillos planeados'}` +
+      (vacios ? ` · ${vacios} ${vacios === 1 ? 'tiempo' : 'tiempos'} sin planear` : '') +
+      (ext ? ` · ${ext} sin receta` : '');
+    btn.disabled = meals.length === 0;
+  }
+
+  function renderSuperList() {
+    const L = superList;
+    const items = L && L.items ? Object.entries(L.items) : [];
+    if (!L) {
+      superListEl.innerHTML = '<div class="super-empty">Elige el rango de la quincena y genera la lista.</div>';
+      return;
+    }
+    const total = items.length, done = items.filter(([, i]) => i.hecho).length;
+    let html = `<div class="super-head">
+        <div class="super-title">Del ${esc(fmtYmd(L.desde))} al ${esc(fmtYmd(L.hasta))}</div>
+        <div class="super-progress">${done} de ${total} en el carrito</div>
+      </div>
+      <div class="super-bar"><i style="width:${total ? (done / total * 100) : 0}%"></i></div>`;
+    if (superSaveError) html += `<div class="super-note">⚠️ ${esc(superSaveError)}</div>`;
+    if (!total) html += '<div class="super-empty">No hay insumos para este rango.</div>';
+    [...SUPPLY_CATS, 'Otros'].forEach(cat => {
+      const inCat = items.filter(([, i]) => (i.cat || 'Otros') === cat)
+        .sort((a, b) => (a[1].hecho - b[1].hecho) || a[1].nombre.localeCompare(b[1].nombre, 'es'));
+      if (!inCat.length) return;
+      html += `<div class="super-cat"><div class="super-cat-label" style="--cat-color:${CAT_COLORS[cat] || 'var(--ink-soft)'}">${esc(cat)}</div>`;
+      inCat.forEach(([k, i]) => {
+        html += `<label class="super-item${i.hecho ? ' done' : ''}">
+          <input type="checkbox" data-key="${esc(k)}" ${i.hecho ? 'checked' : ''}>
+          <div class="super-item-main">
+            <div class="super-item-top">
+              <span class="super-item-name">${esc(i.nombre)}${i.aprox ? '<span class="super-aprox" title="Cantidad interpretada del texto de la receta; conviene revisarla">≈ revisar</span>' : ''}</span>
+              <span class="super-item-qty">${esc(i.cant)}</span>
+            </div>
+            <div class="super-item-from">${esc(i.de)}</div>
+          </div>
+        </label>`;
+      });
+      html += '</div>';
+    });
+    if (L.sinReceta && L.sinReceta.length) {
+      html += `<div class="super-note">Sin receta en Cooking Mama (no suman insumos): ${esc(L.sinReceta.join(', '))}</div>`;
+    }
+    superListEl.innerHTML = html;
+  }
+
+  superListEl.addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"][data-key]');
+    if (!cb || !superList || !superList.items) return;
+    const k = cb.dataset.key;
+    if (!superList.items[k]) return;
+    superList.items[k].hecho = cb.checked;
+    renderSuperList();
+    if (db) db.ref(`casita/super/actual/items/${k}/hecho`).set(cb.checked)
+      .catch(err => console.error('super check', err));
+  });
+
+  function generateSuperList() {
+    const r = readRange();
+    if (!r) return;
+    const list = buildShoppingList(r.from, r.to);
+    // Conservar palomitas de la lista anterior si el insumo y la cantidad no cambiaron
+    const prev = superList && superList.items;
+    if (prev) for (const k in list.items) {
+      if (prev[k] && prev[k].hecho && prev[k].cant === list.items[k].cant) list.items[k].hecho = true;
+    }
+    superList = list;
+    superSaveError = '';
+    renderSuperList();
+    if (db) {
+      db.ref('casita/super/actual').set(list).catch(e => {
+        console.error('super set', e);
+        superSaveError = 'No se pudo guardar en la casita; la lista solo vive en este celular.';
+        renderSuperList();
+      });
+    }
+  }
+
+  document.getElementById('super-generate').addEventListener('click', () => {
+    if (superList && superList.items && Object.keys(superList.items).length) {
+      const anyDone = Object.values(superList.items).some(i => i.hecho);
+      askConfirm('Nueva lista del super',
+        `Esto reemplaza la lista del ${esc(fmtYmd(superList.desde))} al ${esc(fmtYmd(superList.hasta))}.` +
+        (anyDone ? ' Lo que ya tachaste se conserva si no cambió la cantidad.' : ''),
+        'Sí, generar', generateSuperList);
+    } else {
+      generateSuperList();
+    }
+  });
+  superFrom.addEventListener('change', renderSuperPreview);
+  superTo.addEventListener('change', renderSuperPreview);
+
+  function openSuper() {
+    if (superList && superList.desde) {
+      superFrom.value = superList.desde;
+      superTo.value = superList.hasta;
+    } else {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      superFrom.value = ymd(today);
+      superTo.value = ymd(addDays(today, 14));
+    }
+    monthView.hidden = true;
+    weekView.hidden = true;
+    superView.hidden = false;
+    cmSub.textContent = 'Lo que hay que comprar para los platillos planeados';
+    renderSuperPreview();
+    renderSuperList();
+    window.scrollTo(0, 0);
+  }
+  function closeSuper() {
+    superView.hidden = true;
+    monthView.hidden = false;
+    renderMonth();
+    window.scrollTo(0, 0);
+  }
+  document.getElementById('super-btn').addEventListener('click', openSuper);
+  document.getElementById('back-from-super').addEventListener('click', closeSuper);
+
   // ===== INIT / HIDRATACIÓN =====
   const banner = document.getElementById('proto-banner');
 
@@ -2550,6 +2931,8 @@
       renderDishes();
     } else if (!document.getElementById('month-view').hidden) {
       renderMonth();
+    } else if (!superView.hidden) {
+      renderSuperPreview();
     }
   }
 
@@ -2575,6 +2958,12 @@
       applyMenu(snap.val());
       refreshActiveView();
     }, e => console.error('LIVE menu:', e.message));
+
+    // Lista del super: palomitas sincronizadas entre celulares
+    db.ref('casita/super/actual').on('value', snap => {
+      superList = snap.val();
+      if (!superView.hidden) renderSuperList();
+    }, e => console.error('LIVE super:', e.message));
   }
 
   async function bootstrap() {
