@@ -2831,7 +2831,9 @@
     if (db) {
       db.ref('casita/super/actual').set(list).catch(e => {
         console.error('super set', e);
-        superSaveError = 'No se pudo guardar en la casita; la lista solo vive en este celular.';
+        // Firebase revierte la escritura rechazada (el listener recibe null): restaurar la lista local
+        superList = list;
+        superSaveError = 'No se pudo guardar en la casita (sin permiso); la lista solo vive en este celular.';
         renderSuperList();
       });
     }
@@ -2961,7 +2963,11 @@
 
     // Lista del super: palomitas sincronizadas entre celulares
     db.ref('casita/super/actual').on('value', snap => {
-      superList = snap.val();
+      const val = snap.val();
+      // Si la lista local no se pudo guardar, no dejar que el "vacío" del servidor la borre
+      if (!val && superSaveError && superList) return;
+      superList = val;
+      superSaveError = '';
       if (!superView.hidden) renderSuperList();
     }, e => console.error('LIVE super:', e.message));
   }
