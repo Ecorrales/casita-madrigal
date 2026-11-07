@@ -2833,7 +2833,10 @@
         console.error('super set', e);
         // Firebase revierte la escritura rechazada (el listener recibe null): restaurar la lista local
         superList = list;
-        superSaveError = 'No se pudo guardar en la casita (sin permiso); la lista solo vive en este celular.';
+        const motivo = /permission/i.test((e && (e.code || e.message)) || '')
+          ? `sin permiso en ${FIREBASE_CONFIG.projectId}/casita/super`
+          : ((e && (e.code || e.message)) || 'error desconocido');
+        superSaveError = `No se pudo guardar en la casita (${motivo}); la lista solo vive en este celular.`;
         renderSuperList();
       });
     }
