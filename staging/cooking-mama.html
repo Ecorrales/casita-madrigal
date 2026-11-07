@@ -985,6 +985,7 @@
   .super-progress { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
   .super-bar { height: 6px; border-radius: 3px; background: var(--cream-2); overflow: hidden; margin-bottom: 6px; }
   .super-bar i { display: block; height: 100%; background: var(--leaf); transition: width 250ms; }
+  .super-pdf-btn { margin: 8px 0 0; }
   .super-cat { margin-top: 16px; }
   .super-cat-label {
     display: flex; align-items: center; gap: 7px;
@@ -2778,6 +2779,7 @@
         <div class="super-progress">${done} de ${total} en el carrito</div>
       </div>
       <div class="super-bar"><i style="width:${total ? (done / total * 100) : 0}%"></i></div>`;
+    if (total) html += `<button class="add-supply-btn super-pdf-btn" id="super-pdf">📄 Exportar PDF</button>`;
     if (superSaveError) html += `<div class="super-note">⚠️ ${esc(superSaveError)}</div>`;
     if (!total) html += '<div class="super-empty">No hay insumos para este rango.</div>';
     [...SUPPLY_CATS, 'Otros'].forEach(cat => {
@@ -2804,6 +2806,103 @@
     }
     superListEl.innerHTML = html;
   }
+
+  // ===== EXPORTAR LISTA A PDF (con casillas) =====
+  // jsPDF se carga solo al pedirlo, para no hacer más pesada la página.
+  let jsPdfLoading = null;
+  function loadJsPdf() {
+    if (window.jspdf) return Promise.resolve(window.jspdf.jsPDF);
+    if (!jsPdfLoading) {
+      jsPdfLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload = () => resolve(window.jspdf.jsPDF);
+        s.onerror = () => { jsPdfLoading = null; reject(new Error('No se pudo cargar jsPDF')); };
+        document.head.appendChild(s);
+      });
+    }
+    return jsPdfLoading;
+  }
+  // Las fuentes base de PDF solo traen Latin-1: quitar emojis y símbolos fuera de rango
+  function pdfText(s) {
+    return String(s ?? '').replace(/≈/g, '~').replace(/[^\x20-\xFF]/g, '').trim();
+  }
+  function buildSuperPdf(jsPDF, L) {
+    const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+    const M = 16, BOX = 4.2;
+    let y = M;
+    const ink = [42, 31, 26], soft = [107, 93, 82], accent = [194, 106, 43], line = [224, 214, 196];
+    const items = Object.values(L.items || {});
+    const newPageIfNeeded = h => { if (y + h > H - M) { doc.addPage(); y = M; } };
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(...ink);
+    doc.text('Lista del super', M, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...soft);
+    doc.text(pdfText(`Del ${fmtYmd(L.desde)} al ${fmtYmd(L.hasta)}  ·  ${L.platillos || 0} platillos  ·  ${items.length} insumos`), M, y + 12);
+    y += 20;
+
+    [...SUPPLY_CATS, 'Otros'].forEach(cat => {
+      const inCat = items.filter(i => (i.cat || 'Otros') === cat)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      if (!inCat.length) return;
+      newPageIfNeeded(16);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...accent);
+      doc.text(pdfText(cat).toUpperCase(), M, y + 4);
+      y += 7;
+      inCat.forEach(i => {
+        const de = doc.setFontSize(8) && doc.splitTextToSize(pdfText(i.de), W - 2 * M - 10);
+        const rowH = 6 + de.length * 3.6;
+        newPageIfNeeded(rowH + 1);
+        // Casilla
+        doc.setDrawColor(...soft); doc.setLineWidth(0.35);
+        doc.rect(M, y, BOX, BOX);
+        if (i.hecho) {
+          doc.setDrawColor(122, 140, 78); doc.setLineWidth(0.7);
+          doc.line(M + 0.9, y + 2.2, M + 1.8, y + 3.3);
+          doc.line(M + 1.8, y + 3.3, M + 3.5, y + 0.9);
+        }
+        // Nombre y cantidad
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...(i.hecho ? soft : ink));
+        const name = pdfText(i.nombre) + (i.aprox ? '  (~ revisar)' : '');
+        doc.text(name, M + 8, y + 3.6);
+        if (i.hecho) { const tw = doc.getTextWidth(pdfText(i.nombre)); doc.setDrawColor(...soft); doc.setLineWidth(0.3); doc.line(M + 8, y + 2.3, M + 8 + tw, y + 2.3); }
+        doc.setTextColor(...accent);
+        doc.text(pdfText(i.cant), W - M, y + 3.6, { align: 'right' });
+        // De qué platillos viene
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...soft);
+        doc.text(de, M + 8, y + 7.4);
+        y += rowH;
+        doc.setDrawColor(...line); doc.setLineWidth(0.2);
+        doc.line(M + 8, y - 0.8, W - M, y - 0.8);
+        y += 1.2;
+      });
+      y += 3;
+    });
+    if (L.sinReceta && L.sinReceta.length) {
+      newPageIfNeeded(12);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...soft);
+      doc.text(doc.splitTextToSize(pdfText('Sin receta en Cooking Mama: ' + L.sinReceta.join(', ')), W - 2 * M), M, y + 4);
+    }
+    return doc;
+  }
+  superListEl.addEventListener('click', async e => {
+    const btn = e.target.closest('#super-pdf');
+    if (!btn || !superList) return;
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Generando PDF…';
+    try {
+      const jsPDF = await loadJsPdf();
+      buildSuperPdf(jsPDF, superList).save(`lista-super-${superList.desde}-al-${superList.hasta}.pdf`);
+      btn.textContent = label;
+    } catch (err) {
+      console.error('PDF', err);
+      btn.textContent = 'No se pudo generar el PDF (revisa tu internet)';
+      setTimeout(() => { btn.textContent = label; }, 3000);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   superListEl.addEventListener('change', e => {
     const cb = e.target.closest('input[type="checkbox"][data-key]');
