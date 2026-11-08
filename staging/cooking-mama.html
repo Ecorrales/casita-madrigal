@@ -3084,16 +3084,20 @@
       return;
     }
     // Lectura inicial para decidir si hay que sembrar
-    let platVal = null, insVal = null;
+    // Solo se siembra si la lectura FUNCIONÓ y regresó vacío. Si falla (red/permisos),
+    // NO se escribe nada: sembrar a ciegas pisaría recetas reales.
+    let platVal = null, insVal = null, platOk = false, insOk = false;
     try {
       platVal = (await db.ref('casita/platillos').once('value')).val();
+      platOk = true;
     } catch (e) { console.error('READ platillos falló:', e.message); }
     try {
       insVal = (await db.ref('casita/insumos').once('value')).val();
+      insOk = true;
     } catch (e) { console.error('READ insumos falló:', e.message); }
 
     // Seed la primera vez (hijo por hijo, respeta la regla $id)
-    if (!platVal) {
+    if (platOk && !platVal) {
       try {
         for (const d of SEED_DISHES) {
           await db.ref(`casita/platillos/${d.id}`).set({
@@ -3104,7 +3108,7 @@
         }
       } catch (e) { console.error('SEED platillos falló en:', e.message); }
     }
-    if (!insVal) {
+    if (insOk && !insVal) {
       try {
         for (const s of SEED_SUPPLIES) {
           await db.ref(`casita/insumos/${s.id}`).set({ nombre: s.nombre, cat: s.cat });
