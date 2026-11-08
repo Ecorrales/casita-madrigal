@@ -1,0 +1,18 @@
+{
+  "_ayuda": "Calendario general de promos automáticas. Cada evento activa un descuento en la tienda. Tipos de fecha: fija (mes + dia) o 'nth-dow' (el n-ésimo día de la semana del mes; n = -1 es el último; dow: 0=domingo … 6=sábado). 'desplazamiento' mueve el inicio N días. 'dias' es cuántos días dura. Pon \"activo\": false para apagar un evento.",
+  "version": 1,
+  "eventos": [
+    { "id": "reyes",     "nombre": "👑 Día de Reyes",       "mes": 1,  "dia": 6,  "dias": 1, "descuento": 15 },
+    { "id": "amistad",   "nombre": "💘 Día del Amor",       "mes": 2,  "dia": 14, "dias": 1, "descuento": 15 },
+    { "id": "nino",      "nombre": "🎈 Día del Niño",       "mes": 4,  "dia": 30, "dias": 1, "descuento": 20 },
+    { "id": "madres",    "nombre": "💐 Día de las Madres",  "mes": 5,  "dia": 10, "dias": 1, "descuento": 20 },
+    { "id": "hotsale",   "nombre": "🔥 Hot Sale",           "regla": "nth-dow", "mes": 5, "n": -1, "dow": 1, "dias": 9, "descuento": 25 },
+    { "id": "padre",     "nombre": "👔 Día del Padre",      "regla": "nth-dow", "mes": 6, "n": 3,  "dow": 0, "dias": 1, "descuento": 20 },
+    { "id": "patrias",   "nombre": "🇲🇽 Fiestas Patrias",   "mes": 9,  "dia": 15, "dias": 2, "descuento": 15 },
+    { "id": "muertos",   "nombre": "💀 Día de Muertos",     "mes": 10, "dia": 31, "dias": 3, "descuento": 15 },
+    { "id": "buenfin",   "nombre": "🛍️ Buen Fin",           "regla": "nth-dow", "mes": 11, "n": 3, "dow": 1, "desplazamiento": -3, "dias": 4, "descuento": 30 },
+    { "id": "navidad",   "nombre": "🎄 Navidad",            "mes": 12, "dia": 24, "dias": 2, "descuento": 25 },
+    { "id": "anionuevo", "nombre": "🎆 Año Nuevo",          "mes": 12, "dia": 31, "dias": 2, "descuento": 20 }
+  ],
+  "cumpleanos": { "activo": true, "nombre": "🎂 Cumple de {nombre}", "dias": 1, "descuento": 20 }
+}

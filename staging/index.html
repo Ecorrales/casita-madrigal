@@ -5218,6 +5218,28 @@ body::before {
       <div id="critical-loot-status" style="margin-top:8px;font-family:'Inter',sans-serif;font-size:11px;color:var(--muted);letter-spacing:0.06em"></div>
     </div>
 
+    <!-- SECCIÓN EVENTOS AUTOMÁTICOS (la casa funciona sin GM) -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--line)">
+      <h3 style="font-family:'Fraunces',serif;font-size:18px;margin:0 0 4px;color:var(--ink)">Eventos automáticos</h3>
+      <p class="form-hint" style="margin:0 0 12px">La casa se administra sola. Se recalcula cada noche al cambiar de día. Tus bounties y promos manuales siempre tienen prioridad.</p>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;margin-bottom:8px">
+        <input type="checkbox" id="auto-bounties-toggle" onchange="saveAutoEventsConfig()" style="width:18px;height:18px;cursor:pointer">
+        <span style="font-family:'Inter',sans-serif;font-size:13px;font-weight:500">Bounties por atraso</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px 28px;font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft)">
+        Máximo activos
+        <select id="auto-max-bounties" class="form-input" onchange="saveAutoEventsConfig()" style="width:auto;padding:4px 8px">
+          <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+        </select>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="auto-promos-toggle" onchange="saveAutoEventsConfig()" style="width:18px;height:18px;cursor:pointer">
+        <span style="font-family:'Inter',sans-serif;font-size:13px;font-weight:500">Promos por calendario y cumpleaños</span>
+      </label>
+      <div id="auto-events-status" style="margin-top:10px;font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);line-height:1.55"></div>
+      <button class="claim-btn ghost" style="margin-top:8px" onclick="recalcAutoEventsNow()">Recalcular ahora</button>
+    </div>
+
     <div class="modal-actions" style="justify-content:flex-end;margin-top:18px">
       <button class="modal-cancel" onclick="closeSecretMenu()">Cerrar</button>
     </div>
@@ -5413,7 +5435,7 @@ body::before {
    al usuario para recargar. Esto es necesario porque las PWAs instaladas
    en iOS/Android cachean agresivamente el HTML. */
 
-const APP_VERSION = '2026.07.07.1';
+const APP_VERSION = '2026.11.07.2';
 
 async function checkForUpdate(opts = {}) {
   const { silent = true } = opts;
@@ -5623,6 +5645,240 @@ function effectiveRewardCost(reward) {
   if (!isPromoActive()) return base;
   const off = state.promo.percentOff || 0;
   return Math.max(1, Math.ceil(base * (100 - off) / 100));
+}
+
+/* =====================================================================
+   EVENTOS AUTOMÁTICOS (la casa funciona sin GM)
+   - Bounty por estadística: las esporádicas más atrasadas respecto a su
+     frecuencia reciben un bounty automático (bounty.auto = true) que crece
+     con el atraso. Se quita solo al completarse (lógica normal de bounty).
+   - Promo por calendario: fechas de calendario.json (calendario general) y
+     cumpleaños de la casa activan una promo automática (promo.auto = true).
+   Se recalcula una vez al día en el rollover (solo el líder) y al cambiar
+   la configuración. NUNCA toca bounties ni promos manuales.
+   Todo apagado por defecto: config.autoEvents = { bounties, promos, maxBounties }
+   ===================================================================== */
+const AUTO_DEFAULTS = { bounties: false, promos: false, maxBounties: 2 };
+function autoCfg() { return { ...AUTO_DEFAULTS, ...(state.config?.autoEvents || {}) }; }
+
+// Días que dura cada frecuencia (para medir el atraso)
+const FREQ_DAYS = { 'twice-week': 3.5, weekly: 7, biweekly: 15, monthly: 30, quarterly: 91, yearly: 365 };
+// [atraso mínimo en "veces su frecuencia", multiplicador]
+const AUTO_BOUNTY_TIERS = [[12, 20], [6, 10], [3, 5], [1.5, 3]];
+function autoBountyMultiplier(ratio) {
+  for (const [min, mult] of AUTO_BOUNTY_TIERS) if (ratio >= min) return mult;
+  return 0;
+}
+
+/* Lee el historial COMPLETO de Firebase (en memoria solo viven 200 entradas)
+   y regresa { last: { nombreTarea: ultimoTs }, first: tsMasViejo }. */
+async function fetchLastDoneByTask() {
+  const snap = await db.ref('casita/history').once('value');
+  const last = {};
+  let first = Infinity;
+  snap.forEach(ch => {
+    const h = ch.val();
+    if (!h || !h.ts) return;
+    if (h.ts < first) first = h.ts;
+    if (/^(completó|atendió|descubrió)/.test(h.action || '')) {
+      // Por id (entradas nuevas, a prueba de renombres) y por nombre (historial viejo)
+      if (h.taskId && (!last['#' + h.taskId] || h.ts > last['#' + h.taskId])) last['#' + h.taskId] = h.ts;
+      if (h.taskName && (!last[h.taskName] || h.ts > last[h.taskName])) last[h.taskName] = h.ts;
+    }
+  });
+  return { last, first: isFinite(first) ? first : Date.now() };
+}
+
+/* Esporádicas ordenadas de más a menos atrasada. Las nunca hechas cuentan
+   desde la entrada más vieja del historial. */
+function rankOverdueSporadic(lastDone, firstTs, now) {
+  now = now || Date.now();
+  return (state.catalogSporadic || []).map(t => {
+    if (!t) return null;
+    const freq = t.frequency || detectFrequency(t.meta)?.key;
+    const days = FREQ_DAYS[freq];
+    if (!days) return null;
+    if (isPeriodicallyLocked(t, state.sporadic?.[t.id])) return null; // ya hecha este periodo
+    const known = Math.max(lastDone['#' + t.id] || 0, lastDone[t.name] || 0);
+    const last = known || firstTs;
+    const daysLate = (now - last) / 86400000;
+    return { id: t.id, name: t.name, ratio: daysLate / days, daysLate: Math.floor(daysLate), never: !known };
+  }).filter(Boolean).sort((a, b) => b.ratio - a.ratio);
+}
+
+/* Regresa el catálogo de esporádicas con los bounties automáticos
+   recalculados, o null si no cambió nada. */
+function planAutoBounties(lastDone, firstTs) {
+  const cfg = autoCfg();
+  const current = state.catalogSporadic || [];
+  const prevAuto = {};
+  const catalog = current.map(t => {
+    if (!t) return t;
+    const c = { ...t };
+    if (c.bounty?.auto) { prevAuto[c.id] = c.bounty; delete c.bounty; }
+    return c;
+  });
+  if (cfg.bounties) {
+    let slots = Math.max(0, Math.min(5, cfg.maxBounties | 0));
+    for (const r of rankOverdueSporadic(lastDone, firstTs)) {
+      if (slots <= 0) break;
+      const item = catalog.find(x => x && x.id === r.id);
+      if (!item || item.bounty) continue;          // tiene bounty manual: respetarlo
+      const mult = autoBountyMultiplier(r.ratio);
+      if (!mult) break;                            // ya no hay atrasadas suficientes
+      const prev = prevAuto[r.id];
+      item.bounty = (prev && prev.multiplier === mult)
+        ? prev
+        : { multiplier: mult, auto: true, addedBy: 'auto', addedAt: Date.now() };
+      slots--;
+    }
+  }
+  return JSON.stringify(catalog) === JSON.stringify(current) ? null : catalog;
+}
+
+/* ----- Calendario general ----- */
+// Copia de respaldo por si calendario.json no se puede descargar
+const DEFAULT_CALENDAR = {
+  eventos: [
+    { id: 'reyes', nombre: '👑 Día de Reyes', mes: 1, dia: 6, dias: 1, descuento: 15 },
+    { id: 'amistad', nombre: '💘 Día del Amor', mes: 2, dia: 14, dias: 1, descuento: 15 },
+    { id: 'nino', nombre: '🎈 Día del Niño', mes: 4, dia: 30, dias: 1, descuento: 20 },
+    { id: 'madres', nombre: '💐 Día de las Madres', mes: 5, dia: 10, dias: 1, descuento: 20 },
+    { id: 'hotsale', nombre: '🔥 Hot Sale', regla: 'nth-dow', mes: 5, n: -1, dow: 1, dias: 9, descuento: 25 },
+    { id: 'padre', nombre: '👔 Día del Padre', regla: 'nth-dow', mes: 6, n: 3, dow: 0, dias: 1, descuento: 20 },
+    { id: 'patrias', nombre: '🇲🇽 Fiestas Patrias', mes: 9, dia: 15, dias: 2, descuento: 15 },
+    { id: 'muertos', nombre: '💀 Día de Muertos', mes: 10, dia: 31, dias: 3, descuento: 15 },
+    { id: 'buenfin', nombre: '🛍️ Buen Fin', regla: 'nth-dow', mes: 11, n: 3, dow: 1, desplazamiento: -3, dias: 4, descuento: 30 },
+    { id: 'navidad', nombre: '🎄 Navidad', mes: 12, dia: 24, dias: 2, descuento: 25 },
+    { id: 'anionuevo', nombre: '🎆 Año Nuevo', mes: 12, dia: 31, dias: 2, descuento: 20 }
+  ],
+  cumpleanos: { activo: true, nombre: '🎂 Cumple de {nombre}', dias: 1, descuento: 20 }
+};
+async function loadCalendar() {
+  try {
+    const r = await fetch('calendario.json', { cache: 'no-cache' });
+    if (r.ok) {
+      const j = await r.json();
+      if (j && Array.isArray(j.eventos)) return j;
+    }
+  } catch (_) { /* sin red: usar respaldo */ }
+  return DEFAULT_CALENDAR;
+}
+
+// n-ésimo día de la semana del mes (n = -1 → el último). Regresa fecha UTC (solo día).
+function nthDowOfMonth(y, m, n, dow) {
+  if (n > 0) {
+    const first = new Date(Date.UTC(y, m - 1, 1));
+    const off = (dow - first.getUTCDay() + 7) % 7;
+    return new Date(Date.UTC(y, m - 1, 1 + off + (n - 1) * 7));
+  }
+  const last = new Date(Date.UTC(y, m, 0));
+  const off = (last.getUTCDay() - dow + 7) % 7;
+  return new Date(Date.UTC(y, m - 1, last.getUTCDate() - off));
+}
+function calendarEventStart(ev, y) {
+  const d = ev.regla === 'nth-dow'
+    ? nthDowOfMonth(y, ev.mes, ev.n, ev.dow)
+    : new Date(Date.UTC(y, ev.mes - 1, ev.dia));
+  if (ev.desplazamiento) d.setUTCDate(d.getUTCDate() + ev.desplazamiento);
+  return d;
+}
+
+/* Todas las ocurrencias (eventos + cumpleaños) que tocan [desde, hasta] (UTC, solo día) */
+function calendarOccurrences(cal, fromUTC, toUTC) {
+  const out = [];
+  const y0 = new Date(fromUTC).getUTCFullYear() - 1, y1 = new Date(toUTC).getUTCFullYear();
+  for (let y = y0; y <= y1; y++) {
+    for (const ev of (cal.eventos || [])) {
+      if (!ev || ev.activo === false || !ev.mes) continue;
+      const s = calendarEventStart(ev, y).getTime();
+      const days = Math.max(1, ev.dias || 1);
+      const e = s + (days - 1) * 86400000;
+      if (e >= fromUTC && s <= toUTC) out.push({ id: `${ev.id}-${y}`, nombre: ev.nombre, descuento: ev.descuento || 10, start: s, days });
+    }
+    const cb = cal.cumpleanos;
+    if (cb && cb.activo !== false) {
+      for (const [k, bd] of Object.entries(state.birthdays || {})) {
+        if (!bd || !PEOPLE[k]) continue;
+        const [, bm, bdd] = String(bd).split('-').map(Number);
+        if (!bm || !bdd) continue;
+        const s = Date.UTC(y, bm - 1, bdd);
+        const days = Math.max(1, cb.dias || 1);
+        const e = s + (days - 1) * 86400000;
+        if (e >= fromUTC && s <= toUTC) {
+          out.push({ id: `cumple-${k}-${y}`, nombre: (cb.nombre || '🎂 Cumple de {nombre}').replace('{nombre}', PEOPLE[k].name), descuento: cb.descuento || 20, start: s, days });
+        }
+      }
+    }
+  }
+  return out;
+}
+function houseTodayUTC() {
+  const [y, m, d] = todayKey().split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+// Evento activo HOY (si hay varios, el de mayor descuento)
+function activeCalendarEvent(cal) {
+  const t = houseTodayUTC();
+  return calendarOccurrences(cal, t, t).sort((a, b) => b.descuento - a.descuento)[0] || null;
+}
+// Próximo evento (para mostrar en el menú secreto)
+function nextCalendarEvent(cal) {
+  const t = houseTodayUTC();
+  return calendarOccurrences(cal, t + 86400000, t + 400 * 86400000)
+    .sort((a, b) => a.start - b.start)[0] || null;
+}
+
+/* Regresa la promo a escribir: objeto (nueva), null (quitar) o undefined (sin cambio) */
+function planAutoPromo(cal) {
+  const cfg = autoCfg();
+  const p = state.promo;
+  if (p && !p.auto && isPromoActive()) return undefined;    // promo manual vigente: no tocar
+  if (!cfg.promos) return (p && p.auto) ? null : undefined; // apagado: quitar la automática
+  const ev = activeCalendarEvent(cal);
+  if (!ev) return undefined;                                 // la automática vence sola
+  if (p && p.auto && p.autoId === ev.id) return undefined;   // ya está activa
+  const s = new Date(ev.start), e = new Date(ev.start + (ev.days - 1) * 86400000);
+  return {
+    name: ev.nombre,
+    percentOff: Math.min(90, Math.max(5, Math.round(ev.descuento))),
+    startsAt: composeHouseTimestamp(s.getUTCFullYear(), s.getUTCMonth() + 1, s.getUTCDate(), 0, 0, 0),
+    endsAt: composeHouseTimestamp(e.getUTCFullYear(), e.getUTCMonth() + 1, e.getUTCDate(), 23, 59, 59),
+    auto: true, autoId: ev.id, createdBy: 'auto', createdAt: Date.now()
+  };
+}
+
+/* Aplica bounties y promo automáticos. Idempotente: si nada cambió, no escribe. */
+let _autoEventsRunning = false;
+async function runAutoEvents() {
+  if (!useFirebase || !db || _autoEventsRunning) return null;
+  const cfg = autoCfg();
+  const hasAutoBounty = (state.catalogSporadic || []).some(t => t?.bounty?.auto);
+  const hasAutoPromo = !!state.promo?.auto;
+  if (!cfg.bounties && !cfg.promos && !hasAutoBounty && !hasAutoPromo) return null;
+  _autoEventsRunning = true;
+  try {
+    const updates = {};
+    if (cfg.bounties || hasAutoBounty) {
+      const { last, first } = cfg.bounties ? await fetchLastDoneByTask() : { last: {}, first: Date.now() };
+      const cat = planAutoBounties(last, first);
+      if (cat) { updates.catalogSporadic = cat; state.catalogSporadic = cat; }
+    }
+    if (cfg.promos || hasAutoPromo) {
+      const promo = planAutoPromo(cfg.promos ? await loadCalendar() : { eventos: [] });
+      if (promo !== undefined) { updates.promo = promo; state.promo = promo; }
+    }
+    if (Object.keys(updates).length) {
+      await dbBatch(updates);
+      renderAll();
+    }
+    return updates;
+  } catch (e) {
+    console.warn('Eventos automáticos:', e);
+    return null;
+  } finally {
+    _autoEventsRunning = false;
+  }
 }
 
 /* =================================================
@@ -6949,6 +7205,9 @@ async function rolloverWithLeaderElection() {
   }
 
   dbBatch(updates);
+  // Eventos automáticos (bounty por estadística, promo por calendario).
+  // Van en una escritura aparte: si fallan, el rollover ya quedó guardado.
+  runAutoEvents();
   return true;
 }
 
@@ -8891,7 +9150,10 @@ function buildTaskRow(t, store, kind) {
     const bChip = document.createElement('span');
     bChip.className = 'bounty-chip';
     bChip.textContent = `×${bountyMultiplier}`;
-    bChip.title = `Bounty: completa esta tarea y gana ${bountyMultiplier} puntos`;
+    const isAutoBounty = kind === 'sporadic' && state.catalogSporadic?.find(x => x.id === t.id)?.bounty?.auto;
+    bChip.title = isAutoBounty
+      ? `Bounty automático: esta tarea lleva mucho sin hacerse. Complétala y gana ${bountyMultiplier} puntos`
+      : `Bounty: completa esta tarea y gana ${bountyMultiplier} puntos`;
     name.appendChild(bChip);
   }
   // Chip de temporalidad (solo para esporádicas con frecuencia reconocible)
@@ -10097,7 +10359,75 @@ function openSecretMenu() {
     }
   }
   renderPromoStatus();
+  renderAutoEventsStatus();
   document.getElementById('modal-secret').classList.add('open');
+}
+
+/* ----- Eventos automáticos: configuración y vista previa ----- */
+async function renderAutoEventsStatus() {
+  const cfg = autoCfg();
+  const bt = document.getElementById('auto-bounties-toggle');
+  const pt = document.getElementById('auto-promos-toggle');
+  const mx = document.getElementById('auto-max-bounties');
+  if (bt) bt.checked = !!cfg.bounties;
+  if (pt) pt.checked = !!cfg.promos;
+  if (mx) mx.value = String(cfg.maxBounties);
+  const el = document.getElementById('auto-events-status');
+  if (!el) return;
+  el.textContent = 'Calculando…';
+  try {
+    const lines = [];
+    const autos = (state.catalogSporadic || []).filter(t => t?.bounty?.auto);
+    if (autos.length) lines.push('Activos: ' + autos.map(t => `<b>${escapeHtml(t.name)}</b> ×${t.bounty.multiplier}`).join(', '));
+    if (useFirebase && db) {
+      const { last, first } = await fetchLastDoneByTask();
+      const top = rankOverdueSporadic(last, first).filter(r => autoBountyMultiplier(r.ratio)).slice(0, 4);
+      lines.push(top.length
+        ? 'Más atrasadas: ' + top.map(r => `${escapeHtml(r.name)} (${r.never ? 'nunca hecha' : r.daysLate + ' días'} → ×${autoBountyMultiplier(r.ratio)})`).join(' · ')
+        : 'No hay tareas atrasadas. 🎉');
+    }
+    const cal = await loadCalendar();
+    const now = activeCalendarEvent(cal), next = nextCalendarEvent(cal);
+    const fmt = ms => new Date(ms).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    if (now) lines.push(`Hoy en el calendario: <b>${escapeHtml(now.nombre)}</b> · ${now.descuento}%`);
+    if (next) lines.push(`Próxima promo: <b>${escapeHtml(next.nombre)}</b> · ${fmt(next.start)}${next.days > 1 ? '–' + fmt(next.start + (next.days - 1) * 86400000) : ''} · ${next.descuento}%`);
+    el.innerHTML = lines.join('<br>');
+  } catch (e) {
+    el.textContent = 'No se pudo calcular la vista previa.';
+  }
+}
+
+async function saveAutoEventsConfig() {
+  if (!isSecretAdmin()) return;
+  const cfg = {
+    bounties: !!document.getElementById('auto-bounties-toggle')?.checked,
+    promos: !!document.getElementById('auto-promos-toggle')?.checked,
+    maxBounties: parseInt(document.getElementById('auto-max-bounties')?.value, 10) || 2
+  };
+  if (!state.config) state.config = {};
+  const prev = state.config.autoEvents;
+  state.config.autoEvents = cfg;
+  if (useFirebase && db) {
+    try {
+      await db.ref('casita/config/autoEvents').set(cfg);
+    } catch (e) {
+      state.config.autoEvents = prev;
+      renderAutoEventsStatus();
+      toast('No se pudo guardar: falta permiso para config/autoEvents en las reglas de Firebase');
+      return;
+    }
+  }
+  toast('✦ Eventos automáticos actualizados');
+  await runAutoEvents();
+  renderAutoEventsStatus();
+}
+
+async function recalcAutoEventsNow() {
+  if (!isSecretAdmin()) return;
+  const res = await runAutoEvents();
+  toast(res && Object.keys(res).length ? '✦ Eventos recalculados' : 'Sin cambios');
+  renderPromoStatus();
+  renderAutoEventsStatus();
 }
 
 function closeSecretMenu() {
@@ -10139,7 +10469,7 @@ function renderPromoStatus() {
     statusBlock.innerHTML = `
       <div style="background:linear-gradient(135deg, color-mix(in srgb, var(--gold) 18%, var(--paper)), color-mix(in srgb, var(--terra) 12%, var(--paper)));border:1px solid var(--gold);border-radius:var(--radius);padding:14px;margin-bottom:12px">
         <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:var(--terra-deep)">🔥 ${escapeHtml(p.name)}</div>
-        <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);margin-top:4px">${p.percentOff}% off · termina en ${remainingDays} día${remainingDays === 1 ? '' : 's'}</div>
+        <div style="font-family:'Inter',sans-serif;font-size:12px;color:var(--ink-soft);margin-top:4px">${p.percentOff}% off · termina en ${remainingDays} día${remainingDays === 1 ? '' : 's'}${p.auto ? ' · automática (calendario)' : ''}</div>
         <button class="claim-btn ghost" style="margin-top:10px;color:var(--terra-deep)" onclick="endPromoNow()">Terminar promo ahora</button>
       </div>
     `;
@@ -10192,8 +10522,10 @@ async function endPromoNow() {
     destructive: true
   });
   if (!ok) return;
-  state.promo = null;
-  dbSet('promo', null);
+  // Promo automática: dejarla vencida (no null) para que el calendario no la
+  // vuelva a crear mientras dure ese mismo evento.
+  state.promo = state.promo?.auto ? { ...state.promo, endsAt: Date.now() - 1 } : null;
+  dbSet('promo', state.promo);
   toast('Promo terminada');
   renderPromoStatus();
   renderAll();
@@ -11556,6 +11888,7 @@ function markDone(t, store, kind, evt) {
     ts: Date.now(),
     by: state.me,
     taskName: t.name,
+    taskId: t.id,
     action: bonus.type === 'bounty' ? `completó (bounty ×${bonus.multiplier})`
           : bonus.type === 'loot' ? `descubrió Jamboree ×${bonus.multiplier}`
           : 'completó'
@@ -11636,6 +11969,7 @@ function toggleDetail(d, evt) {
     ts: Date.now(),
     by: state.me,
     taskName: d.title,
+    taskId: d.id,
     action: bonus.type === 'bounty' ? `atendió (bounty ×${bonus.multiplier})`
           : bonus.type === 'loot' ? `descubrió Jamboree ×${bonus.multiplier}`
           : 'atendió'
